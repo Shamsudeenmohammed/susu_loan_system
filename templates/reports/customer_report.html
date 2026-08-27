@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Customer Report{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">Customer Report <span class="badge bg-secondary">{{ total }}</span></h4>
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light"><tr><th>#</th><th>Name</th><th>Phone</th><th>Status</th><th>Registered</th></tr></thead>
+                <tbody>
+                {% for c in customers %}
+                <tr><td>{{ c.customer_number }}</td><td>{{ c.get_full_name }}</td><td>{{ c.phone }}</td><td><span class="badge {{ c.status|status_badge_class }}">{{ c.status }}</span></td><td>{{ c.created_at|date:"d M Y" }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'loan_policy_list' %}" class="text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Back to Policies</a>
+    <h4 class="mt-2">{{ title }}</h4>
+</div>
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        {% for field, errors in form.errors.items %}
+                        {% for error in errors %}<p class="mb-0"><strong>{{ field }}:</strong> {{ error }}</p>{% endfor %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Policy Name *</label>
+                        {{ form.name }}
+                    </div>
+
+                    <h6 class="fw-semibold mt-4 mb-3">Membership Requirements</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Minimum Membership (days) *</label>
+                            {{ form.minimum_membership_days }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Waiting Period (days) *</label>
+                            {{ form.waiting_period_days }}
+                        </div>
+                    </div>
+
+                    <h6 class="fw-semibold mt-4 mb-3">Contribution Requirements</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Minimum Contribution Period (days) *</label>
+                            {{ form.minimum_contribution_days }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Minimum Successful Contributions *</label>
+                            {{ form.minimum_successful_contributions }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Maximum Missed Periods *</label>
+                            {{ form.maximum_missed_periods }}
+                        </div>
+                    </div>
+
+                    <h6 class="fw-semibold mt-4 mb-3">Loan Limits</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Minimum Savings (GHS) *</label>
+                            {{ form.minimum_savings }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Loan-to-Savings Multiplier *</label>
+                            {{ form.maximum_loan_multiplier }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Maximum Active Loans *</label>
+                            {{ form.maximum_active_loans }}
+                        </div>
+                    </div>
+
+                    <h6 class="fw-semibold mt-4 mb-3">Additional Rules</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                {{ form.require_kyc }}
+                                <label class="form-check-label">Require KYC</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                {{ form.require_good_repayment_history }}
+                                <label class="form-check-label">Require Good History</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                {{ form.block_overdue_customers }}
+                                <label class="form-check-label">Block Overdue</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label">Active Policy</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save Policy</button>
+                        <a href="{% url 'loan_policy_list' %}" class="btn btn-secondary ms-2">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

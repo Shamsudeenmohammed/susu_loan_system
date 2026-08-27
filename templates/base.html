@@ -1,0 +1,197 @@
+{% load static %}
+{% load core_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}{{ organization_name }}{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% block body %}
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="d-flex">
+        {% if user.is_authenticated and user.role != 'CUSTOMER' %}
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h5><i class="fas fa-university me-2"></i>{{ organization_name|truncatechars:25 }}</h5>
+                <small>Zemzem Savings and Loans</small>
+            </div>
+            <div class="sidebar-nav">
+                <div class="nav-section">Main</div>
+                <a class="nav-link" href="{% url 'dashboard' %}">
+                    <i class="fas fa-tachometer-alt"></i>Dashboard
+                </a>
+
+                {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,CASHIER,COLLECTOR" %}
+                <div class="nav-section">Management</div>
+                <a class="nav-link" href="{% url 'customer_list' %}">
+                    <i class="fas fa-users"></i>Customers
+                </a>
+                {% endif %}
+
+                {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,CASHIER" %}
+                <a class="nav-link" href="{% url 'susu_account_list' %}">
+                    <i class="fas fa-piggy-bank"></i>Savings Accounts
+                </a>
+                <a class="nav-link" href="{% url 'record_contribution' %}">
+                    <i class="fas fa-hand-holding-usd"></i>Contribute
+                </a>
+                {% endif %}
+
+                {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,LOAN_OFFICER,CASHIER" %}
+                <div class="nav-section">Loans</div>
+                <a class="nav-link" href="{% url 'loan_list' %}">
+                    <i class="fas fa-file-invoice-dollar"></i>Loans
+                </a>
+                <a class="nav-link" href="{% url 'loan_apply' %}">
+                    <i class="fas fa-plus-circle"></i>Apply for Loan
+                </a>
+                <a class="nav-link" href="{% url 'loan_eligibility' %}">
+                    <i class="fas fa-clipboard-check"></i>Loan Eligibility
+                </a>
+                <a class="nav-link" href="{% url 'record_repayment' %}">
+                    <i class="fas fa-money-check-alt"></i>Record Repayment
+                </a>
+                {% endif %}
+
+                <div class="nav-section">Finance</div>
+                <a class="nav-link" href="{% url 'transaction_list' %}">
+                    <i class="fas fa-exchange-alt"></i>Transactions
+                </a>
+                <a class="nav-link" href="{% url 'withdrawal_list' %}">
+                    <i class="fas fa-money-bill-wave"></i>Withdrawals
+                </a>
+
+                {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER" %}
+                <div class="nav-section">System</div>
+                <a class="nav-link" href="{% url 'report_index' %}">
+                    <i class="fas fa-chart-bar"></i>Reports
+                </a>
+                <a class="nav-link" href="{% url 'sms_notification_list' %}">
+                    <i class="fas fa-sms"></i>SMS History
+                </a>
+                <a class="nav-link" href="{% url 'audit_log_list' %}">
+                    <i class="fas fa-clipboard-list"></i>Audit Log
+                </a>
+                <a class="nav-link" href="{% url 'loan_product_list' %}">
+                    <i class="fas fa-cogs"></i>Loan Products
+                </a>
+                <a class="nav-link" href="{% url 'loan_policy_list' %}">
+                    <i class="fas fa-shield-alt"></i>Loan Policies
+                </a>
+                <a class="nav-link" href="{% url 'eligibility_audit_list' %}">
+                    <i class="fas fa-clipboard-list"></i>Eligibility Audit
+                </a>
+                {% endif %}
+            </div>
+        </nav>
+        {% endif %}
+
+        {% if user.is_authenticated and user.role == 'CUSTOMER' %}
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h5><i class="fas fa-university me-2"></i>{{ organization_name|truncatechars:25 }}</h5>
+                <small>My Account</small>
+            </div>
+            <div class="sidebar-nav">
+                <div class="nav-section">Main</div>
+                <a class="nav-link" href="{% url 'customer_dashboard' %}">
+                    <i class="fas fa-tachometer-alt"></i>Dashboard
+                </a>
+
+                    <div class="nav-section">Savings</div>
+                <a class="nav-link" href="{% url 'customer_contribute' %}">
+                    <i class="fas fa-hand-holding-usd"></i>Make Contribution
+                </a>
+
+                <div class="nav-section">Finance</div>
+                <a class="nav-link" href="{% url 'customer_transactions' %}">
+                    <i class="fas fa-exchange-alt"></i>Transactions
+                </a>
+                <a class="nav-link" href="{% url 'withdrawal_request' %}">
+                    <i class="fas fa-money-bill-wave"></i>Request Withdrawal
+                </a>
+
+                <div class="nav-section">Loans</div>
+                <a class="nav-link" href="{% url 'loan_eligibility' %}">
+                    <i class="fas fa-clipboard-check"></i>Loan Eligibility
+                </a>
+                <a class="nav-link" href="{% url 'loan_apply' %}">
+                    <i class="fas fa-plus-circle"></i>Apply for Loan
+                </a>
+            </div>
+        </nav>
+        {% endif %}
+
+        <div id="main-content" class="flex-grow-1">
+            <nav class="top-navbar">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="hamburger-btn d-lg-none" id="sidebarToggle" type="button" aria-label="Toggle sidebar">
+                        <span></span>
+                    </button>
+                    <div class="breadcrumb-area">
+                        {% block breadcrumb %}{% endblock %}
+                    </div>
+                </div>
+
+                <div class="user-area">
+                    {% if user.is_authenticated %}
+                    <div class="user-avatar">{{ user.first_name.0|default:user.email.0|upper }}</div>
+                    <div class="d-none d-sm-block">
+                        <div style="font-size:0.825rem;font-weight:600;">{{ user.get_full_name|default:user.email }}</div>
+                        <div style="font-size:0.7rem;color:var(--text-muted);">{{ user.get_role_display }}</div>
+                    </div>
+                    <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span class="d-none d-sm-inline ms-1">Logout</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </nav>
+
+            <div class="content-area">
+                <!-- Django messages → passed to JS for toast rendering -->
+                {% if messages %}
+                <div id="djangoMessages" class="d-none"
+                    data-messages='{% for message in messages %}[{"tag":"{{ message.tags }}","text":"{{ message|escapejs }}"}]{% if not forloop.last %},{% endif %}{% endfor %}'>
+                </div>
+                {% endif %}
+
+                <div class="fade-in">
+                {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Confirm Dialog -->
+    <div class="confirm-overlay" id="confirmOverlay">
+        <div class="confirm-dialog">
+            <div class="confirm-icon warning" id="confirmIcon"><i class="fas fa-exclamation-triangle"></i></div>
+            <h5 id="confirmTitle">Are you sure?</h5>
+            <p id="confirmMessage">This action cannot be undone.</p>
+            <div class="d-flex gap-2 justify-content-center mt-3">
+                <button class="btn btn-outline-secondary" id="confirmCancel">Cancel</button>
+                <button class="btn btn-danger" id="confirmOk">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{% static 'js/app.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

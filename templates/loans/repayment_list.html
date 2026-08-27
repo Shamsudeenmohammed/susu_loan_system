@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Loan Repayments{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">Loan Repayments</h4>
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>#</th><th>Loan</th><th class="d-none d-md-table-cell">Customer</th><th>Amount</th><th class="d-none d-lg-table-cell">Method</th><th class="d-none d-md-table-cell">Date</th></tr>
+                </thead>
+                <tbody>
+                {% for r in repayments %}
+                <tr>
+                    <td>{{ r.repayment_number }}</td>
+                    <td><a href="{% url 'loan_detail' pk=r.loan.pk %}">{{ r.loan.loan_number }}</a></td>
+                    <td class="d-none d-md-table-cell">{{ r.loan.customer.get_full_name }}</td>
+                    <td class="text-success fw-bold">{{ r.amount|currency }}</td>
+                    <td class="d-none d-lg-table-cell">{{ r.get_payment_method_display }}</td>
+                    <td class="d-none d-md-table-cell">{{ r.created_at|date:"d M Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No repayments recorded</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

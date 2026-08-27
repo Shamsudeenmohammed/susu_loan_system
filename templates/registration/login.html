@@ -1,0 +1,424 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - {{ organization_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0d6efd;
+            --accent: #6366f1;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Animated background orbs */
+        body::before, body::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            animation: float 20s ease-in-out infinite;
+        }
+        body::before {
+            width: 500px; height: 500px;
+            background: var(--primary);
+            top: -150px; right: -100px;
+        }
+        body::after {
+            width: 400px; height: 400px;
+            background: var(--accent);
+            bottom: -100px; left: -80px;
+            animation-delay: -10s;
+        }
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.05); }
+            66% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+
+        /* Login card */
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(255,255,255,0.97);
+            border-radius: 16px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+            animation: cardIn 0.6s cubic-bezier(.4,0,.2,1);
+        }
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(30px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .login-header {
+            background: linear-gradient(135deg, #0d6efd, #6366f1);
+            color: #fff;
+            text-align: center;
+            padding: 2rem 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .login-header::before {
+            content: '';
+            position: absolute;
+            top: -40px; right: -40px;
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+        }
+        .login-header::after {
+            content: '';
+            position: absolute;
+            bottom: -30px; left: -30px;
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+        }
+        .login-header i.logo-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .login-header h4 { font-weight: 700; margin-bottom: 0.25rem; }
+        .login-header p { opacity: 0.85; font-size: 0.85rem; margin: 0; }
+
+        .login-body { padding: 1.75rem; }
+
+        .login-body h5 {
+            text-align: center;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 1.25rem;
+        }
+
+        /* Form styles */
+        .form-label { font-weight: 500; font-size: 0.85rem; color: #475569; margin-bottom: 0.3rem; }
+
+        .form-control {
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 0.65rem 0.875rem;
+            font-size: 0.9rem;
+            transition: all 0.25s ease;
+            background: #f8fafc;
+        }
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(13,110,253,0.12);
+            background: #fff;
+            outline: none;
+        }
+
+        .btn-signin {
+            background: linear-gradient(135deg, #0d6efd, #6366f1);
+            border: none;
+            border-radius: 10px;
+            padding: 0.7rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #fff;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(13,110,253,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-signin:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(13,110,253,0.4);
+        }
+        .btn-signin:active { transform: translateY(0); }
+
+        .btn-signin .spinner-border { display: none; }
+        .btn-signin.loading .spinner-border { display: inline-block; }
+        .btn-signin.loading span { opacity: 0.6; }
+
+        .login-footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        .login-footer a {
+            color: var(--primary);
+            font-weight: 500;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .login-footer a:hover { color: var(--accent); text-decoration: underline; }
+
+        /* ============================================
+           TOAST NOTIFICATIONS (standalone auth pages)
+           ============================================ */
+        .auth-toast-container {
+            position: fixed;
+            top: 1.25rem;
+            right: 1.25rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.625rem;
+            pointer-events: none;
+        }
+
+        .auth-toast {
+            pointer-events: auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            min-width: 320px;
+            max-width: 440px;
+            animation: toastSlideIn 0.5s cubic-bezier(.4,0,.2,1);
+            border-left: 5px solid var(--primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-toast::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: currentColor;
+            animation: toastTimer 5s linear forwards;
+            opacity: 0.4;
+        }
+        @keyframes toastTimer {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+
+        .auth-toast.success { border-left-color: var(--success); }
+        .auth-toast.success::after { background: var(--success); }
+        .auth-toast.error { border-left-color: var(--danger); }
+        .auth-toast.error::after { background: var(--danger); }
+        .auth-toast.warning { border-left-color: var(--warning); }
+        .auth-toast.warning::after { background: var(--warning); }
+        .auth-toast.info { border-left-color: var(--primary); }
+        .auth-toast.info::after { background: var(--primary); }
+
+        .auth-toast .toast-icon-wrap {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 0.95rem;
+        }
+        .auth-toast.success .toast-icon-wrap { background: #d1fae5; color: var(--success); }
+        .auth-toast.error .toast-icon-wrap { background: #fee2e2; color: var(--danger); }
+        .auth-toast.warning .toast-icon-wrap { background: #fef3c7; color: var(--warning); }
+        .auth-toast.info .toast-icon-wrap { background: #dbeafe; color: var(--primary); }
+
+        .auth-toast .toast-content { flex: 1; padding-top: 2px; }
+        .auth-toast .toast-title { font-weight: 600; font-size: 0.9rem; color: #1e293b; line-height: 1.3; }
+        .auth-toast .toast-text { font-size: 0.82rem; color: #64748b; margin-top: 2px; line-height: 1.4; }
+
+        .auth-toast .toast-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 0;
+            font-size: 1.2rem;
+            line-height: 1;
+            transition: color 0.2s;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .auth-toast .toast-close:hover { color: #1e293b; }
+
+        .auth-toast.removing {
+            animation: toastSlideOut 0.4s cubic-bezier(.4,0,.2,1) forwards;
+        }
+
+        @keyframes toastSlideIn {
+            from { opacity: 0; transform: translateX(100px) scale(0.9); }
+            to { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes toastSlideOut {
+            from { opacity: 1; transform: translateX(0) scale(1); max-height: 200px; margin-bottom: 0; }
+            to { opacity: 0; transform: translateX(100px) scale(0.9); max-height: 0; padding: 0; margin-bottom: -0.625rem; }
+        }
+
+        /* Shake animation for error */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-6px); }
+            80% { transform: translateX(6px); }
+        }
+        .auth-toast.error { animation: toastSlideIn 0.5s cubic-bezier(.4,0,.2,1), shake 0.5s ease 0.3s; }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .auth-toast-container { top: 0.75rem; right: 0.75rem; left: 0.75rem; }
+            .auth-toast { min-width: unset; max-width: 100%; }
+            .login-card { border-radius: 12px; }
+            .login-header { padding: 1.5rem 1rem; }
+            .login-body { padding: 1.25rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast Container -->
+    <div class="auth-toast-container" id="toastContainer"></div>
+
+    <div class="login-card">
+        <div class="login-header">
+            <i class="fas fa-university logo-icon"></i>
+            <h4>{{ organization_name }}</h4>
+            <p>Zemzem Savings and Loans</p>
+        </div>
+        <div class="login-body">
+            <h5>Sign In</h5>
+
+            <!-- Django messages rendered as hidden, JS picks them up -->
+            {% if messages %}
+            <div id="djangoMessages" class="d-none"
+                data-messages='{% for message in messages %}[{"tag":"{{ message.tags }}","text":"{{ message|escapejs }}"}]{% if not forloop.last %},{% endif %}{% endfor %}'>
+            </div>
+            {% endif %}
+
+            {% if form.errors %}
+            <div id="formErrors" class="d-none"
+                data-text="Invalid email or password. Please try again."></div>
+            {% endif %}
+
+            <form method="post" id="loginForm">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Email Address</label>
+                    {{ form.username }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    {{ form.password }}
+                </div>
+                <button type="submit" class="btn-signin" id="submitBtn">
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    <span><i class="fas fa-sign-in-alt me-2"></i>Sign In</span>
+                </button>
+            </form>
+            <div class="login-footer mt-3">
+                Don't have an account? <a href="{% url 'register' %}">Create one</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        /* ---- Toast system ---- */
+        var container = document.getElementById('toastContainer');
+        var toastId = 0;
+
+        function showAuthToast(type, title, text, duration) {
+            duration = duration || 6000;
+            var id = 'auth-toast-' + (++toastId);
+            var icons = {
+                success: 'fa-check',
+                error: 'fa-times',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info'
+            };
+            var toast = document.createElement('div');
+            toast.className = 'auth-toast ' + type;
+            toast.id = id;
+            toast.innerHTML =
+                '<div class="toast-icon-wrap"><i class="fas ' + (icons[type] || icons.info) + '"></i></div>' +
+                '<div class="toast-content">' +
+                    '<div class="toast-title">' + title + '</div>' +
+                    (text ? '<div class="toast-text">' + text + '</div>' : '') +
+                '</div>' +
+                '<button class="toast-close" onclick="dismissAuthToast(\'' + id + '\')">&times;</button>';
+            container.appendChild(toast);
+            setTimeout(function() { dismissAuthToast(id); }, duration);
+        }
+
+        window.dismissAuthToast = function(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.classList.add('removing');
+            setTimeout(function() { el.remove(); }, 400);
+        };
+
+        /* ---- Render Django messages as toasts ---- */
+        var msgEl = document.getElementById('djangoMessages');
+        if (msgEl) {
+            try {
+                var msgs = JSON.parse(msgEl.getAttribute('data-messages'));
+                msgs.forEach(function(m, i) {
+                    setTimeout(function() {
+                        var type = 'info';
+                        if (m.tag === 'success') type = 'success';
+                        else if (m.tag === 'error' || m.tag === 'danger') type = 'error';
+                        else if (m.tag === 'warning') type = 'warning';
+                        var titles = {
+                            success: 'Success',
+                            error: 'Error',
+                            warning: 'Warning',
+                            info: 'Notice'
+                        };
+                        showAuthToast(type, titles[type] || 'Notice', m.text);
+                    }, i * 300);
+                });
+            } catch(e) {}
+        }
+
+        /* ---- Form errors as toast ---- */
+        var errEl = document.getElementById('formErrors');
+        if (errEl) {
+            setTimeout(function() {
+                showAuthToast('error', 'Login Failed', errEl.getAttribute('data-text'));
+            }, 100);
+        }
+
+        /* ---- Button loading state ---- */
+        var form = document.getElementById('loginForm');
+        var btn = document.getElementById('submitBtn');
+        if (form && btn) {
+            form.addEventListener('submit', function() {
+                btn.classList.add('loading');
+                btn.disabled = true;
+            });
+        }
+    })();
+    </script>
+</body>
+</html>

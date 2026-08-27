@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Loans{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Loans</h4>
+    <a href="{% url 'loan_apply' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i><span class="d-none d-sm-inline">New Application</span><span class="d-sm-none">New</span></a>
+</div>
+
+<div class="mb-3 d-flex flex-wrap gap-1">
+    <a href="{% url 'loan_list' %}" class="btn btn-sm {% if not request.GET.status %}btn-primary{% else %}btn-outline-primary{% endif %}">All</a>
+    {% for value, label in status_choices %}
+    <a href="?status={{ value }}" class="btn btn-sm {% if request.GET.status == value %}btn-primary{% else %}btn-outline-primary{% endif %}">{{ label }}</a>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Loan #</th><th class="d-none d-md-table-cell">Customer</th><th class="d-none d-lg-table-cell">Product</th><th>Principal</th><th class="d-none d-md-table-cell">Outstanding</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                {% for loan in loans %}
+                <tr>
+                    <td><a href="{% url 'loan_detail' pk=loan.pk %}">{{ loan.loan_number }}</a></td>
+                    <td class="d-none d-md-table-cell">{{ loan.customer.get_full_name }}</td>
+                    <td class="d-none d-lg-table-cell">{{ loan.loan_product.name }}</td>
+                    <td>{{ loan.principal_amount|currency }}</td>
+                    <td class="d-none d-md-table-cell">{{ loan.outstanding_balance|currency }}</td>
+                    <td><span class="badge {{ loan.status|status_badge_class }}">{{ loan.get_status_display }}</span></td>
+                    <td><a href="{% url 'loan_detail' pk=loan.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No loans found</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Savings Accounts{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Savings Accounts <span class="badge bg-secondary">{{ total_count }}</span></h4>
+    <a href="{% url 'susu_account_create' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i><span class="d-none d-sm-inline">Open Account</span><span class="d-sm-none">New</span></a>
+</div>
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Account #</th><th>Customer</th><th class="d-none d-md-table-cell">Frequency</th><th>Balance</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                {% for acc in accounts %}
+                <tr>
+                    <td><a href="{% url 'susu_account_detail' pk=acc.pk %}">{{ acc.account_number }}</a></td>
+                    <td>{{ acc.customer.get_full_name }}</td>
+                    <td class="d-none d-md-table-cell">{{ acc.get_contribution_frequency_display }}</td>
+                    <td class="text-success fw-bold">{{ acc.current_balance|currency }}</td>
+                    <td><span class="badge {{ acc.status|status_badge_class }}">{{ acc.status }}</span></td>
+                    <td><a href="{% url 'susu_account_detail' pk=acc.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No accounts found</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

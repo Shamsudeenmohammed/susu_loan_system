@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Overdue Loans{% endblock %}
+
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-exclamation-triangle text-danger me-2"></i>Overdue Loans</h4>
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Loan #</th><th class="d-none d-md-table-cell">Customer</th><th class="d-none d-lg-table-cell">Installment</th><th>Due Date</th><th>Amount Due</th><th class="d-none d-md-table-cell">Paid</th><th>Remaining</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                {% for s in overdue %}
+                <tr>
+                    <td><a href="{% url 'loan_detail' pk=s.loan.pk %}">{{ s.loan.loan_number }}</a></td>
+                    <td class="d-none d-md-table-cell">{{ s.loan.customer.get_full_name }}</td>
+                    <td class="d-none d-lg-table-cell">{{ s.installment_number }}</td>
+                    <td>{{ s.due_date }}</td>
+                    <td>{{ s.total_due|currency }}</td>
+                    <td class="d-none d-md-table-cell">{{ s.amount_paid|currency }}</td>
+                    <td class="text-danger fw-bold">{{ s.amount_remaining|currency }}</td>
+                    <td><span class="badge bg-danger">OVERDUE</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-4">No overdue loans</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Overdue Report{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">Overdue Report <span class="badge bg-danger">{{ total_overdue|currency }}</span></h4>
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light"><tr><th>Loan #</th><th>Customer</th><th>Installment</th><th>Due Date</th><th>Remaining</th><th>Status</th></tr></thead>
+                <tbody>
+                {% for s in overdue %}
+                <tr><td>{{ s.loan.loan_number }}</td><td>{{ s.loan.customer.get_full_name }}</td><td>{{ s.installment_number }}</td><td>{{ s.due_date }}</td><td class="text-danger fw-bold">{{ s.amount_remaining|currency }}</td><td><span class="badge bg-danger">OVERDUE</span></td></tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No overdue loans</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

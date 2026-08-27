@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}SMS {{ notification.notification_number }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'sms_notification_list' %}" class="text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Back</a>
+    <h4 class="mt-2">SMS {{ notification.notification_number }}</h4>
+</div>
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6"><small class="text-muted">Notification #</small><br><strong>{{ notification.notification_number }}</strong></div>
+                    <div class="col-6"><small class="text-muted">Status</small><br><span class="badge {{ notification.status|status_badge_class }}">{{ notification.get_status_display }}</span></div>
+                    <div class="col-6"><small class="text-muted">Phone</small><br>{{ notification.phone_number }}</div>
+                    <div class="col-6"><small class="text-muted">Type</small><br>{{ notification.get_notification_type_display }}</div>
+                    <div class="col-12"><small class="text-muted">Message</small><br><div class="p-3 bg-light rounded">{{ notification.message }}</div></div>
+                    {% if notification.brevo_message_id %}
+                    <div class="col-6"><small class="text-muted">Brevo Message ID</small><br>{{ notification.brevo_message_id }}</div>
+                    {% endif %}
+                    {% if notification.error_message %}
+                    <div class="col-12"><small class="text-muted">Error</small><br><span class="text-danger">{{ notification.error_message }}</span></div>
+                    {% endif %}
+                    <div class="col-6"><small class="text-muted">Created</small><br>{{ notification.created_at|date:"d M Y H:i:s" }}</div>
+                    {% if notification.sent_at %}
+                    <div class="col-6"><small class="text-muted">Sent</small><br>{{ notification.sent_at|date:"d M Y H:i:s" }}</div>
+                    {% endif %}
+                </div>
+                {% if notification.status == 'FAILED' %}
+                <a href="{% url 'sms_retry' pk=notification.pk %}" class="btn btn-warning mt-3"><i class="fas fa-redo me-1"></i>Retry SMS</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

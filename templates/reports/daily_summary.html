@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Daily Summary - {{ today }}{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">Daily Summary - {{ today|date:"d F Y" }}</h4>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm bg-success text-white"><div class="card-body text-center">
+            <h6>Contributions</h6><h3>{{ total_contributions|currency }}</h3><small>{{ num_contributions }} transactions</small>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm bg-danger text-white"><div class="card-body text-center">
+            <h6>Withdrawals</h6><h3>{{ total_withdrawals|currency }}</h3>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm bg-primary text-white"><div class="card-body text-center">
+            <h6>Loan Repayments</h6><h3>{{ total_repayments|currency }}</h3>
+        </div></div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white"><h6 class="mb-0">Today's Contributions</h6></div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light"><tr><th>#</th><th>Customer</th><th>Amount</th><th>Method</th><th>Staff</th><th>Time</th></tr></thead>
+                <tbody>
+                {% for t in contributions %}
+                <tr><td>{{ t.transaction_number }}</td><td>{{ t.customer.get_full_name }}</td><td class="text-success">{{ t.amount|currency }}</td><td>{{ t.get_payment_method_display }}</td><td>{{ t.created_by.get_full_name }}</td><td>{{ t.created_at|date:"H:i" }}</td></tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-3">No contributions today</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

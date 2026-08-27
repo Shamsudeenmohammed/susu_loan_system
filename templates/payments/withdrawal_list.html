@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Withdrawals{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Withdrawals</h4>
+    <a href="{% url 'withdrawal_request' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i><span class="d-none d-sm-inline">New Request</span><span class="d-sm-none">New</span></a>
+</div>
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>#</th><th class="d-none d-md-table-cell">Customer</th><th class="d-none d-lg-table-cell">Account</th><th>Amount</th><th>Status</th><th class="d-none d-md-table-cell">Requested</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                {% for w in withdrawals %}
+                <tr>
+                    <td>{{ w.withdrawal_number }}</td>
+                    <td class="d-none d-md-table-cell">{{ w.customer.get_full_name }}</td>
+                    <td class="d-none d-lg-table-cell">{{ w.account.account_number }}</td>
+                    <td>{{ w.amount|currency }}</td>
+                    <td><span class="badge {{ w.status|status_badge_class }}">{{ w.get_status_display }}</span></td>
+                    <td class="d-none d-md-table-cell">{{ w.created_at|date:"d M Y" }}</td>
+                    <td>
+                        {% if w.status == 'REQUESTED' or w.status == 'UNDER_REVIEW' %}
+                        <a href="{% url 'withdrawal_review' pk=w.pk %}" class="btn btn-sm btn-outline-warning">Review</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No withdrawals</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

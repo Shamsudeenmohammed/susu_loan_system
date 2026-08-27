@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}Loan Eligibility{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h4><i class="fas fa-clipboard-check me-2"></i>Loan Eligibility</h4>
+    <p class="text-muted mb-0">{{ customer.customer_number }} - {{ customer.get_full_name }}</p>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header {% if result.eligible %}bg-success{% else %}bg-warning{% endif %} text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-{% if result.eligible %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
+                    ZEMZEM SAVINGS AND LOANS — LOAN ELIGIBILITY STATUS
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <h2 class="{% if result.eligible %}text-success{% else %}text-warning{% endif %} fw-bold mb-1">
+                        {% if result.eligible %}ELIGIBLE{% else %}NOT ELIGIBLE{% endif %}
+                    </h2>
+                    <p class="text-muted">
+                        {% if result.eligible %}
+                            Congratulations! You are eligible to apply for a loan from Zemzem Savings and Loans.
+                        {% else %}
+                            You do not currently meet all eligibility requirements.
+                        {% endif %}
+                    </p>
+                </div>
+
+                <h6 class="fw-semibold mb-3">Criteria Checklist</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Criteria</th>
+                                <th>Current</th>
+                                <th>Required</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in result.passed_criteria %}
+                            <tr>
+                                <td>{{ item.label }}</td>
+                                <td>{{ item.current }}</td>
+                                <td>{{ item.required }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-success"><i class="fas fa-check"></i></span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% for item in result.failed_criteria %}
+                            <tr class="table-warning">
+                                <td>{{ item.label }}</td>
+                                <td>{{ item.current }}</td>
+                                <td>{{ item.required }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-danger"><i class="fas fa-times"></i></span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if result.failed_criteria %}
+                <h6 class="fw-semibold mt-4 mb-2">What you need to do:</h6>
+                <ul class="list-unstyled">
+                    {% for reason in result.reasons %}
+                    <li class="mb-2">
+                        <i class="fas fa-arrow-right text-danger me-2"></i>{{ reason }}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if result.eligible %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header"><h6 class="mb-0"><i class="fas fa-file-alt me-2"></i>Available Loan Products</h6></div>
+            <div class="card-body">
+                {% for product in products %}
+                <div class="d-flex justify-content-between align-items-center mb-3 p-3 rounded" style="background:#f8fafc;">
+                    <div>
+                        <div class="fw-semibold">{{ product.name }}</div>
+                        <small class="text-muted">{{ product.get_interest_method_display }} {{ product.interest_rate }}% | {{ product.min_term }}-{{ product.max_term }} months</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-muted">GHS {{ product.min_amount|floatformat:2 }} - {{ product.max_amount|floatformat:2 }}</div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted">No loan products available.</p>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header"><h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Summary</h6></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted d-block">Membership Duration</small>
+                    <strong>{{ result.membership_months }} / {{ result.required_membership_months }} months</strong>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted d-block">Successful Contributions</small>
+                    <strong>{{ result.successful_contributions }} / {{ result.required_contributions }}</strong>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted d-block">Savings Balance</small>
+                    <strong>GHS {{ result.total_savings|floatformat:2 }} / GHS {{ result.minimum_savings|floatformat:2 }}</strong>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted d-block">Missed Periods</small>
+                    <strong>{{ result.missed_periods }} / {{ result.max_missed_periods }}</strong>
+                </div>
+                <hr>
+                <div class="mb-0">
+                    <small class="text-muted d-block">Maximum Eligible Loan</small>
+                    <h4 class="text-success mb-0">GHS {{ result.maximum_loan_amount|floatformat:2 }}</h4>
+                </div>
+            </div>
+        </div>
+
+        {% if result.eligible %}
+        <a href="{% url 'loan_apply' %}" class="btn btn-success btn-lg w-100 mb-3">
+            <i class="fas fa-paper-plane me-2"></i>Apply for Loan
+        </a>
+        {% endif %}
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-shield-alt text-primary fa-2x mb-2"></i>
+                <h6>Eligibility is Automatic</h6>
+                <p class="text-muted mb-0" style="font-size:0.82rem;">Your eligibility is calculated based on your verified contribution history and account status with Zemzem Savings and Loans.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

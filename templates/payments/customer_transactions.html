@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}My Transactions{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">My Transactions</h4>
+    <div>
+        <span class="badge bg-success me-2">Contributions: {{ total_contributions|currency }}</span>
+        <span class="badge bg-danger">Withdrawals: {{ total_withdrawals|currency }}</span>
+    </div>
+</div>
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr><th>#</th><th>Type</th><th>Amount</th><th>Balance After</th><th>Date</th></tr>
+                </thead>
+                <tbody>
+                {% for txn in transactions %}
+                <tr>
+                    <td>{{ txn.transaction_number }}</td>
+                    <td><span class="badge {{ txn.transaction_type|status_badge_class }}">{{ txn.get_transaction_type_display }}</span></td>
+                    <td>{{ txn.amount|currency }}</td>
+                    <td>{{ txn.balance_after|currency }}</td>
+                    <td>{{ txn.created_at|date:"d M Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">No transactions yet</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Make Contribution{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h4><i class="fas fa-hand-holding-usd me-2"></i>Make Contribution</h4>
+    <p class="text-muted mb-0">Deposit into your savings account via Paystack</p>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card stagger-item">
+            <div class="card-header"><h6 class="mb-0"><i class="fas fa-credit-card me-2"></i>Payment Details</h6></div>
+            <div class="card-body">
+                <form method="post" id="contributionForm">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Savings Account</label>
+                        <select name="account" id="accountSelect" class="form-select" required>
+                            {% for acc in susu_accounts %}
+                            <option value="{{ acc.pk }}" data-balance="{{ acc.current_balance }}" data-target="{{ acc.target_amount }}" data-frequency="{{ acc.get_contribution_frequency_display }}">
+                                {{ acc.account_number }} — Balance: GHS {{ acc.current_balance|currency }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Amount (GHS)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">GHS</span>
+                            <input type="number" name="amount" id="amountInput" class="form-control" min="1" step="0.01" placeholder="0.00" required>
+                        </div>
+                        <div class="form-text">Minimum amount: GHS 1.00</div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success btn-lg" id="payBtn">
+                            <i class="fas fa-lock me-2"></i>Pay with Paystack
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card stagger-item">
+            <div class="card-header"><h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Account Summary</h6></div>
+            <div class="card-body">
+                {% for acc in susu_accounts %}
+                <div class="d-flex justify-content-between align-items-center mb-3 p-3 rounded" style="background: #f8fafc;">
+                    <div>
+                        <div class="fw-semibold">{{ acc.account_number }}</div>
+                        <small class="text-muted">{{ acc.get_contribution_frequency_display }}</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-success fw-bold" style="font-size:1.1rem;">GHS {{ acc.current_balance|currency }}</div>
+                        <small class="text-muted">Target: GHS {{ acc.target_amount|currency }}</small>
+                    </div>
+                </div>
+                {% if acc.target_amount > 0 %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small class="text-muted">Progress</small>
+                        <small class="text-muted">{{ acc.current_balance|currency }} / {{ acc.target_amount|currency }}</small>
+                    </div>
+                    <div class="progress">
+                        {% widthratio acc.current_balance acc.target_amount 100 as progress %}
+                        <div class="progress-bar bg-success" style="width: {{ progress }}%"></div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card mt-3 stagger-item">
+            <div class="card-body text-center">
+                <i class="fas fa-shield-alt text-success fa-2x mb-2"></i>
+                <h6>Secure Payment</h6>
+                <p class="text-muted mb-0" style="font-size:0.82rem;">Payments are processed securely via Paystack. Your financial data is encrypted.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script>
+(function() {
+    var form = document.getElementById('contributionForm');
+    var payBtn = document.getElementById('payBtn');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        var amount = parseFloat(document.getElementById('amountInput').value);
+        var accountSelect = document.getElementById('accountSelect');
+        var accountOption = accountSelect.options[accountSelect.selectedIndex];
+
+        if (!amount || amount <= 0) {
+            if (window.showToast) window.showToast('error', 'Invalid Amount', 'Please enter a valid amount.');
+            return;
+        }
+
+        var paystackKey = '{{ paystack_public_key|default:"" }}';
+        if (!paystackKey) {
+            form.submit();
+            return;
+        }
+
+        payBtn.disabled = true;
+        payBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Initializing payment...';
+
+        var handler = PaystackPop.setup({
+            key: paystackKey,
+            email: '{{ request.user.email|escapejs }}',
+            amount: Math.round(amount * 100),
+            currency: 'GHS',
+            ref: 'SUSU-' + Date.now(),
+            metadata: {
+                custom_fields: [
+                    {
+                        display_name: "Account",
+                        variable_name: "account",
+                        value: accountSelect.value
+                    }
+                ]
+            },
+            callback: function(response) {
+                window.location.href = "{% url 'customer_contribute_callback' %}?ref=" + response.reference;
+            },
+            onClose: function() {
+                payBtn.disabled = false;
+                payBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Pay with Paystack';
+                if (window.showToast) window.showToast('info', 'Payment Cancelled', 'You cancelled the payment.');
+            }
+        });
+        handler.openIframe();
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% load humanize %}
+
+{% block title %}Dashboard - {{ organization_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Dashboard</h4>
+    <span class="text-muted d-none d-sm-inline">{% now "l, d F Y" %}</span>
+</div>
+
+<!-- Row 1: Core Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card primary stagger-item">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Total Customers</p>
+                        <h3 class="stat-value" data-counter="{{ total_customers }}">{{ total_customers }}</h3>
+                    </div>
+                    <div class="stat-icon bg-primary bg-opacity-10"><i class="fas fa-users text-primary"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card success stagger-item">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Active Savings Accounts</p>
+                        <h3 class="stat-value" data-counter="{{ active_susu_accounts }}">{{ active_susu_accounts }}</h3>
+                    </div>
+                    <div class="stat-icon bg-success bg-opacity-10"><i class="fas fa-piggy-bank text-success"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card info stagger-item">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Total Contributions</p>
+                        <h3 class="stat-value">{{ total_contributions|currency }}</h3>
+                    </div>
+                    <div class="stat-icon bg-info bg-opacity-10"><i class="fas fa-hand-holding-usd text-info"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card warning stagger-item">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Today's Contributions</p>
+                        <h3 class="stat-value">{{ today_contributions|currency }}</h3>
+                    </div>
+                    <div class="stat-icon bg-warning bg-opacity-10"><i class="fas fa-calendar-day text-warning"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Row 2: Loan Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card danger stagger-item">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Outstanding Loans</p>
+                        <h3 class="stat-value">{{ outstanding_loans|currency }}</h3>
+                    </div>
+                    <div class="stat-icon bg-danger bg-opacity-10"><i class="fas fa-file-invoice-dollar text-danger"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card primary stagger-item">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Total Disbursed</p>
+                        <h3 class="stat-value">{{ total_disbursed|currency }}</h3>
+                    </div>
+                    <div class="stat-icon bg-primary bg-opacity-10"><i class="fas fa-money-bill-wave text-primary"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card success stagger-item">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Total Repayments</p>
+                        <h3 class="stat-value">{{ total_repayments|currency }}</h3>
+                    </div>
+                    <div class="stat-icon bg-success bg-opacity-10"><i class="fas fa-check-circle text-success"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card danger stagger-item">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Overdue Loans</p>
+                        <h3 class="stat-value" data-counter="{{ overdue_count }}">{{ overdue_count }}</h3>
+                    </div>
+                    <div class="stat-icon bg-danger bg-opacity-10"><i class="fas fa-exclamation-triangle text-danger"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart + Pending -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card stagger-item">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Contributions (Last 30 Days)</h6>
+                <span class="badge bg-light text-dark d-none d-sm-inline">30 Days</span>
+            </div>
+            <div class="card-body"><canvas id="contributionsChart" height="100"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card stagger-item">
+            <div class="card-header"><h6 class="mb-0">Pending Applications</h6></div>
+            <div class="card-body text-center py-4">
+                <h1 class="display-4 text-warning" data-counter="{{ pending_applications }}">{{ pending_applications }}</h1>
+                <p class="text-muted mb-3">Loan applications awaiting review</p>
+                <a href="{% url 'loan_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Tables -->
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card stagger-item">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Recent Transactions</h6>
+                <a href="{% url 'transaction_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead><tr><th>Transaction</th><th class="d-none d-md-table-cell">Customer</th><th>Type</th><th>Amount</th></tr></thead>
+                        <tbody>
+                        {% for txn in recent_transactions %}
+                        <tr>
+                            <td><a href="{% url 'transaction_detail' pk=txn.pk %}">{{ txn.transaction_number }}</a></td>
+                            <td class="d-none d-md-table-cell">{{ txn.customer.get_full_name }}</td>
+                            <td><span class="badge {{ txn.transaction_type|status_badge_class }}">{{ txn.get_transaction_type_display }}</span></td>
+                            <td>{{ txn.amount|currency }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-3">No transactions yet</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card stagger-item">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Recent Loans</h6>
+                <a href="{% url 'loan_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead><tr><th>Loan #</th><th class="d-none d-md-table-cell">Customer</th><th>Amount</th><th>Status</th></tr></thead>
+                        <tbody>
+                        {% for loan in recent_loans %}
+                        <tr>
+                            <td><a href="{% url 'loan_detail' pk=loan.pk %}">{{ loan.loan_number }}</a></td>
+                            <td class="d-none d-md-table-cell">{{ loan.customer.get_full_name }}</td>
+                            <td>{{ loan.principal_amount|currency }}</td>
+                            <td><span class="badge {{ loan.status|status_badge_class }}">{{ loan.get_status_display }}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-3">No loans yet</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const chartData = {{ contributions_chart|safe }};
+new Chart(document.getElementById('contributionsChart'), {
+    type: 'line',
+    data: {
+        labels: chartData.map(d => d.date),
+        datasets: [{
+            label: 'Contributions (GHS)',
+            data: chartData.map(d => d.amount),
+            borderColor: '#0d6efd',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 3,
+            pointHoverRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', titleFont: { size: 12 }, bodyFont: { size: 11 }, padding: 10, cornerRadius: 8 } },
+        scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
+    }
+});
+</script>
+{% endblock %}

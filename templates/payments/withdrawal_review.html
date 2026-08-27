@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Review Withdrawal {{ withdrawal.withdrawal_number }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'withdrawal_list' %}" class="text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Back</a>
+    <h4 class="mt-2">Review Withdrawal {{ withdrawal.withdrawal_number }}</h4>
+</div>
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6"><small class="text-muted">Customer</small><br><strong>{{ withdrawal.customer.get_full_name }}</strong></div>
+                    <div class="col-6"><small class="text-muted">Account</small><br>{{ withdrawal.account.account_number }}</div>
+                    <div class="col-6"><small class="text-muted">Amount</small><br><h4 class="text-primary mb-0">{{ withdrawal.amount|currency }}</h4></div>
+                    <div class="col-6"><small class="text-muted">Balance</small><br>{{ withdrawal.account.current_balance|currency }}</div>
+                    <div class="col-12"><small class="text-muted">Reason</small><br>{{ withdrawal.reason|default:"-" }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white"><h6 class="mb-0">Decision</h6></div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Decision *</label><br>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="status" value="APPROVED" id="approve">
+                            <label class="form-check-label" for="approve">Approve</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="status" value="REJECTED" id="reject">
+                            <label class="form-check-label" for="reject">Reject</label>
+                        </div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Notes</label>{{ form.review_notes }}</div>
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-check me-1"></i>Submit Decision</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

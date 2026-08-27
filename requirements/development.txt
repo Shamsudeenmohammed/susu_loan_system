@@ -1,0 +1,10 @@
+-r base.txt
+django-debug-toolbar>=4.2,<5.0
+django-silk>=5.0,<6.0
+pytest-django>=4.7,<5.0
+factory-boy>=3.3,<4.0
+faker>=20.0,<22.0
+coverage>=7.3,<8.0
+flake8>=6.1,<7.0
+black>=23.9,<25.0
+isort>=5.12,<6.0

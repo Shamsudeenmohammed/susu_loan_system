@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Eligibility Audit Log{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h4><i class="fas fa-clipboard-list me-2"></i>Eligibility Audit Log</h4>
+</div>
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Policy</th>
+                    <th>Status</th>
+                    <th>Score</th>
+                    <th>Max Loan</th>
+                    <th>Failed</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for audit in audits %}
+                <tr>
+                    <td>{{ audit.created_at|date:"d M Y H:i" }}</td>
+                    <td>{{ audit.customer }}</td>
+                    <td>{{ audit.policy.name }}</td>
+                    <td>
+                        {% if audit.eligible %}
+                        <span class="badge bg-success">ELIGIBLE</span>
+                        {% else %}
+                        <span class="badge bg-danger">NOT ELIGIBLE</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ audit.eligibility_score }}%</td>
+                    <td>GHS {{ audit.maximum_loan_amount|floatformat:2 }}</td>
+                    <td>{{ audit.failed_criteria|length }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No audit records found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

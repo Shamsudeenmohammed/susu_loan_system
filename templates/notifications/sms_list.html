@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}SMS History{% endblock %}
+
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-sms me-2"></i>SMS Notifications <span class="badge bg-secondary">{{ total_count }}</span></h4>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-sm-6 col-md-4">
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-sm-6 col-md-4">
+                <select name="type" class="form-select">
+                    <option value="">All Types</option>
+                    {% for value, label in type_choices %}
+                    <option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-2"><button class="btn btn-primary w-100">Filter</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>#</th><th class="d-none d-md-table-cell">Phone</th><th>Type</th><th class="d-none d-lg-table-cell">Message</th><th>Status</th><th class="d-none d-md-table-cell">Date</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                {% for n in notifications %}
+                <tr>
+                    <td>{{ n.notification_number }}</td>
+                    <td class="d-none d-md-table-cell">{{ n.phone_number }}</td>
+                    <td><span class="badge bg-secondary">{{ n.get_notification_type_display }}</span></td>
+                    <td class="d-none d-lg-table-cell">{{ n.message|truncatechars:60 }}</td>
+                    <td><span class="badge {{ n.status|status_badge_class }}">{{ n.get_status_display }}</span></td>
+                    <td class="d-none d-md-table-cell">{{ n.created_at|date:"d M Y H:i" }}</td>
+                    <td><a href="{% url 'sms_notification_detail' pk=n.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No SMS records</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

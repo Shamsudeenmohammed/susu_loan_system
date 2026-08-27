@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Review Loan {{ loan.loan_number }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'loan_detail' pk=loan.pk %}" class="text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Back</a>
+    <h4 class="mt-2">Review {{ loan.loan_number }}</h4>
+</div>
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-6"><small class="text-muted">Customer</small><br><strong>{{ loan.customer.get_full_name }}</strong></div>
+                    <div class="col-6"><small class="text-muted">Product</small><br>{{ loan.loan_product.name }}</div>
+                    <div class="col-6"><small class="text-muted">Amount</small><br><h5 class="text-primary mb-0">{{ loan.principal_amount|currency }}</h5></div>
+                    <div class="col-6"><small class="text-muted">Term</small><br>{{ loan.term_months }} months</div>
+                    <div class="col-6"><small class="text-muted">Interest</small><br>{{ loan.interest_amount|currency }}</div>
+                    <div class="col-6"><small class="text-muted">Total</small><br><strong>{{ loan.total_amount|currency }}</strong></div>
+                    {% if loan.purpose %}
+                    <div class="col-12"><small class="text-muted">Purpose</small><br>{{ loan.purpose }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white"><h6 class="mb-0">Decision</h6></div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Decision *</label><br>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="decision" value="APPROVE" id="approve">
+                            <label class="form-check-label" for="approve">Approve</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="decision" value="REJECT" id="reject">
+                            <label class="form-check-label" for="reject">Reject</label>
+                        </div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Notes</label>
+                        <textarea class="form-control" name="notes" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Submit Decision</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}{{ customer.customer_number }} - {{ customer.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4 gap-2">
+    <div>
+        <h4 class="mb-0">{{ customer.get_full_name }}</h4>
+        <small class="text-muted">{{ customer.customer_number }}</small>
+    </div>
+    <a href="{% url 'customer_update' pk=customer.pk %}" class="btn btn-outline-primary btn-sm flex-shrink-0"><i class="fas fa-edit me-1"></i>Edit</a>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header"><h6 class="mb-0">Personal Information</h6></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-sm-6"><small class="text-muted d-block">Full Name</small>{{ customer.get_full_name }}</div>
+                    <div class="col-sm-6"><small class="text-muted d-block">Phone</small>{{ customer.phone }}</div>
+                    <div class="col-sm-6"><small class="text-muted d-block">Email</small>{{ customer.email|default:"-" }}</div>
+                    <div class="col-sm-6"><small class="text-muted d-block">Date of Birth</small>{{ customer.date_of_birth|default:"-" }}</div>
+                    <div class="col-sm-6"><small class="text-muted d-block">Gender</small>{{ customer.get_gender_display|default:"-" }}</div>
+                    <div class="col-sm-6"><small class="text-muted d-block">Status</small><br><span class="badge {{ customer.status|status_badge_class }}">{{ customer.status }}</span></div>
+                    <div class="col-sm-6"><small class="text-muted d-block">Occupation</small>{{ customer.occupation|default:"-" }}</div>
+                    <div class="col-sm-6"><small class="text-muted d-block">Address</small>{{ customer.address|default:"-" }}</div>
+                    <div class="col-sm-6"><small class="text-muted d-block">Emergency Contact</small>{{ customer.emergency_contact_name|default:"-" }} {{ customer.emergency_contact_phone }}</div>
+                    <div class="col-sm-6"><small class="text-muted d-block">ID</small>{{ customer.get_id_type_display|default:"-" }} {{ customer.id_number }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header"><h6 class="mb-0">Savings Accounts</h6></div>
+            <div class="list-group list-group-flush">
+                {% for acc in susu_accounts %}
+                <a href="{% url 'susu_account_detail' pk=acc.pk %}" class="list-group-item list-group-item-action">
+                    <div class="d-flex justify-content-between">
+                        <div><strong>{{ acc.account_number }}</strong><br><small class="text-muted">{{ acc.get_contribution_frequency_display }}</small></div>
+                        <div class="text-end"><strong class="text-success">{{ acc.current_balance|currency }}</strong><br><span class="badge {{ acc.status|status_badge_class }}">{{ acc.status }}</span></div>
+                    </div>
+                </a>
+                {% empty %}
+                <div class="list-group-item text-center text-muted py-3">No savings accounts</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

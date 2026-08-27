@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Record Repayment{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h4><i class="fas fa-money-check-alt me-2"></i>Record Loan Repayment</h4>
+</div>
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        {% for field, errors in form.errors.items %}
+                        {% for error in errors %}<p class="mb-0"><strong>{{ field }}:</strong> {{ error }}</p>{% endfor %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label">Loan *</label>
+                        <div class="searchable-select-wrapper">
+                            <div class="searchable-select-search">
+                                <i class="fas fa-search"></i>
+                                <input type="text" class="form-control form-control-sm" placeholder="Search by loan number or customer..." id="loanSearchInput">
+                            </div>
+                            <div class="searchable-select-results" id="loanSearchResults"></div>
+                            {{ form.loan }}
+                        </div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Amount (GHS) *</label>{{ form.amount }}</div>
+                    <div class="mb-3"><label class="form-label">Payment Method *</label>{{ form.payment_method }}</div>
+                    <div class="mb-3"><label class="form-label">Reference</label>{{ form.reference }}</div>
+                    <div class="mb-3"><label class="form-label">Notes</label>{{ form.notes }}</div>
+                    <button type="submit" class="btn btn-success w-100"><i class="fas fa-check me-1"></i>Record Repayment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initSearchableSelect('id_loan', 'loanSearchInput', 'loanSearchResults');
+});
+</script>
+{% endblock %}

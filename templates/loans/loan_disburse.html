@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Disburse Loan {{ loan.loan_number }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'loan_detail' pk=loan.pk %}" class="text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Back</a>
+    <h4 class="mt-2">Disburse {{ loan.loan_number }}</h4>
+</div>
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-6"><small class="text-muted">Customer</small><br><strong>{{ loan.customer.get_full_name }}</strong></div>
+                    <div class="col-6"><small class="text-muted">Loan #</small><br>{{ loan.loan_number }}</div>
+                    <div class="col-6"><small class="text-muted">Principal</small><br>{{ loan.principal_amount|currency }}</div>
+                    <div class="col-6"><small class="text-muted">Processing Fee</small><br>{{ loan.processing_fee|currency }}</div>
+                    <div class="col-6"><small class="text-muted">Disbursement Amount</small><br><h5 class="text-success mb-0">{{ loan.disbursement_amount|currency }}</h5></div>
+                    <div class="col-6"><small class="text-muted">Total to Repay</small><br><strong>{{ loan.total_amount|currency }}</strong></div>
+                </div>
+            </div>
+        </div>
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-1"></i>
+            This will disburse the loan, create a ledger transaction, generate the repayment schedule, and send an SMS notification.
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success w-100 btn-lg" onclick="return confirm('Confirm disbursement of {{ loan.disbursement_amount }}?')">
+                <i class="fas fa-money-check me-1"></i>Confirm Disbursement
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

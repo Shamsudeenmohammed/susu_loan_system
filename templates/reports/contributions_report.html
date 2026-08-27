@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Contributions Report{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">Contributions Report <span class="badge bg-success">{{ total|currency }}</span></h4>
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-4"><input type="date" name="start_date" class="form-control" value="{{ start_date }}" placeholder="Start Date"></div>
+            <div class="col-md-4"><input type="date" name="end_date" class="form-control" value="{{ end_date }}" placeholder="End Date"></div>
+            <div class="col-md-2"><button class="btn btn-primary w-100">Filter</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light"><tr><th>#</th><th>Customer</th><th>Amount</th><th>Method</th><th>Recorded By</th><th>Date</th></tr></thead>
+                <tbody>
+                {% for t in transactions %}
+                <tr><td>{{ t.transaction_number }}</td><td>{{ t.customer.get_full_name }}</td><td class="text-success fw-bold">{{ t.amount|currency }}</td><td>{{ t.get_payment_method_display }}</td><td>{{ t.created_by.get_full_name|default:"-" }}</td><td>{{ t.created_at|date:"d M Y H:i" }}</td></tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No contributions found</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

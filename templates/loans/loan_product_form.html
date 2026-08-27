@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'loan_product_list' %}" class="text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Back</a>
+    <h4 class="mt-2">{{ title }}</h4>
+</div>
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                {% for field, errors in form.errors.items %}
+                {% for error in errors %}<p class="mb-0"><strong>{{ field }}:</strong> {{ error }}</p>{% endfor %}
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="row g-3">
+                <div class="col-md-6"><label class="form-label">Product Name *</label>{{ form.name }}</div>
+                <div class="col-md-6"><label class="form-label">Code *</label>{{ form.code }}</div>
+                <div class="col-12"><label class="form-label">Description</label>{{ form.description }}</div>
+                <div class="col-md-4"><label class="form-label">Min Amount *</label>{{ form.min_amount }}</div>
+                <div class="col-md-4"><label class="form-label">Max Amount *</label>{{ form.max_amount }}</div>
+                <div class="col-md-4"><label class="form-label">Interest Rate (%) *</label>{{ form.interest_rate }}</div>
+                <div class="col-md-4"><label class="form-label">Interest Method *</label>{{ form.interest_method }}</div>
+                <div class="col-md-4"><label class="form-label">Min Term (months) *</label>{{ form.min_term }}</div>
+                <div class="col-md-4"><label class="form-label">Max Term (months) *</label>{{ form.max_term }}</div>
+                <div class="col-md-4"><label class="form-label">Repayment Frequency *</label>{{ form.repayment_frequency }}</div>
+                <div class="col-md-4"><label class="form-label">Processing Fee (%)</label>{{ form.processing_fee_percentage }}</div>
+                <div class="col-md-4"><label class="form-label">Late Penalty (GHS)</label>{{ form.late_payment_penalty }}</div>
+                <div class="col-md-4"><label class="form-label">Active</label><br>{{ form.is_active }}</div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

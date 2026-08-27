@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Loan {{ loan.loan_number }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4 gap-2">
+    <div>
+        <a href="{% url 'loan_list' %}" class="text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Back</a>
+        <h4 class="mt-2 mb-0">{{ loan.loan_number }} <span class="badge {{ loan.status|status_badge_class }}">{{ loan.get_status_display }}</span></h4>
+    </div>
+    <div class="d-flex gap-1 flex-shrink-0">
+        {% if loan.status == 'SUBMITTED' %}
+        <a href="{% url 'loan_review' pk=loan.pk %}" class="btn btn-warning btn-sm">Review</a>
+        {% endif %}
+        {% if loan.status == 'APPROVED' %}
+        <a href="{% url 'loan_disburse' pk=loan.pk %}" class="btn btn-success btn-sm">Disburse</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header"><h6 class="mb-0">Loan Details</h6></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-sm-6 col-md-4"><small class="text-muted d-block">Customer</small><strong>{{ loan.customer.get_full_name }}</strong></div>
+                    <div class="col-sm-6 col-md-4"><small class="text-muted d-block">Product</small>{{ loan.loan_product.name }}</div>
+                    <div class="col-sm-6 col-md-4"><small class="text-muted d-block">Term</small>{{ loan.term_months }} months</div>
+                    <div class="col-6 col-md-3"><small class="text-muted d-block">Principal</small><strong>{{ loan.principal_amount|currency }}</strong></div>
+                    <div class="col-6 col-md-3"><small class="text-muted d-block">Interest</small>{{ loan.interest_amount|currency }}</div>
+                    <div class="col-6 col-md-3"><small class="text-muted d-block">Processing Fee</small>{{ loan.processing_fee|currency }}</div>
+                    <div class="col-6 col-md-3"><small class="text-muted d-block">Total Amount</small><strong>{{ loan.total_amount|currency }}</strong></div>
+                    <div class="col-6 col-md-3"><small class="text-muted d-block">Outstanding</small><strong class="text-danger">{{ loan.outstanding_balance|currency }}</strong></div>
+                    <div class="col-6 col-md-3"><small class="text-muted d-block">Disbursement</small>{{ loan.disbursement_amount|currency }}</div>
+                    <div class="col-6 col-md-3"><small class="text-muted d-block">Submitted</small>{{ loan.application_date|date:"d M Y" }}</div>
+                    <div class="col-12">
+                        <small class="text-muted d-block mb-1">Progress</small>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" style="width: {{ loan.completion_percentage }}%">{{ loan.completion_percentage }}%</div>
+                        </div>
+                    </div>
+                    {% if loan.purpose %}
+                    <div class="col-12"><small class="text-muted d-block">Purpose</small>{{ loan.purpose }}</div>
+                    {% endif %}
+                    {% if loan.rejection_reason %}
+                    <div class="col-12"><small class="text-muted d-block">Rejection Reason</small><span class="text-danger">{{ loan.rejection_reason }}</span></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if schedules %}
+        <div class="card mb-3">
+            <div class="card-header"><h6 class="mb-0">Repayment Schedule</h6></div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr><th>#</th><th class="d-none d-md-table-cell">Due Date</th><th>Principal</th><th class="d-none d-md-table-cell">Interest</th><th>Total Due</th><th>Paid</th><th class="d-none d-md-table-cell">Remaining</th><th>Status</th></tr></thead>
+                        <tbody>
+                        {% for s in schedules %}
+                        <tr>
+                            <td>{{ s.installment_number }}</td>
+                            <td class="d-none d-md-table-cell">{{ s.due_date }}</td>
+                            <td>{{ s.principal_due|currency }}</td>
+                            <td class="d-none d-md-table-cell">{{ s.interest_due|currency }}</td>
+                            <td>{{ s.total_due|currency }}</td>
+                            <td>{{ s.amount_paid|currency }}</td>
+                            <td class="d-none d-md-table-cell">{{ s.amount_remaining|currency }}</td>
+                            <td><span class="badge {{ s.status|status_badge_class }}">{{ s.get_status_display }}</span></td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        {% if repayments %}
+        <div class="card">
+            <div class="card-header"><h6 class="mb-0">Repayment History</h6></div>
+            <div class="list-group list-group-flush">
+                {% for r in repayments %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <div><strong>{{ r.repayment_number }}</strong><br><small class="text-muted">{{ r.created_at|date:"d M Y" }}</small></div>
+                        <div class="text-end"><strong class="text-success">{{ r.amount|currency }}</strong><br><small>{{ r.get_payment_method_display }}</small></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

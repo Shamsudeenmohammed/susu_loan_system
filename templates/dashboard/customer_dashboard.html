@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}My Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Welcome, {{ customer.get_full_name }}</h4>
+    <span class="badge bg-primary">{{ customer.customer_number }}</span>
+</div>
+
+{% if payment_pending %}
+<div id="payment-pending-banner" class="alert alert-info d-flex align-items-center mb-4" role="alert">
+    <div class="spinner-border spinner-border-sm me-3" role="status"></div>
+    <div>
+        <strong>Processing your payment...</strong>
+        <p class="mb-0 small">Your balance will update automatically. This page refreshes every 3 seconds.</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card primary stagger-item" style="background: linear-gradient(135deg, #0d6efd, #6366f1); color: #fff;">
+            <div class="card-body text-center py-4">
+                <i class="fas fa-wallet fa-2x mb-2 opacity-75"></i>
+                <p class="mb-1 opacity-75" style="font-size:0.8rem;">Savings Balance</p>
+                <h2 class="mb-0 fw-bold">{{ total_balance|currency }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card success stagger-item">
+            <div class="card-body text-center py-4">
+                <i class="fas fa-arrow-down text-success fa-2x mb-2"></i>
+                <p class="text-muted mb-1" style="font-size:0.8rem;">Total Contributions</p>
+                <h2 class="text-success mb-0 fw-bold">{{ total_contributions|currency }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card danger stagger-item">
+            <div class="card-body text-center py-4">
+                <i class="fas fa-arrow-up text-danger fa-2x mb-2"></i>
+                <p class="text-muted mb-1" style="font-size:0.8rem;">Total Withdrawals</p>
+                <h2 class="text-danger mb-0 fw-bold">{{ total_withdrawals|currency }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Loan -->
+{% if active_loan %}
+<div class="card mb-4 stagger-item">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="fas fa-file-invoice-dollar me-2"></i>Active Loan: {{ active_loan.loan_number }}</h6>
+        <a href="{% url 'loan_detail' pk=active_loan.pk %}" class="btn btn-sm btn-outline-primary">View Details</a>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-sm-6 col-md-3">
+                <small class="text-muted d-block">Principal</small>
+                <strong>{{ active_loan.principal_amount|currency }}</strong>
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <small class="text-muted d-block">Outstanding</small>
+                <strong class="text-danger">{{ active_loan.outstanding_balance|currency }}</strong>
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <small class="text-muted d-block">Total Paid</small>
+                <strong class="text-success">{{ total_loan_repaid|currency }}</strong>
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <small class="text-muted d-block">Next Repayment</small>
+                {% if next_repayment %}
+                <strong>{{ next_repayment.total_due|currency }}</strong>
+                <small class="text-muted d-block">Due: {{ next_repayment.due_date }}</small>
+                {% else %}
+                <strong class="text-success">All paid!</strong>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Quick Actions -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <a href="{% url 'customer_contribute' %}" class="card quick-action-card text-decoration-none stagger-item">
+            <div class="card-body text-center py-3">
+                <div class="quick-icon bg-primary bg-opacity-10"><i class="fas fa-hand-holding-usd text-primary"></i></div>
+                <h6>Contribute</h6>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="{% url 'loan_apply' %}" class="card quick-action-card text-decoration-none stagger-item">
+            <div class="card-body text-center py-3">
+                <div class="quick-icon bg-success bg-opacity-10"><i class="fas fa-file-alt text-success"></i></div>
+                <h6>Apply for Loan</h6>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="{% url 'withdrawal_request' %}" class="card quick-action-card text-decoration-none stagger-item">
+            <div class="card-body text-center py-3">
+                <div class="quick-icon bg-warning bg-opacity-10"><i class="fas fa-money-bill-wave text-warning"></i></div>
+                <h6>Withdraw</h6>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="{% url 'customer_transactions' %}" class="card quick-action-card text-decoration-none stagger-item">
+            <div class="card-body text-center py-3">
+                <div class="quick-icon bg-info bg-opacity-10"><i class="fas fa-history text-info"></i></div>
+                <h6>Transactions</h6>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Recent Transactions + Notifications -->
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card stagger-item">
+            <div class="card-header"><h6 class="mb-0">Recent Transactions</h6></div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead><tr><th>#</th><th>Type</th><th>Amount</th><th class="d-none d-sm-table-cell">Date</th></tr></thead>
+                        <tbody>
+                        {% for txn in recent_transactions %}
+                        <tr>
+                            <td>{{ txn.transaction_number }}</td>
+                            <td><span class="badge {{ txn.transaction_type|status_badge_class }}">{{ txn.get_transaction_type_display }}</span></td>
+                            <td>{{ txn.amount|currency }}</td>
+                            <td class="d-none d-sm-table-cell">{{ txn.created_at|date:"d M Y" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-3">No transactions yet</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card stagger-item">
+            <div class="card-header"><h6 class="mb-0">Recent Notifications</h6></div>
+            <div class="list-group list-group-flush">
+                {% for n in recent_notifications %}
+                <div class="list-group-item">
+                    <small class="text-muted">{{ n.created_at|date:"d M Y H:i" }}</small><br>
+                    {{ n.message|truncatechars:100 }}
+                </div>
+                {% empty %}
+                <div class="list-group-item text-center text-muted py-3">No notifications</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if payment_pending %}
+<script>
+(function() {
+    let checkCount = 0;
+    const maxChecks = 60;
+    const interval = setInterval(function() {
+        checkCount++;
+        if (checkCount >= maxChecks) {
+            clearInterval(interval);
+            const banner = document.getElementById('payment-pending-banner');
+            if (banner) {
+                banner.classList.replace('alert-info', 'alert-warning');
+                banner.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i> Payment check timed out. <a href="?">Refresh</a> or contact support.';
+            }
+            return;
+        }
+        fetch('/payments/check/')
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok' && data.has_transaction) {
+                    clearInterval(interval);
+                    const banner = document.getElementById('payment-pending-banner');
+                    if (banner) {
+                        banner.classList.replace('alert-info', 'alert-success');
+                        banner.innerHTML = '<i class="fas fa-check-circle me-2"></i> Payment recorded! Transaction: ' + data.transaction_number + ' — Balance: GHS ' + data.account_balance;
+                    }
+                    setTimeout(function() { location.reload(); }, 1500);
+                }
+            })
+            .catch(() => {});
+    }, 3000);
+})();
+</script>
+{% endif %}
+{% endblock %}
