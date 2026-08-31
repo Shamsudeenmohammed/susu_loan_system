@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f766e"/>
+      <stop offset="100%" stop-color="#115e59"/>
+    </linearGradient>
+    <linearGradient id="coin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Outer badge -->
+  <circle cx="60" cy="60" r="56" fill="url(#bg)"/>
+  <circle cx="60" cy="60" r="56" fill="none" stroke="#d4af37" stroke-width="4"/>
+
+  <!-- Coin -->
+  <circle cx="60" cy="60" r="34" fill="url(#coin)"/>
+  <circle cx="60" cy="60" r="34" fill="none" stroke="#92400e" stroke-width="2"/>
+  <circle cx="60" cy="60" r="27" fill="none" stroke="#92400e" stroke-width="1.2"/>
+
+  <!-- Z monogram -->
+  <text x="60" y="73" font-family="Arial, Helvetica, sans-serif" font-size="40" font-weight="bold"
+        fill="#78350f" text-anchor="middle">Z
+  </text>
+</svg>

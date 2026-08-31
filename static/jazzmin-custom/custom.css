@@ -1,0 +1,191 @@
+/* ==========================================================================
+   Zemzem Savings and Loans — Jazzmin admin alignment/styling overrides
+   ========================================================================== */
+
+/* --- Brand / logo alignment --------------------------------------------- */
+.brand-link {
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 1rem;
+}
+
+.brand-image {
+    float: none;
+    width: 34px;
+    height: 34px;
+    line-height: 34px;
+    margin-left: 0;
+    margin-right: 0.6rem;
+}
+
+.brand-text {
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1;
+    color: #fff;
+}
+
+/* --- Navbar: keep search compact and aligned ---------------------------- */
+#jazzy-navbar .navbar-nav .nav-link {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1.6rem;
+}
+
+#jazzy-navbar form .input-group {
+    min-width: 220px;
+    max-width: 280px;
+}
+
+.form-control-navbar {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* --- Change form: cleaner field rows ------------------------------------ */
+#content-main form .form-group {
+    margin-bottom: 0.35rem;
+}
+
+#content-main form .form-group > .row {
+    align-items: center;
+    margin: 0;
+}
+
+#content-main form .form-group > .row > label {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    margin-bottom: 0;
+}
+
+#content-main form .form-group > .row > div {
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+}
+
+/* Kill the empty help-block divs that add stray vertical space */
+#content-main .help-block.red:empty,
+#content-main .help-block.text-red:empty,
+#content-main .form-group .help-block:empty {
+    display: none;
+}
+
+/* Align readonly values vertically with inputs */
+#content-main .readonly {
+    padding-top: 0.325rem;
+}
+
+/* --- Card headers / content spacing -------------------------------------- */
+.card .card-body {
+    padding-top: 1rem;
+}
+
+#jazzy-actions .object-tools {
+    margin-top: 0.75rem;
+}
+
+/* --- Sidebar nav item alignment ------------------------------------------ */
+.sidebar-menu .nav-link {
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-menu .nav-link p {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* --- Login page polish --------------------------------------------------- */
+.login-page,
+.register-page {
+    background: linear-gradient(140deg, #0f766e 0%, #115e59 45%, #0f172a 100%) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-box,
+.register-box {
+    width: 400px;
+    max-width: 92%;
+    margin: 0;
+}
+
+.login-logo,
+.register-logo {
+    margin-bottom: 0.5rem;
+}
+
+.login-logo .logo-light,
+.register-logo .logo-light {
+    width: 64px;
+    height: 64px;
+}
+
+.login-card-body,
+.register-card-body {
+    border-radius: 0 0 0.75rem 0.75rem;
+    box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.35);
+}
+
+.login-logo a,
+.register-logo a {
+    color: #14532d;
+    font-weight: 700;
+}
+
+.bg-login {
+    background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+}
+
+/* --- Horizontal-tabs change form ------------------------------------------ */
+.jazzmin-tabs-wrapper .nav.nav-tabs {
+    border-bottom: 1px solid var(--border, #e2e8f0);
+    padding-bottom: 0;
+}
+
+.jazzmin-tabs-wrapper .nav-tabs .nav-link {
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem;
+}
+
+.jazzmin-tabs-wrapper .nav-tabs .nav-link.active {
+    color: #0f766e;
+    background: transparent;
+    border-bottom-color: #0f766e;
+}
+
+/* --- Content header / breadcrumbs ----------------------------------------- */
+.content-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0 0 0.75rem;
+}
+
+.content-header h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.breadcrumb {
+    margin: 0;
+}
+
+/* --- Alerts inside forms ------------------------------------------------- */
+#content-main .alert {
+    margin-bottom: 0.5rem;
+}
+
+/* --- Footer -------------------------------------------------------------- */
+.app-footer {
+    font-size: 0.875rem;
+}
