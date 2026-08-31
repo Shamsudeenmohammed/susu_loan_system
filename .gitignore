@@ -45,4 +45,3 @@ coverage.xml
 
 *.pid
 *.seed
-.env.example

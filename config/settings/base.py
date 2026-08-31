@@ -11,6 +11,7 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -126,10 +127,13 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
-# Brevo SMS
-BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '')
-BREVO_SMS_SENDER = os.environ.get('BREVO_SMS_SENDER', 'Zemzem savings and loans')
-BREVO_ENABLED = os.environ.get('BREVO_ENABLED', 'False') == 'True'
+# Sailup SMS
+SMS_PROVIDER = os.environ.get('SMS_PROVIDER', 'sailup')
+SAILUP_API_KEY = os.environ.get('SAILUP_API_KEY', '')
+SAILUP_BASE_URL = os.environ.get('SAILUP_BASE_URL', 'https://api.sailup.io/v1')
+SAILUP_SENDER_ID = os.environ.get('SAILUP_SENDER_ID', 'ZEMZEM')
+SAILUP_TIMEOUT = int(os.environ.get('SAILUP_TIMEOUT', '10'))
+SAILUP_ENABLED = os.environ.get('SAILUP_ENABLED', 'False') == 'True'
 SMS_TEST_MODE = os.environ.get('SMS_TEST_MODE', 'True') == 'True'
 
 # Paystack
@@ -180,5 +184,129 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
         },
+    },
+}
+
+# ==============================================================================
+# DJANGO JAZZMIN - Admin Backend Theme
+# ==============================================================================
+JAZZMIN_SETTINGS = {
+    # ------------------------------------------------------------------
+    # Branding
+    # ------------------------------------------------------------------
+    'site_title': 'Zemzem Savings and Loans',
+    'site_header': 'Zemzem Savings and Loans',
+    'site_brand': 'Zemzem',
+    'welcome_sign': 'Welcome to the Zemzem Savings and Loans Admin Portal',
+    'copyright': 'Zemzem Savings and Loans',
+    'site_logo': 'jazzmin-custom/logo.svg',
+    'login_logo': 'jazzmin-custom/logo.svg',
+    'site_logo_classes': 'img-circle',
+    'site_icon': 'jazzmin-custom/logo.svg',
+    'show_sidebar': True,
+    'navigation_expanded': True,
+
+    # ------------------------------------------------------------------
+    # Search — single box in the navbar keeps the top bar aligned
+    # ------------------------------------------------------------------
+    'search_model': 'customers.Customer',
+    'search_sources': ['customers.Customer', 'susu.SusuAccount', 'payments.Transaction', 'loans.Loan'],
+
+    # ------------------------------------------------------------------
+    # Icons (Font Awesome) for models and apps
+    # ------------------------------------------------------------------
+    'icons': {
+        'auth.User': 'fas fa-user',
+        'accounts.User': 'fas fa-user-shield',
+        'customers.Customer': 'fas fa-users',
+        'susu.SusuAccount': 'fas fa-piggy-bank',
+        'loans.LoanProduct': 'fas fa-tags',
+        'loans.LoanPolicy': 'fas fa-book',
+        'loans.Loan': 'fas fa-file-invoice-dollar',
+        'loans.RepaymentSchedule': 'fas fa-calendar-alt',
+        'loans.LoanRepayment': 'fas fa-money-bill-wave',
+        'loans.EligibilityAudit': 'fas fa-clipboard-check',
+        'payments.Transaction': 'fas fa-exchange-alt',
+        'payments.Withdrawal': 'fas fa-hand-holding-usd',
+        'notifications.SMSNotification': 'fas fa-sms',
+        'audit.AuditLog': 'fas fa-history',
+    },
+    'default_icon_parents': 'fas fa-chevron-circle-down',
+    'default_icon_children': 'fas fa-circle',
+
+    # ------------------------------------------------------------------
+    # Ordering
+    # ------------------------------------------------------------------
+    'order_with_respect_to': [
+        'customers',
+        'susu',
+        'payments',
+        'loans',
+        'notifications',
+        'audit',
+        'accounts',
+        'auth',
+    ],
+    'related_modal_active': False,
+    'show_ui_builder': True,
+
+    # ------------------------------------------------------------------
+    # Top menu
+    # ------------------------------------------------------------------
+    'topmenu_links': [
+        {'name': 'Home', 'url': 'admin:index', 'new_window': False},
+        {'model': 'customers.Customer'},
+        {'model': 'payments.Transaction'},
+        {'model': 'loans.Loan'},
+        {'app': 'audit'},
+        {'app': 'reports'},
+        {'name': 'Support', 'url': 'https://zemzemsavings.com', 'new_window': True},
+    ],
+
+    # ------------------------------------------------------------------
+    # Forms / navigation
+    # ------------------------------------------------------------------
+    'show_changelist_header': True,
+    'changeform_format': 'horizontal_tabs',
+    'add_changeform_link_back': False,
+    'custom_css': 'jazzmin-custom/custom.css',
+    'custom_js': None,
+    'usermenu_links': [
+        {'name': 'View Customer Site', 'url': '/', 'new_window': True},
+    ],
+    'langmenu_active': False,
+}
+
+# ----------------------------------------------------------------------------
+# Colour / UI tweaks
+# ----------------------------------------------------------------------------
+JAZZMIN_UI_TWEAKS = {
+    'navbar_small_text': False,
+    'footer_small_text': False,
+    'body_small_text': False,
+    'brand_small_text': False,
+    'brand_colour': 'navbar-dark',
+    'accent': 'accent-success',
+    'navbar': 'navbar-success navbar-dark',
+    'no_navbar_border': False,
+    'navbar_fixed': True,
+    'layout_boxed': False,
+    'footer_fixed': False,
+    'sidebar_fixed': True,
+    'sidebar': 'sidebar-dark-success',
+    'sidebar_nav_small_text': False,
+    'sidebar_disable_expand': False,
+    'sidebar_nav_child_indent': True,
+    'sidebar_nav_compact_style': False,
+    'sidebar_nav_legacy_style': True,
+    'sidebar_nav_flat_style': False,
+    'theme': 'slate',
+    'button_classes': {
+        'primary': 'btn-outline-primary',
+        'secondary': 'btn-outline-secondary',
+        'info': 'btn-info',
+        'warning': 'btn-warning',
+        'danger': 'btn-danger',
+        'success': 'btn-success',
     },
 }

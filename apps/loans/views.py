@@ -178,12 +178,24 @@ def loan_review(request, pk):
                 loan.approved_by = request.user
                 loan.save()
                 messages.success(request, f'Loan {loan.loan_number} approved.')
+
+                from apps.notifications.tasks import send_loan_approved_sms
+                try:
+                    send_loan_approved_sms.delay(loan.pk)
+                except Exception:
+                    pass
             else:
                 loan.status = Loan.Status.REJECTED
                 loan.rejected_by = request.user
                 loan.rejection_reason = notes
                 loan.save()
                 messages.info(request, f'Loan {loan.loan_number} rejected.')
+
+                from apps.notifications.tasks import send_loan_rejected_sms
+                try:
+                    send_loan_rejected_sms.delay(loan.pk)
+                except Exception:
+                    pass
             return redirect('loan_detail', pk=pk)
     else:
         form = LoanReviewForm()

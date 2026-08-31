@@ -23,4 +23,4 @@ pytest-django>=4.7,<5.0
 factory-boy>=3.3,<4.0
 faker>=20.0,<22.0
 coverage>=7.3,<8.0
-sib-api-v3-sdk>=7.6,<8.0
+django-jazzmin>=3.0,<4.0

@@ -23,22 +23,28 @@ def format_currency(amount):
 def normalize_ghana_phone(phone):
     """
     Normalize Ghanaian phone numbers to +233XXXXXXXXX format.
-    Supports: 024XXXXXXX, 054XXXXXXX, 055XXXXXXX, 020XXXXXXX, 050XXXXXXX
+    Supports: 024XXXXXXX, 054XXXXXXX, 055XXXXXXX, 020XXXXXXX, 050XXXXXXX,
+              233XXXXXXXXX, +233XXXXXXXXX.
+    Returns the original value unchanged if it cannot be recognized.
     """
-    import phonenumbers
     if not phone:
         return phone
 
-    phone = phone.strip().replace(' ', '').replace('-', '')
+    original = phone
+    phone = str(phone).strip().replace(' ', '').replace('-', '')
 
-    if phone.startswith('+233'):
-        return phone
-    elif phone.startswith('233'):
+    if phone.startswith('+'):
+        if phone.startswith('+233'):
+            return phone
+        return '+' + phone.lstrip('+')
+
+    if phone.startswith('233') and len(phone) == 12:
         return f'+{phone}'
-    elif phone.startswith('0'):
+
+    if phone.startswith('0') and len(phone) == 10:
         return f'+233{phone[1:]}'
 
-    return phone
+    return original
 
 
 def validate_ghana_phone(phone):

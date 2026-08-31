@@ -18,8 +18,17 @@
                     <div class="col-6"><small class="text-muted">Phone</small><br>{{ notification.phone_number }}</div>
                     <div class="col-6"><small class="text-muted">Type</small><br>{{ notification.get_notification_type_display }}</div>
                     <div class="col-12"><small class="text-muted">Message</small><br><div class="p-3 bg-light rounded">{{ notification.message }}</div></div>
-                    {% if notification.brevo_message_id %}
-                    <div class="col-6"><small class="text-muted">Brevo Message ID</small><br>{{ notification.brevo_message_id }}</div>
+                    {% if notification.provider_message_id %}
+                    <div class="col-6"><small class="text-muted">Provider Message ID</small><br>{{ notification.provider_message_id }}</div>
+                    {% endif %}
+                    {% if notification.provider %}
+                    <div class="col-6"><small class="text-muted">Provider</small><br>{{ notification.provider }}</div>
+                    {% endif %}
+                    {% if notification.delivery_status %}
+                    <div class="col-6"><small class="text-muted">Delivery Status</small><br>{{ notification.delivery_status }}</div>
+                    {% endif %}
+                    {% if notification.retry_count %}
+                    <div class="col-6"><small class="text-muted">Retries</small><br>{{ notification.retry_count }}</div>
                     {% endif %}
                     {% if notification.error_message %}
                     <div class="col-12"><small class="text-muted">Error</small><br><span class="text-danger">{{ notification.error_message }}</span></div>

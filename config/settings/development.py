@@ -21,6 +21,12 @@ CORS_ALLOW_ALL_ORIGINS = True
 INSTALLED_APPS += ['debug_toolbar']
 MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
 INTERNAL_IPS = ['127.0.0.1']
+DEBUG_TOOLBAR_CONFIG = {
+    'DISABLE_PANELS': {
+        'debug_toolbar.panels.staticfiles.StaticFilesPanel',
+        'debug_toolbar.panels.redirects.RedirectsPanel',
+    },
+}
 
 # Use synchronous Celery in development
 CELERY_TASK_ALWAYS_EAGER = True

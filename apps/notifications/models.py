@@ -20,11 +20,11 @@ class SMSNotification(models.Model):
         GENERAL = 'GENERAL', 'General'
 
     class Status(models.TextChoices):
-        PENDING = 'PENDING', 'Pending'
+        QUEUED = 'QUEUED', 'Queued'
+        SENDING = 'SENDING', 'Sending'
         SENT = 'SENT', 'Sent'
         DELIVERED = 'DELIVERED', 'Delivered'
         FAILED = 'FAILED', 'Failed'
-        REJECTED = 'REJECTED', 'Rejected'
 
     notification_number = models.CharField(max_length=20, unique=True, editable=False)
     customer = models.ForeignKey(
@@ -42,9 +42,13 @@ class SMSNotification(models.Model):
     )
     reference_model = models.CharField(max_length=50, blank=True)
     reference_id = models.PositiveIntegerField(null=True, blank=True)
-    brevo_message_id = models.CharField(max_length=100, blank=True)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    provider = models.CharField(max_length=50, blank=True)
+    provider_message_id = models.CharField(max_length=100, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.QUEUED)
+    delivery_status = models.CharField(max_length=50, blank=True)
     error_message = models.TextField(blank=True)
+    retry_count = models.PositiveIntegerField(default=0)
+    unique_key = models.CharField(max_length=200, blank=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     sent_at = models.DateTimeField(null=True, blank=True)
     delivered_at = models.DateTimeField(null=True, blank=True)

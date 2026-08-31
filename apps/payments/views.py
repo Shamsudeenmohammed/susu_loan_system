@@ -274,69 +274,82 @@ def customer_contribute_callback(request):
     """Paystack callback — record contribution, notify customer."""
     import logging
     logger = logging.getLogger('apps.payments')
+    from .paystack import verify_payment
 
     pending = request.session.pop('pending_contribution', None)
-    if not pending:
-        logger.warning("Callback with no pending_contribution in session. user=%s", request.user.pk)
-        messages.warning(
-            request,
-            'Your payment is being processed. Your balance will update shortly.'
-        )
-        return redirect(f"{reverse('customer_dashboard')}?payment_pending=1")
-
-    customer = request.user.customer_profile
-    account_id = pending.get('account_id')
-    pending_amount = Decimal(pending.get('amount', '0'))
-    our_ref = pending.get('reference', '')
-
-    try:
-        account = SusuAccount.objects.get(pk=account_id, customer=customer, status='ACTIVE')
-    except SusuAccount.DoesNotExist:
-        logger.error("Callback account not found. account_id=%s customer=%s", account_id, customer.pk)
-        messages.error(request, 'Account not found. Please contact support.')
-        return redirect('customer_dashboard')
+    logger.info("Callback hit. user=%s has_pending=%s", request.user.pk, bool(pending))
 
     paystack_ref = (
         request.GET.get('reference', '')
         or request.GET.get('trxref', '')
         or request.GET.get('ref', '')
     )
+    our_ref = (pending or {}).get('reference', '')
 
-    logger.info(
-        "Callback received. user=%s paystack_ref=%s our_ref=%s amount=%.2f",
-        request.user.pk, paystack_ref, our_ref, float(pending_amount),
-    )
+    customer = request.user.customer_profile
 
+    # --- Resolve customer + account + amount ---
+    amount = None
+    account = None
     verified_ref = paystack_ref or our_ref
 
-    if settings.DEBUG:
-        amount = pending_amount
-    else:
-        from .paystack import verify_payment
-        result = {'status': False}
-        if paystack_ref:
-            result = verify_payment(paystack_ref)
-        if not result['status'] and our_ref and our_ref != paystack_ref:
-            result = verify_payment(our_ref)
-        if not result['status'] or result.get('amount', 0) <= 0:
-            logger.warning("Verification failed. ref=%s result=%s", verified_ref, result)
-            messages.warning(request, 'Payment is being processed. Your balance will update shortly.')
-            return redirect(f"{reverse('customer_dashboard')}?payment_pending=1")
-        amount = result['amount']
+    # 1. Try Paystack API verification FIRST — recovers from session loss,
+    #    and returns authoritative amount + metadata (works in test AND prod).
+    verify_result = None
+    for ref_candidate in [paystack_ref, our_ref]:
+        if ref_candidate:
+            verify_result = verify_payment(ref_candidate)
+            if verify_result.get('status'):
+                verified_ref = ref_candidate
+                logger.info("Verified via API. ref=%s amount=%.2f", ref_candidate, float(verify_result['amount']))
+                break
+            verify_result = None
 
-    if amount <= 0:
-        messages.error(request, 'Invalid payment amount.')
-        return redirect('customer_contribute')
+    if verify_result and verify_result.get('status') and verify_result.get('amount', 0) > 0:
+        amount = verify_result['amount']
+        meta = verify_result.get('metadata') or {}
+        if not account:
+            account = SusuAccount.objects.filter(pk=meta.get('account_id'), status='ACTIVE').first()
+        if not customer:
+            try:
+                from apps.customers.models import Customer
+                customer = Customer.objects.get(pk=meta.get('customer_id'))
+            except Exception:
+                pass
 
+    # 2. Fall back to session data (dev/test convenience).
+    if amount is None and pending and settings.DEBUG:
+        amount = Decimal(pending.get('amount', '0'))
+
+    if amount is None or amount <= 0:
+        logger.warning("Could not resolve payment amount. paystack_ref=%s our_ref=%s", paystack_ref, our_ref)
+        messages.warning(request, 'Your payment is being processed. Your balance will update shortly.')
+        return redirect(f"{reverse('customer_dashboard')}?payment_pending=1")
+
+    # Resolve account from session if API metadata was unavailable.
+    if not account and pending:
+        try:
+            account = SusuAccount.objects.get(
+                pk=pending.get('account_id'), customer=customer, status='ACTIVE'
+            )
+        except (SusuAccount.DoesNotExist, TypeError, ValueError):
+            pass
+
+    if not account or not customer:
+        logger.error("Callback could not resolve account/customer. user=%s", request.user.pk)
+        messages.error(request, 'Unable to identify your account. Please contact support.')
+        return redirect('customer_dashboard')
+
+    # --- Idempotency guard ---
     existing = Transaction.objects.filter(idempotency_key=verified_ref).first()
     if not existing and our_ref and our_ref != verified_ref:
         existing = Transaction.objects.filter(idempotency_key=our_ref).first()
-
     if existing:
-        logger.info("Duplicate — txn %s exists", existing.transaction_number)
+        logger.info("Duplicate — txn %s exists. ref=%s", existing.transaction_number, verified_ref)
         messages.info(request, f'Payment already recorded. Transaction: {existing.transaction_number}')
         return redirect('transaction_detail', pk=existing.pk)
 
+    # --- Record contribution (updates balance atomically) ---
     txn, success, error = record_contribution(
         customer=customer,
         amount=amount,
@@ -355,11 +368,9 @@ def customer_contribute_callback(request):
     txn.idempotency_key = verified_ref
     txn.save(update_fields=['idempotency_key'])
 
-    try:
-        from apps.notifications.tasks import send_contribution_sms
-        send_contribution_sms.delay(txn.pk)
-    except Exception:
-        pass
+    # --- Async SMS via Sailup (financial transaction already saved) ---
+    from apps.notifications.tasks import send_contribution_sms
+    send_contribution_sms.delay(txn.pk)
 
     logger.info(
         "Contribution recorded. txn=%s amount=%.2f balance=%.2f customer=%s",

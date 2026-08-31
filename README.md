@@ -15,7 +15,7 @@ A professional, production-ready Susu Collection and Loan Management Platform bu
 - **Loan Disbursement** - Automated disbursement with ledger entries and repayment schedule generation
 - **Repayment Schedules** - Auto-generated installment plans supporting daily/weekly/biweekly/monthly
 - **Loan Repayments** - Payment recording with installment tracking and balance updates
-- **SMS Notifications** - Brevo Transactional SMS API integration for all key events
+- **SMS Notifications** - Sailup SMS integration (provider-independent, via Celery) for all key events
 - **Dashboards** - Staff dashboard with charts and KPIs; customer dashboard with account overview
 - **Reports** - Customer, contribution, loan, repayment, overdue, and daily summary reports with CSV export
 - **Audit Log** - Comprehensive audit trail for all financial and administrative actions
@@ -31,7 +31,7 @@ A professional, production-ready Susu Collection and Loan Management Platform bu
 | Database | PostgreSQL (production), SQLite (development) |
 | Frontend | Django Templates, Bootstrap 5, Chart.js |
 | Async Tasks | Celery + Redis |
-| SMS | Brevo Transactional SMS API |
+| SMS | Sailup SMS (provider abstraction) |
 | Testing | pytest-django, factory-boy |
 
 ## Project Structure
@@ -49,7 +49,7 @@ susu_loan_system/
 │   ├── susu/             # Susu accounts
 │   ├── payments/         # Financial ledger, contributions, withdrawals
 │   ├── loans/            # Loan products, applications, repayments
-│   ├── notifications/    # Brevo SMS integration
+│   ├── notifications/    # SMS notifications (providers, services, tasks)
 │   ├── reports/          # Reporting & CSV export
 │   ├── audit/            # Audit logging
 │   ├── dashboard/        # Dashboard views
@@ -137,45 +137,52 @@ celery -A config beat --loglevel=info
 | `DB_PORT` | PostgreSQL port | `5432` |
 | `REDIS_URL` | Redis URL | `redis://localhost:6379/0` |
 | `CELERY_BROKER_URL` | Celery broker | `redis://localhost:6379/0` |
-| `BREVO_API_KEY` | Brevo API key | Required for SMS |
-| `BREVO_SMS_SENDER` | SMS sender name | `SUSU` |
-| `BREVO_ENABLED` | Enable Brevo SMS | `False` |
+| `SAILUP_API_KEY` | Sailup API key | Required for real SMS |
+| `SAILUP_BASE_URL` | Sailup API base URL | `https://api.sailup.io/v1` |
+| `SAILUP_SENDER_ID` | SMS sender ID | `ZEMZEM` |
+| `SAILUP_TIMEOUT` | Sailup request timeout | `10` |
+| `SAILUP_ENABLED` | Enable real Sailup SMS | `False` |
 | `SMS_TEST_MODE` | Log SMS instead of sending | `True` |
 | `EMAIL_HOST` | SMTP host | `smtp.gmail.com` |
 | `EMAIL_PORT` | SMTP port | `587` |
 | `TIME_ZONE` | Timezone | `Africa/Accra` |
 
-## Brevo SMS Configuration
+## Sailup SMS Configuration
 
 ### Setup
 
-1. Create a Brevo account at https://www.brevo.com
-2. Navigate to SMS settings and get your API key
-3. Configure an SMS sender name
-4. Set environment variables:
+1. Create a Sailup account at https://www.sailup.io and get an API key (prefix `sailup_`).
+2. Register your sender ID (e.g. `ZEMZEM`) in the Sailup dashboard.
+3. Set environment variables:
 
 ```env
-BREVO_API_KEY=your-api-key-here
-BREVO_SMS_SENDER=SUSU
-BREVO_ENABLED=True
+SAILUP_API_KEY=sailup_your-api-key-here
+SAILUP_BASE_URL=https://api.sailup.io/v1
+SAILUP_SENDER_ID=ZEMZEM
+SAILUP_TIMEOUT=10
+SAILUP_ENABLED=True
 SMS_TEST_MODE=False
 ```
+
+The provider abstraction (`apps/notifications/providers/`) keeps SMS provider-independent. Sailup is the default provider; another provider can be added later without rewriting the application.
 
 ### SMS Events
 
 The system sends branded SMS from Zemzem Savings and Loans for:
-- Customer registration
-- Contribution recorded
+- Contribution recorded (with updated savings balance)
 - Withdrawal request/approval/rejection
 - Loan application submitted
 - Loan approved/rejected
 - Loan disbursed
 - Loan repayment recorded
 - Repayment reminders (via Celery beat)
+- OTP/security verification
+
+SMS is always sent asynchronously via Celery after the financial transaction is saved. If Sailup is unavailable, the financial transaction still succeeds.
 
 ### Safe Testing
 
-Set `SMS_TEST_MODE=True` to log SMS instead of sending real messages. SMS records are still created in the database, allowing you to verify the notification flow without sending actual SMS.
+Set `SMS_TEST_MODE=True` (or leave `SAILUP_ENABLED=False`) to log SMS instead of sending real messages. SMS records are still created in the database, allowing you to verify the notification flow without sending actual SMS. To send real test SMS locally, set a valid `SAILUP_API_KEY` with `SAILUP_ENABLED=True` and `SMS_TEST_MODE=False`.
 
 ## Render Deployment
 
@@ -199,14 +206,19 @@ celery -A config worker --loglevel=info
 
 ### Environment Variables for Render
 
-Set all required environment variables in the Render dashboard. Key variables:
+Set all required environment variables in the Render dashboard (Settings → Environment). Key variables:
 - `SECRET_KEY`
 - `DATABASE_URL` (use Render PostgreSQL)
 - `REDIS_URL` (use Render Redis)
-- `BREVO_API_KEY`
-- `BREVO_SMS_SENDER`
+- `SAILUP_API_KEY`
+- `SAILUP_BASE_URL`
+- `SAILUP_SENDER_ID`
+- `SAILUP_ENABLED=True`
+- `SMS_TEST_MODE=False`
 - `ALLOWED_HOSTS=your-app.onrender.com`
 - `DJANGO_SETTINGS_MODULE=config.settings.production`
+
+The `Procfile` starts a Celery worker and beat alongside the web process; SMS is delivered asynchronously by the worker.
 
 ## Database Migrations
 

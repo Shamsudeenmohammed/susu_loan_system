@@ -1,14 +1,23 @@
 from celery import shared_task
 import logging
 
+from apps.notifications.services import messages as templates
+
 logger = logging.getLogger('apps.notifications')
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
 def send_sms_task(self, phone_number, message, notification_type='GENERAL',
-                  customer_id=None, reference_model='', reference_id=None):
-    """Celery task for sending SMS asynchronously."""
-    from apps.notifications.services.sms import send_sms
+                  customer_id=None, reference_model='', reference_id=None,
+                  unique_key=''):
+    """
+    Celery task for sending a single SMS asynchronously.
+
+    The actual SMS dispatch is delegated to the SMS service, which handles
+    the provider, logging and duplicat e protection. This task adds retry
+    semantics on top for transient failures.
+    """
+    from apps.notifications.services.sms import get_sms_service
     from apps.customers.models import Customer
 
     customer = None
@@ -19,13 +28,15 @@ def send_sms_task(self, phone_number, message, notification_type='GENERAL',
             pass
 
     try:
-        notification = send_sms(
+        service = get_sms_service()
+        notification = service.send_sms(
             phone_number=phone_number,
             message=message,
             notification_type=notification_type,
             customer=customer,
             reference_model=reference_model,
             reference_id=reference_id,
+            unique_key=unique_key,
         )
         return {'status': notification.status, 'notification_id': notification.pk}
     except Exception as exc:
@@ -37,7 +48,7 @@ def send_sms_task(self, phone_number, message, notification_type='GENERAL',
 def send_contribution_sms(transaction_pk):
     """Send SMS for a contribution transaction."""
     from apps.payments.models import Transaction
-    from apps.notifications.services.sms import send_sms
+    from apps.notifications.services.sms import get_sms_service
 
     try:
         txn = Transaction.objects.select_related('customer').get(pk=transaction_pk)
@@ -46,18 +57,15 @@ def send_contribution_sms(transaction_pk):
             return
 
         balance = txn.balance_after
-        msg = (
-            f"Zemzem Savings and Loans: Your contribution of GHS {txn.amount:.2f} has been received successfully. "
-            f"Your new balance is GHS {balance:.2f}. "
-            f"Transaction: {txn.transaction_number}."
-        )
-        send_sms(
+        msg = templates.contribution_received(txn.amount, balance, txn.transaction_number)
+        get_sms_service().send_sms(
             phone_number=phone,
             message=msg,
             notification_type='CONTRIBUTION',
             customer=txn.customer,
             reference_model='Transaction',
             reference_id=txn.pk,
+            unique_key=f'contribution:{txn.pk}',
         )
     except Exception as e:
         logger.exception(f"Contribution SMS failed: {e}")
@@ -67,7 +75,7 @@ def send_contribution_sms(transaction_pk):
 def send_withdrawal_request_sms(withdrawal_pk):
     """Send SMS for withdrawal request."""
     from apps.payments.models import Withdrawal
-    from apps.notifications.services.sms import send_sms
+    from apps.notifications.services.sms import get_sms_service
 
     try:
         w = Withdrawal.objects.select_related('customer').get(pk=withdrawal_pk)
@@ -75,17 +83,15 @@ def send_withdrawal_request_sms(withdrawal_pk):
         if not phone:
             return
 
-        msg = (
-            f"Zemzem Savings and Loans: Your withdrawal request {w.withdrawal_number} for GHS {w.amount:.2f} "
-            f"has been submitted and is under review."
-        )
-        send_sms(
+        msg = templates.withdrawal_request(w.withdrawal_number, w.amount)
+        get_sms_service().send_sms(
             phone_number=phone,
             message=msg,
             notification_type='WITHDRAWAL_REQUEST',
             customer=w.customer,
             reference_model='Withdrawal',
             reference_id=w.pk,
+            unique_key=f'withdrawal_request:{w.pk}',
         )
     except Exception as e:
         logger.exception(f"Withdrawal request SMS failed: {e}")
@@ -95,7 +101,7 @@ def send_withdrawal_request_sms(withdrawal_pk):
 def send_withdrawal_status_sms(withdrawal_pk, status):
     """Send SMS for withdrawal approval/rejection/completion."""
     from apps.payments.models import Withdrawal
-    from apps.notifications.services.sms import send_sms
+    from apps.notifications.services.sms import get_sms_service
 
     try:
         w = Withdrawal.objects.select_related('customer').get(pk=withdrawal_pk)
@@ -104,15 +110,25 @@ def send_withdrawal_status_sms(withdrawal_pk, status):
             return
 
         if status == 'APPROVED':
-            msg = f"Zemzem Savings and Loans: Your withdrawal request {w.withdrawal_number} for GHS {w.amount:.2f} has been approved and processed."
+            msg = templates.withdrawal_approved(w.withdrawal_number, w.amount)
             ntype = 'WITHDRAWAL_APPROVED'
+            ukey = f'withdrawal_status:{w.pk}:APPROVED'
         elif status == 'REJECTED':
-            msg = f"Zemzem Savings and Loans: Your withdrawal request {w.withdrawal_number} for GHS {w.amount:.2f} has been rejected. Please contact us for details."
+            msg = templates.withdrawal_rejected(w.withdrawal_number, w.amount)
             ntype = 'WITHDRAWAL_REJECTED'
+            ukey = f'withdrawal_status:{w.pk}:REJECTED'
         else:
             return
 
-        send_sms(phone, msg, ntype, w.customer, 'Withdrawal', w.pk)
+        get_sms_service().send_sms(
+            phone_number=phone,
+            message=msg,
+            notification_type=ntype,
+            customer=w.customer,
+            reference_model='Withdrawal',
+            reference_id=w.pk,
+            unique_key=ukey,
+        )
     except Exception as e:
         logger.exception(f"Withdrawal status SMS failed: {e}")
 
@@ -121,7 +137,7 @@ def send_withdrawal_status_sms(withdrawal_pk, status):
 def send_loan_application_sms(loan_pk):
     """Send SMS for loan application."""
     from apps.loans.models import Loan
-    from apps.notifications.services.sms import send_sms
+    from apps.notifications.services.sms import get_sms_service
 
     try:
         loan = Loan.objects.select_related('customer').get(pk=loan_pk)
@@ -129,11 +145,16 @@ def send_loan_application_sms(loan_pk):
         if not phone:
             return
 
-        msg = (
-            f"Zemzem Savings and Loans: Your loan application {loan.loan_number} for GHS {loan.principal_amount:.2f} "
-            f"has been received and is awaiting review."
+        msg = templates.loan_application_submitted(loan.loan_number, loan.principal_amount)
+        get_sms_service().send_sms(
+            phone_number=phone,
+            message=msg,
+            notification_type='LOAN_APPLICATION',
+            customer=loan.customer,
+            reference_model='Loan',
+            reference_id=loan.pk,
+            unique_key=f'loan_application:{loan.pk}',
         )
-        send_sms(phone, msg, 'LOAN_APPLICATION', loan.customer, 'Loan', loan.pk)
     except Exception as e:
         logger.exception(f"Loan application SMS failed: {e}")
 
@@ -142,7 +163,7 @@ def send_loan_application_sms(loan_pk):
 def send_loan_approved_sms(loan_pk):
     """Send SMS for loan approval."""
     from apps.loans.models import Loan
-    from apps.notifications.services.sms import send_sms
+    from apps.notifications.services.sms import get_sms_service
 
     try:
         loan = Loan.objects.select_related('customer').get(pk=loan_pk)
@@ -150,20 +171,52 @@ def send_loan_approved_sms(loan_pk):
         if not phone:
             return
 
-        msg = (
-            f"Zemzem Savings and Loans: Congratulations. Your loan application {loan.loan_number} for GHS {loan.principal_amount:.2f} "
-            f"has been approved. Please check your account for repayment details."
+        msg = templates.loan_approved(loan.loan_number, loan.principal_amount)
+        get_sms_service().send_sms(
+            phone_number=phone,
+            message=msg,
+            notification_type='LOAN_APPROVED',
+            customer=loan.customer,
+            reference_model='Loan',
+            reference_id=loan.pk,
+            unique_key=f'loan_approved:{loan.pk}',
         )
-        send_sms(phone, msg, 'LOAN_APPROVED', loan.customer, 'Loan', loan.pk)
     except Exception as e:
         logger.exception(f"Loan approved SMS failed: {e}")
+
+
+@shared_task
+def send_loan_rejected_sms(loan_pk):
+    """Send SMS for loan rejection."""
+    from apps.loans.models import Loan
+    from apps.notifications.services.sms import get_sms_service
+
+    try:
+        loan = Loan.objects.select_related('customer').get(pk=loan_pk)
+        phone = loan.customer.phone
+        if not phone:
+            return
+
+        reason = loan.rejection_reason or 'Please contact us for details.'
+        msg = templates.loan_rejected(loan.loan_number, loan.principal_amount, reason)
+        get_sms_service().send_sms(
+            phone_number=phone,
+            message=msg,
+            notification_type='LOAN_REJECTED',
+            customer=loan.customer,
+            reference_model='Loan',
+            reference_id=loan.pk,
+            unique_key=f'loan_rejected:{loan.pk}',
+        )
+    except Exception as e:
+        logger.exception(f"Loan rejected SMS failed: {e}")
 
 
 @shared_task
 def send_loan_disbursement_sms(loan_pk):
     """Send SMS for loan disbursement."""
     from apps.loans.models import Loan
-    from apps.notifications.services.sms import send_sms
+    from apps.notifications.services.sms import get_sms_service
 
     try:
         loan = Loan.objects.select_related('customer').get(pk=loan_pk)
@@ -171,11 +224,16 @@ def send_loan_disbursement_sms(loan_pk):
         if not phone:
             return
 
-        msg = (
-            f"Zemzem Savings and Loans: Your loan {loan.loan_number} of GHS {loan.disbursement_amount:.2f} "
-            f"has been disbursed to your account. Your repayment schedule is now active."
+        msg = templates.loan_disbursed(loan.loan_number, loan.disbursement_amount or loan.principal_amount)
+        get_sms_service().send_sms(
+            phone_number=phone,
+            message=msg,
+            notification_type='LOAN_DISBURSEMENT',
+            customer=loan.customer,
+            reference_model='Loan',
+            reference_id=loan.pk,
+            unique_key=f'loan_disbursement:{loan.pk}',
         )
-        send_sms(phone, msg, 'LOAN_DISBURSEMENT', loan.customer, 'Loan', loan.pk)
     except Exception as e:
         logger.exception(f"Loan disbursement SMS failed: {e}")
 
@@ -184,7 +242,7 @@ def send_loan_disbursement_sms(loan_pk):
 def send_repayment_sms(repayment_pk):
     """Send SMS for loan repayment."""
     from apps.loans.models import LoanRepayment
-    from apps.notifications.services.sms import send_sms
+    from apps.notifications.services.sms import get_sms_service
 
     try:
         r = LoanRepayment.objects.select_related('loan', 'loan__customer').get(pk=repayment_pk)
@@ -192,11 +250,18 @@ def send_repayment_sms(repayment_pk):
         if not phone:
             return
 
-        msg = (
-            f"Zemzem Savings and Loans: Loan repayment of GHS {r.amount:.2f} received for loan {r.loan.loan_number}. "
-            f"Outstanding balance: GHS {r.loan.outstanding_balance:.2f}."
+        msg = templates.loan_repayment_received(
+            r.amount, r.loan.loan_number, r.loan.outstanding_balance
         )
-        send_sms(phone, msg, 'LOAN_REPAYMENT', r.loan.customer, 'LoanRepayment', r.pk)
+        get_sms_service().send_sms(
+            phone_number=phone,
+            message=msg,
+            notification_type='LOAN_REPAYMENT',
+            customer=r.loan.customer,
+            reference_model='LoanRepayment',
+            reference_id=r.pk,
+            unique_key=f'repayment:{r.pk}',
+        )
     except Exception as e:
         logger.exception(f"Repayment SMS failed: {e}")
 
@@ -205,13 +270,13 @@ def send_repayment_sms(repayment_pk):
 def send_repayment_reminders():
     """Scheduled task to send repayment reminders for upcoming and overdue payments."""
     from django.utils import timezone
-    from apps.loans.models import RepaymentSchedule, Loan
-    from apps.notifications.services.sms import send_sms
+    from apps.loans.models import RepaymentSchedule
+    from apps.notifications.services.sms import get_sms_service
 
     today = timezone.now().date()
-    upcoming = today + timezone.timedelta(days=3)
 
-    # Due today
+    service = get_sms_service()
+
     due_today = RepaymentSchedule.objects.filter(
         due_date=today,
         status__in=['PENDING', 'PARTIALLY_PAID']
@@ -221,14 +286,17 @@ def send_repayment_reminders():
         phone = schedule.loan.customer.phone
         if phone:
             amount = schedule.total_due - schedule.amount_paid
-            msg = (
-                f"Zemzem Savings and Loans Reminder: You have a loan repayment of GHS {amount:.2f} "
-                f"due today for loan {schedule.loan.loan_number}. "
-                f"Please make your payment to avoid penalties."
+            msg = templates.repayment_reminder(amount, schedule.loan.loan_number)
+            service.send_sms(
+                phone_number=phone,
+                message=msg,
+                notification_type='REPAYMENT_REMINDER',
+                customer=schedule.loan.customer,
+                reference_model='RepaymentSchedule',
+                reference_id=schedule.pk,
+                unique_key=f'repayment_reminder:{schedule.pk}:{today}',
             )
-            send_sms(phone, msg, 'REPAYMENT_REMINDER', schedule.loan.customer, 'RepaymentSchedule', schedule.pk)
 
-    # Overdue
     overdue = RepaymentSchedule.objects.filter(
         due_date__lt=today,
         status__in=['PENDING', 'PARTIALLY_PAID', 'Overdue']
@@ -238,9 +306,13 @@ def send_repayment_reminders():
         phone = schedule.loan.customer.phone
         if phone:
             amount = schedule.total_due - schedule.amount_paid
-            msg = (
-                f"Zemzem Savings and Loans OVERDUE: Your loan repayment of GHS {amount:.2f} for loan "
-                f"{schedule.loan.loan_number} was due on {schedule.due_date}. "
-                f"Please pay immediately to avoid additional penalties."
+            msg = templates.repayment_overdue(amount, schedule.loan.loan_number, schedule.due_date)
+            service.send_sms(
+                phone_number=phone,
+                message=msg,
+                notification_type='REPAYMENT_REMINDER',
+                customer=schedule.loan.customer,
+                reference_model='RepaymentSchedule',
+                reference_id=schedule.pk,
+                unique_key=f'repayment_overdue:{schedule.pk}:{schedule.due_date}',
             )
-            send_sms(phone, msg, 'REPAYMENT_REMINDER', schedule.loan.customer, 'RepaymentSchedule', schedule.pk)
