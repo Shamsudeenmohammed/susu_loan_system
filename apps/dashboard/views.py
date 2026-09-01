@@ -99,6 +99,16 @@ def _customer_dashboard(request):
         return redirect('login')
 
     customer = request.user.customer_profile
+
+    if customer.is_pending:
+        logout(request)
+        messages.error(
+            request,
+            'Your account is awaiting administrator approval. '
+            'You will be able to sign in once it has been approved.',
+        )
+        return redirect('login')
+
     susu_accounts = SusuAccount.objects.filter(customer=customer, status='ACTIVE')
 
     total_balance = susu_accounts.aggregate(total=Sum('current_balance'))['total'] or Decimal('0.00')

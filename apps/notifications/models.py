@@ -5,6 +5,9 @@ from django.conf import settings
 class SMSNotification(models.Model):
     class NotificationType(models.TextChoices):
         CUSTOMER_CREATED = 'CUSTOMER_CREATED', 'Customer Created'
+        CUSTOMER_APPROVED = 'CUSTOMER_APPROVED', 'Customer Approved'
+        CUSTOMER_REJECTED = 'CUSTOMER_REJECTED', 'Customer Rejected'
+        SUSU_ACTIVATED = 'SUSU_ACTIVATED', 'Susu Account Activated'
         PHONE_VERIFIED = 'PHONE_VERIFIED', 'Phone Verified'
         CONTRIBUTION = 'CONTRIBUTION', 'Contribution'
         WITHDRAWAL_REQUEST = 'WITHDRAWAL_REQUEST', 'Withdrawal Request'

@@ -10,9 +10,11 @@ class Customer(models.Model):
         OTHER = 'OTHER', 'Other'
 
     class Status(models.TextChoices):
+        PENDING = 'PENDING', 'Pending Approval'
         ACTIVE = 'ACTIVE', 'Active'
         INACTIVE = 'INACTIVE', 'Inactive'
         SUSPENDED = 'SUSPENDED', 'Suspended'
+        REJECTED = 'REJECTED', 'Rejected'
 
     customer_number = models.CharField(max_length=20, unique=True, editable=False)
     user = models.OneToOneField(
@@ -35,7 +37,22 @@ class Customer(models.Model):
     id_type = models.CharField(max_length=50, blank=True)
     id_number = models.CharField(max_length=100, blank=True)
     photo = models.ImageField(upload_to='customer_photos/', blank=True, null=True)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='approved_customers'
+    )
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    rejected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='rejected_customers'
+    )
+    rejection_reason = models.TextField(blank=True)
     registered_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -62,3 +79,15 @@ class Customer(models.Model):
     @property
     def display_name(self):
         return self.get_full_name()
+
+    @property
+    def is_pending(self):
+        return self.status == self.Status.PENDING
+
+    @property
+    def is_approved_active(self):
+        return self.status == self.Status.ACTIVE
+
+    @property
+    def is_rejected(self):
+        return self.status == self.Status.REJECTED

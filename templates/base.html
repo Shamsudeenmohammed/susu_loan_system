@@ -37,6 +37,12 @@
                 </a>
                 {% endif %}
 
+                {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER" %}
+                <a class="nav-link" href="{% url 'customer_pending_approvals' %}">
+                    <i class="fas fa-user-clock"></i>Pending Approvals
+                </a>
+                {% endif %}
+
                 {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,CASHIER" %}
                 <a class="nav-link" href="{% url 'susu_account_list' %}">
                     <i class="fas fa-piggy-bank"></i>Savings Accounts

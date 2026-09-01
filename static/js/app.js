@@ -259,12 +259,15 @@
     document.querySelectorAll('form[data-confirm]').forEach(function (form) {
         form.addEventListener('submit', function (e) {
             e.preventDefault();
-            var msg = form.getAttribute('data-confirm') || 'Are you sure you want to delete this?';
+            var msg = form.getAttribute('data-confirm') || 'Are you sure you want to do this?';
+            var title = form.getAttribute('data-confirm-title') || 'Please Confirm';
+            var type = form.getAttribute('data-confirm-type') || 'warning';
+            var confirmText = form.getAttribute('data-confirm-text') || 'Confirm';
             window.confirmAction({
-                title: 'Confirm Deletion',
+                title: title,
                 message: msg,
-                type: 'danger',
-                confirmText: 'Delete'
+                type: type,
+                confirmText: confirmText
             }).then(function (confirmed) {
                 if (confirmed) form.submit();
             });

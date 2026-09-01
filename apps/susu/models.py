@@ -45,8 +45,9 @@ class SusuAccount(models.Model):
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
-        default=Status.ACTIVE
+        default=Status.INACTIVE
     )
+    activated_at = models.DateTimeField(null=True, blank=True)
     opened_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

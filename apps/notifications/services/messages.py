@@ -8,6 +8,36 @@ or Celery tasks. This keeps messages consistent and easy to maintain.
 BRAND = 'Zemzem Savings and Loans'
 
 
+def account_created(customer_name):
+    return (
+        f"{BRAND}: Dear {customer_name}, your account has been registered and is now "
+        f"pending approval. You will be notified once it has been approved."
+    )
+
+
+def customer_approved(customer_name):
+    return (
+        f"{BRAND}: Dear {customer_name}, your Zemzem Savings and Loans account has been "
+        f"approved successfully. You can now access your account. Thank you for choosing Zemzem."
+    )
+
+
+def customer_rejected(customer_name, reason=None):
+    suffix = f" {reason}" if reason else ""
+    return (
+        f"{BRAND}: Dear {customer_name}, we regret to inform you that your account "
+        f"registration was not approved.{suffix} Please contact us for more information."
+    )
+
+
+def susu_account_activated(customer_name, account_number):
+    return (
+        f"{BRAND}: Dear {customer_name}, your Zemzem Susu Savings Account {account_number} "
+        f"has been activated successfully. You can now start making contributions. "
+        f"Thank you for choosing Zemzem."
+    )
+
+
 def contribution_received(amount, new_balance, reference):
     return (
         f"{BRAND}: Your contribution of GHS {amount:.2f} has been received successfully. "

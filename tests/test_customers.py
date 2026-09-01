@@ -11,7 +11,7 @@ class TestCustomer:
             phone='0241234567', registered_by=admin_user
         )
         assert c.customer_number.startswith('CUS-')
-        assert c.status == 'ACTIVE'
+        assert c.status == Customer.Status.PENDING
 
     def test_customer_number_unique(self, admin_user):
         c1 = Customer.objects.create(first_name='A', last_name='B', phone='0241111111', registered_by=admin_user)

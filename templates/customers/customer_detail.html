@@ -4,13 +4,36 @@
 {% block title %}{{ customer.customer_number }} - {{ customer.get_full_name }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-start mb-4 gap-2">
+<div class="d-flex justify-content-between align-items-start mb-4 gap-2 flex-wrap">
     <div>
-        <h4 class="mb-0">{{ customer.get_full_name }}</h4>
-        <small class="text-muted">{{ customer.customer_number }}</small>
+        <h4 class="mb-1">{{ customer.get_full_name }}</h4>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <small class="text-muted">{{ customer.customer_number }}</small>
+            <span class="badge {{ customer.status|status_badge_class }}">{{ customer.status }}</span>
+        </div>
     </div>
-    <a href="{% url 'customer_update' pk=customer.pk %}" class="btn btn-outline-primary btn-sm flex-shrink-0"><i class="fas fa-edit me-1"></i>Edit</a>
+    <div class="d-flex gap-2 flex-wrap">
+        {% if customer.is_pending %}
+        <form method="post" action="{% url 'customer_approve' pk=customer.pk %}"
+            data-confirm="Are you sure you want to approve this customer? Their customer account will become active and an SMS notification will be sent."
+            data-confirm-title="Approve Customer?"
+            data-confirm-type="success"
+            data-confirm-text="Approve Customer">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success"><i class="fas fa-check me-1"></i>Approve</button>
+        </form>
+        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectModal"><i class="fas fa-times me-1"></i>Reject</button>
+        {% endif %}
+        <a href="{% url 'customer_update' pk=customer.pk %}" class="btn btn-outline-primary"><i class="fas fa-edit me-1"></i>Edit</a>
+    </div>
 </div>
+
+{% if customer.is_rejected and customer.rejection_reason %}
+<div class="alert alert-danger"><i class="fas fa-times-circle me-2"></i><strong>Rejected:</strong> {{ customer.rejection_reason }}</div>
+{% endif %}
+{% if customer.is_approved_active and customer.approved_at %}
+<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i><strong>Approved</strong> on {{ customer.approved_at|date:"d M Y H:i" }}{% if customer.approved_by %} by {{ customer.approved_by.get_full_name|default:customer.approved_by.email }}{% endif %}.</div>
+{% endif %}
 
 <div class="row g-3">
     <div class="col-lg-8">
@@ -23,18 +46,22 @@
                     <div class="col-sm-6"><small class="text-muted d-block">Email</small>{{ customer.email|default:"-" }}</div>
                     <div class="col-sm-6"><small class="text-muted d-block">Date of Birth</small>{{ customer.date_of_birth|default:"-" }}</div>
                     <div class="col-sm-6"><small class="text-muted d-block">Gender</small>{{ customer.get_gender_display|default:"-" }}</div>
-                    <div class="col-sm-6"><small class="text-muted d-block">Status</small><br><span class="badge {{ customer.status|status_badge_class }}">{{ customer.status }}</span></div>
+                    <div class="col-sm-6"><small class="text-muted d-block">Alt Phone</small>{{ customer.alt_phone|default:"-" }}</div>
                     <div class="col-sm-6"><small class="text-muted d-block">Occupation</small>{{ customer.occupation|default:"-" }}</div>
                     <div class="col-sm-6"><small class="text-muted d-block">Address</small>{{ customer.address|default:"-" }}</div>
                     <div class="col-sm-6"><small class="text-muted d-block">Emergency Contact</small>{{ customer.emergency_contact_name|default:"-" }} {{ customer.emergency_contact_phone }}</div>
                     <div class="col-sm-6"><small class="text-muted d-block">ID</small>{{ customer.get_id_type_display|default:"-" }} {{ customer.id_number }}</div>
+                    <div class="col-sm-6"><small class="text-muted d-block">Registered</small>{{ customer.created_at|date:"d M Y H:i" }}</div>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-lg-4">
         <div class="card mb-3">
-            <div class="card-header"><h6 class="mb-0">Savings Accounts</h6></div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Savings Accounts</h6>
+                <a href="{% url 'susu_account_create' %}" class="btn btn-sm btn-primary">Open</a>
+            </div>
             <div class="list-group list-group-flush">
                 {% for acc in susu_accounts %}
                 <a href="{% url 'susu_account_detail' pk=acc.pk %}" class="list-group-item list-group-item-action">
@@ -47,7 +74,48 @@
                 <div class="list-group-item text-center text-muted py-3">No savings accounts</div>
                 {% endfor %}
             </div>
+            {% if inactive_susu_accounts %}
+            <div class="card-footer bg-white border-top-0">
+                <div class="d-flex flex-column gap-2">
+                    {% for acc in inactive_susu_accounts %}
+                    <div class="d-flex justify-content-between align-items-center small">
+                        <span><strong>{{ acc.account_number }}</strong> <span class="badge {{ acc.status|status_badge_class }}">{{ acc.status }}</span></span>
+                        <form method="post" action="{% url 'susu_account_activate' pk=acc.pk %}"
+                            data-confirm="Activate Susu account {{ acc.account_number }}? The customer will receive an SMS notification once activated."
+                            data-confirm-title="Activate Susu Account?"
+                            data-confirm-type="success"
+                            data-confirm-text="Activate">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-power-off me-1"></i>Activate</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
         </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" action="{% url 'customer_reject' pk=customer.pk %}" class="modal-content"
+            data-confirm="Are you sure you want to reject this customer registration?"
+            data-confirm-title="Reject Customer?"
+            data-confirm-type="danger"
+            data-confirm-text="Reject Customer">
+            <div class="modal-header"><h5 class="modal-title">Reject Customer</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                {% csrf_token %}
+                <label class="form-label">Reason (optional)</label>
+                <textarea name="reason" class="form-control" rows="3" placeholder="Reason for rejection"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger">Reject Customer</button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}

@@ -25,8 +25,13 @@ def susu_account_create(request):
         if form.is_valid():
             account = form.save(commit=False)
             account.opened_by = request.user
+            account.status = SusuAccount.Status.INACTIVE
             account.save()
-            messages.success(request, f'Susu account {account.account_number} created successfully.')
+            messages.success(
+                request,
+                f'Susu account {account.account_number} created. '
+                'It is inactive and must be activated before contributions can be made.',
+            )
             return redirect('susu_account_detail', pk=account.pk)
     else:
         form = SusuAccountForm()

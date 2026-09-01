@@ -4,117 +4,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - {{ organization_name }}</title>
+    <title>Create Customer Account - {{ organization_name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #0d6efd;
-            --accent: #6366f1;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --text: #1e293b;
+            --muted: #64748b;
+            --border: #e2e8f0;
+            --bg: #f1f5f9;
         }
 
         * { box-sizing: border-box; }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0f3460 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #0f3460 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1.5rem 1rem;
-            position: relative;
-            overflow-x: hidden;
+            padding: 2rem 1rem 3rem;
+            color: var(--text);
         }
 
-        body::before, body::after {
-            content: '';
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.15;
-            animation: float 20s ease-in-out infinite;
+        .register-shell {
+            max-width: 860px;
+            margin: 0 auto;
         }
-        body::before { width: 500px; height: 500px; background: var(--primary); top: -150px; right: -100px; }
-        body::after { width: 400px; height: 400px; background: var(--accent); bottom: -100px; left: -80px; animation-delay: -10s; }
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            33% { transform: translate(30px, -30px) scale(1.05); }
-            66% { transform: translate(-20px, 20px) scale(0.95); }
+
+        .page-head {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 1.5rem;
         }
+        .page-head .brand-icon {
+            width: 64px; height: 64px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 1.7rem; color: #fff;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 10px 30px rgba(16,185,129,0.35);
+        }
+        .page-head h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem; }
+        .page-head p { opacity: 0.85; margin: 0; font-size: 0.95rem; }
 
         .register-card {
-            width: 100%;
-            max-width: 520px;
-            background: rgba(255,255,255,0.97);
-            border-radius: 16px;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-            position: relative;
-            z-index: 1;
-            animation: cardIn 0.6s cubic-bezier(.4,0,.2,1);
-        }
-        @keyframes cardIn {
-            from { opacity: 0; transform: translateY(30px) scale(0.97); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        .register-header {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: #fff;
-            text-align: center;
-            padding: 1.75rem 1.5rem;
-            position: relative;
-            overflow: hidden;
-        }
-        .register-header::before {
-            content: '';
-            position: absolute;
-            top: -40px; right: -40px;
-            width: 120px; height: 120px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.1);
-        }
-        .register-header::after {
-            content: '';
-            position: absolute;
-            bottom: -30px; left: -30px;
-            width: 80px; height: 80px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.08);
-        }
-        .register-header i.logo-icon { font-size: 2.2rem; margin-bottom: 0.5rem; display: inline-block; }
-        .register-header h4 { font-weight: 700; margin-bottom: 0.2rem; }
-        .register-header p { opacity: 0.85; font-size: 0.85rem; margin: 0; }
-
-        .register-body { padding: 1.75rem; }
-        .register-body h5 { text-align: center; font-weight: 600; color: #1e293b; margin-bottom: 1.25rem; }
-
-        .form-label { font-weight: 500; font-size: 0.85rem; color: #475569; margin-bottom: 0.3rem; }
-        .form-control {
-            border: 1.5px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 0.6rem 0.875rem;
-            font-size: 0.875rem;
-            transition: all 0.25s ease;
-            background: #f8fafc;
-        }
-        .form-control:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(13,110,253,0.12);
             background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+            overflow: hidden;
+        }
+
+        .card-head {
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            padding: 1.35rem 1.75rem;
+        }
+        .card-head h5 { font-weight: 700; margin: 0; }
+
+        .card-body-reg { padding: 1.5rem 1.75rem 2rem; }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--primary-dark);
+            padding-bottom: 0.5rem;
+            margin: 1.5rem 0 1rem;
+            border-bottom: 2px solid #e7f5f0;
+        }
+        .section-title:first-child { margin-top: 0; }
+        .section-title i { color: var(--primary); }
+
+        .form-label { font-weight: 500; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
+
+        .form-control, .form-select {
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 0.55rem 0.875rem;
+            font-size: 0.9rem;
+            transition: all 0.25s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
             outline: none;
         }
+        .is-invalid { border-color: #ef4444 !important; }
+        .field-error {
+            font-size: 0.78rem; color: #ef4444; margin-top: 0.25rem; display: block;
+        }
+        .errorlist { list-style: none; padding: 0; margin: 0.3rem 0 0; }
+        .errorlist li {
+            font-size: 0.78rem; color: #ef4444; background: #fef2f2;
+            border: 1px solid #fecaca; border-radius: 8px; padding: 0.35rem 0.6rem;
+        }
+        .errorlist.nonfield { margin-bottom: 0.5rem; }
+
+        .required::after { content: ' *'; color: #ef4444; }
 
         .btn-register {
-            background: linear-gradient(135deg, #10b981, #059669);
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             border: none;
-            border-radius: 10px;
-            padding: 0.7rem;
+            border-radius: 12px;
+            padding: 0.75rem;
             font-weight: 600;
             font-size: 0.95rem;
             color: #fff;
@@ -122,165 +119,151 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(16,185,129,0.3);
         }
-        .btn-register:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16,185,129,0.4); }
+        .btn-register:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16,185,129,0.4); color:#fff; }
         .btn-register:active { transform: translateY(0); }
         .btn-register .spinner-border { display: none; }
         .btn-register.loading .spinner-border { display: inline-block; }
         .btn-register.loading span { opacity: 0.6; }
 
-        .register-footer { text-align: center; font-size: 0.85rem; color: #64748b; }
-        .register-footer a { color: var(--primary); font-weight: 500; text-decoration: none; }
-        .register-footer a:hover { color: var(--accent); text-decoration: underline; }
-
-        /* Inline validation */
-        .field-error {
-            font-size: 0.78rem;
-            color: var(--danger);
-            margin-top: 0.25rem;
-            display: block;
-            animation: slideDown 0.2s ease;
-        }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-
-        .form-control.is-invalid { border-color: var(--danger); }
-
-        /* Toasts */
-        .auth-toast-container {
-            position: fixed;
-            top: 1.25rem;
-            right: 1.25rem;
-            z-index: 9999;
+        .pending-note {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 10px;
+            padding: 0.85rem 1rem;
+            font-size: 0.85rem;
+            color: #92400e;
             display: flex;
-            flex-direction: column;
-            gap: 0.625rem;
-            pointer-events: none;
+            gap: 0.6rem;
+            align-items: flex-start;
+        }
+
+        .register-footer { text-align: center; font-size: 0.85rem; color: var(--muted); margin-top: 1.25rem; }
+        .register-footer a { color: var(--primary); font-weight: 500; text-decoration: none; }
+
+        /* Toasts (reuse auth toast style) */
+        .auth-toast-container {
+            position: fixed; top: 1.25rem; right: 1.25rem; z-index: 9999;
+            display: flex; flex-direction: column; gap: 0.625rem; pointer-events: none;
         }
         .auth-toast {
-            pointer-events: auto;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-            padding: 1rem 1.25rem;
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            min-width: 320px;
-            max-width: 440px;
-            animation: toastSlideIn 0.5s cubic-bezier(.4,0,.2,1);
-            border-left: 5px solid var(--primary);
-            position: relative;
-            overflow: hidden;
+            pointer-events: auto; background: #fff; border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2); padding: 1rem 1.25rem;
+            display: flex; align-items: flex-start; gap: 0.75rem;
+            min-width: 320px; max-width: 440px; animation: toastIn .5s cubic-bezier(.4,0,.2,1);
+            border-left: 5px solid var(--primary); overflow: hidden;
         }
-        .auth-toast::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0;
-            height: 3px;
-            animation: toastTimer 6s linear forwards;
-            opacity: 0.4;
-        }
-        @keyframes toastTimer { from { width: 100%; } to { width: 0%; } }
-        .auth-toast.success { border-left-color: var(--success); }
-        .auth-toast.success::after { background: var(--success); }
-        .auth-toast.error { border-left-color: var(--danger); }
-        .auth-toast.error::after { background: var(--danger); }
-        .auth-toast.warning { border-left-color: var(--warning); }
-        .auth-toast.warning::after { background: var(--warning); }
-        .auth-toast.info { border-left-color: var(--primary); }
-        .auth-toast.info::after { background: var(--primary); }
+        .auth-toast.success { border-left-color: #10b981; }
+        .auth-toast.error { border-left-color: #ef4444; }
+        .auth-toast.warning { border-left-color: #f59e0b; }
         .auth-toast .toast-icon-wrap {
-            width: 36px; height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 0.95rem;
+            width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: .95rem;
         }
-        .auth-toast.success .toast-icon-wrap { background: #d1fae5; color: var(--success); }
-        .auth-toast.error .toast-icon-wrap { background: #fee2e2; color: var(--danger); }
-        .auth-toast.warning .toast-icon-wrap { background: #fef3c7; color: var(--warning); }
-        .auth-toast.info .toast-icon-wrap { background: #dbeafe; color: var(--primary); }
-        .auth-toast .toast-content { flex: 1; padding-top: 2px; }
-        .auth-toast .toast-title { font-weight: 600; font-size: 0.9rem; color: #1e293b; }
-        .auth-toast .toast-text { font-size: 0.82rem; color: #64748b; margin-top: 2px; line-height: 1.4; }
-        .auth-toast .toast-close {
-            background: none; border: none; color: #94a3b8; cursor: pointer;
-            font-size: 1.2rem; line-height: 1; transition: color 0.2s; flex-shrink: 0;
-        }
-        .auth-toast .toast-close:hover { color: #1e293b; }
-        .auth-toast.removing { animation: toastSlideOut 0.4s cubic-bezier(.4,0,.2,1) forwards; }
-        @keyframes toastSlideIn { from { opacity: 0; transform: translateX(100px) scale(0.9); } to { opacity: 1; transform: translateX(0) scale(1); } }
-        @keyframes toastSlideOut { from { opacity: 1; transform: translateX(0); max-height: 200px; } to { opacity: 0; transform: translateX(100px); max-height: 0; padding: 0; } }
-        @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
-        .auth-toast.error { animation: toastSlideIn 0.5s cubic-bezier(.4,0,.2,1), shake 0.5s ease 0.3s; }
+        .auth-toast.success .toast-icon-wrap { background: #d1fae5; color: #059669; }
+        .auth-toast.error .toast-icon-wrap { background: #fee2e2; color: #ef4444; }
+        .auth-toast.warning .toast-icon-wrap { background: #fef3c7; color: #d97706; }
+        .auth-toast .toast-content { flex: 1; }
+        .auth-toast .toast-title { font-weight: 600; font-size: .9rem; color: #1e293b; }
+        .auth-toast .toast-text { font-size: .82rem; color: #64748b; margin-top: 2px; line-height: 1.4; }
+        .auth-toast .toast-close { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.2rem; line-height: 1; }
+        .auth-toast.removing { animation: toastOut .4s cubic-bezier(.4,0,.2,1) forwards; }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(100px) scale(.9); } to { opacity: 1; transform: translateX(0) scale(1); } }
+        @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateX(100px); } }
 
         @media (max-width: 480px) {
-            .auth-toast-container { top: 0.75rem; right: 0.75rem; left: 0.75rem; }
+            .auth-toast-container { top: .75rem; right: .75rem; left: .75rem; }
             .auth-toast { min-width: unset; max-width: 100%; }
-            .register-card { border-radius: 12px; }
+            .card-body-reg { padding: 1.25rem; }
+            .card-head { padding: 1.1rem 1.25rem; }
         }
     </style>
 </head>
 <body>
     <div class="auth-toast-container" id="toastContainer"></div>
 
-    <div class="register-card">
-        <div class="register-header">
-            <i class="fas fa-user-plus logo-icon"></i>
-            <h4>Create Account</h4>
-            <p>Join {{ organization_name }}</p>
+    <div class="register-shell">
+        <div class="page-head">
+            <div class="brand-icon"><i class="fas fa-university"></i></div>
+            <h1>Create Customer Account</h1>
+            <p>Register a new customer for {{ organization_name }}</p>
         </div>
-        <div class="register-body">
-            <h5>Sign Up</h5>
 
-            <!-- Django messages -->
-            {% if messages %}
-            <div id="djangoMessages" class="d-none"
-                data-messages='{% for message in messages %}[{"tag":"{{ message.tags }}","text":"{{ message|escapejs }}"}]{% if not forloop.last %},{% endif %}{% endfor %}'>
+        <div class="register-card">
+            <div class="card-head">
+                <h5><i class="fas fa-user-plus me-2" style="color:var(--primary)"></i>Customer Onboarding</h5>
             </div>
-            {% endif %}
 
-            <form method="post" id="registerForm">
-                {% csrf_token %}
+            <div class="card-body-reg">
+                <div class="pending-note mb-4">
+                    <i class="fas fa-info-circle mt-1"></i>
+                    <span>After you register, your account will be <strong>pending approval</strong>. Our team will review your information and notify you via SMS once your account has been approved.</span>
+                </div>
 
-                {% if form.errors %}
-                <div id="formErrors" class="d-none" data-errors='{% for field, errors in form.errors.items %}[{"field":"{{ field }}","text":"{{ errors.0|escapejs }}"}]{% if not forloop.last %},{% endif %}{% endfor %}'></div>
+                {% if messages %}
+                <div class="mb-4">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-2" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endfor %}
+                </div>
                 {% endif %}
 
-                <div class="row">
-                    <div class="col-sm-6 mb-3">
-                        <label class="form-label">First Name</label>
-                        {{ form.first_name }}
+                <form method="post" enctype="multipart/form-data" id="registerForm" novalidate>
+                    {% csrf_token %}
+
+                    <!-- Personal Information -->
+                    <div class="section-title"><i class="fas fa-user"></i> Personal Information</div>
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="form-label required">First Name</label>{{ form.first_name }}{{ form.first_name.errors }}</div>
+                        <div class="col-md-6"><label class="form-label required">Last Name</label>{{ form.last_name }}{{ form.last_name.errors }}</div>
+                        <div class="col-md-6"><label class="form-label">Date of Birth</label>{{ form.date_of_birth }}{{ form.date_of_birth.errors }}</div>
+                        <div class="col-md-6"><label class="form-label">Gender</label>{{ form.gender }}{{ form.gender.errors }}</div>
+                        <div class="col-md-6"><label class="form-label required">Phone Number</label>{{ form.phone }}{{ form.phone.errors }}</div>
+                        <div class="col-md-6"><label class="form-label">Alternative Phone</label>{{ form.alt_phone }}{{ form.alt_phone.errors }}</div>
+                        <div class="col-md-6"><label class="form-label required">Email Address</label>{{ form.email }}{{ form.email.errors }}</div>
                     </div>
-                    <div class="col-sm-6 mb-3">
-                        <label class="form-label">Last Name</label>
-                        {{ form.last_name }}
+
+                    <!-- Address Information -->
+                    <div class="section-title"><i class="fas fa-map-marker-alt"></i> Address Information</div>
+                    <div class="row g-3">
+                        <div class="col-12"><label class="form-label">Residential Address</label>{{ form.address }}{{ form.address.errors }}</div>
+                        <div class="col-md-6"><label class="form-label">Occupation</label>{{ form.occupation }}{{ form.occupation.errors }}</div>
                     </div>
+
+                    <!-- Identification -->
+                    <div class="section-title"><i class="fas fa-id-card"></i> Identification</div>
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="form-label">ID Type</label>{{ form.id_type }}{{ form.id_type.errors }}</div>
+                        <div class="col-md-6"><label class="form-label">ID Number</label>{{ form.id_number }}{{ form.id_number.errors }}</div>
+                        <div class="col-12"><label class="form-label">Photo (optional)</label>{{ form.photo }}{{ form.photo.errors }}</div>
+                    </div>
+
+                    <!-- Emergency Contact -->
+                    <div class="section-title"><i class="fas fa-phone-alt"></i> Emergency Contact</div>
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="form-label">Contact Name</label>{{ form.emergency_contact_name }}{{ form.emergency_contact_name.errors }}</div>
+                        <div class="col-md-6"><label class="form-label">Contact Phone</label>{{ form.emergency_contact_phone }}{{ form.emergency_contact_phone.errors }}</div>
+                    </div>
+
+                    <!-- Account Information -->
+                    <div class="section-title"><i class="fas fa-lock"></i> Account Information</div>
+                    <div class="row g-3">
+                        <div class="col-12"><label class="form-label required">{% if not organization_name %}Sign-in Identifier{% else %}Password{% endif %}</label><small class="text-muted d-block mb-1">Use your registered email to sign in</small></div>
+                        <div class="col-md-6"><label class="form-label required">Password</label>{{ form.password1 }}{{ form.password1.errors }}</div>
+                        <div class="col-md-6"><label class="form-label required">Confirm Password</label>{{ form.password2 }}{{ form.password2.errors }}</div>
+                    </div>
+
+                    <button type="submit" class="btn-register mt-4" id="submitBtn">
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <span><i class="fas fa-user-plus me-2"></i>Create Account</span>
+                    </button>
+                </form>
+
+                <div class="register-footer">
+                    Already have an account? <a href="{% url 'login' %}">Sign In</a>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    {{ form.email }}
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Phone</label>
-                    {{ form.phone }}
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Password</label>
-                    {{ form.password1 }}
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Confirm Password</label>
-                    {{ form.password2 }}
-                </div>
-                <button type="submit" class="btn-register" id="submitBtn">
-                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                    <span><i class="fas fa-user-plus me-2"></i>Create Account</span>
-                </button>
-            </form>
-            <div class="register-footer mt-3">
-                Already have an account? <a href="{% url 'login' %}">Sign In</a>
             </div>
         </div>
     </div>
@@ -289,84 +272,32 @@
     (function() {
         var container = document.getElementById('toastContainer');
         var toastId = 0;
-
-        function showAuthToast(type, title, text, duration) {
-            duration = duration || 6000;
+        function showToast(type, title, text) {
             var id = 'auth-toast-' + (++toastId);
             var icons = { success: 'fa-check', error: 'fa-times', warning: 'fa-exclamation-triangle', info: 'fa-info' };
-            var toast = document.createElement('div');
-            toast.className = 'auth-toast ' + type;
-            toast.id = id;
-            toast.innerHTML =
+            var t = document.createElement('div');
+            t.className = 'auth-toast ' + type; t.id = id;
+            t.innerHTML =
                 '<div class="toast-icon-wrap"><i class="fas ' + (icons[type] || icons.info) + '"></i></div>' +
-                '<div class="toast-content">' +
-                    '<div class="toast-title">' + title + '</div>' +
-                    (text ? '<div class="toast-text">' + text + '</div>' : '') +
-                '</div>' +
-                '<button class="toast-close" onclick="dismissAuthToast(\'' + id + '\')">&times;</button>';
-            container.appendChild(toast);
-            setTimeout(function() { dismissAuthToast(id); }, duration);
+                '<div class="toast-content"><div class="toast-title">' + title + '</div>' +
+                (text ? '<div class="toast-text">' + text + '</div>' : '') + '</div>' +
+                '<button class="toast-close" onclick="dismissToast(\'' + id + '\')">&times;</button>';
+            container.appendChild(t);
+            setTimeout(function() { dismissToast(id); }, 6000);
         }
-
-        window.dismissAuthToast = function(id) {
+        window.dismissToast = function(id) {
             var el = document.getElementById(id);
             if (!el) return;
             el.classList.add('removing');
             setTimeout(function() { el.remove(); }, 400);
         };
-
-        // Django messages
         var msgEl = document.getElementById('djangoMessages');
-        if (msgEl) {
-            try {
-                var msgs = JSON.parse(msgEl.getAttribute('data-messages'));
-                msgs.forEach(function(m, i) {
-                    setTimeout(function() {
-                        var type = 'info';
-                        if (m.tag === 'success') type = 'success';
-                        else if (m.tag === 'error' || m.tag === 'danger') type = 'error';
-                        else if (m.tag === 'warning') type = 'warning';
-                        var titles = { success: 'Success', error: 'Error', warning: 'Warning', info: 'Notice' };
-                        showAuthToast(type, titles[type] || 'Notice', m.text);
-                    }, i * 300);
-                });
-            } catch(e) {}
-        }
-
-        // Form field errors → inline + toast
-        var errEl = document.getElementById('formErrors');
-        if (errEl) {
-            try {
-                var errs = JSON.parse(errEl.getAttribute('data-errors'));
-                var msgs = [];
-                errs.forEach(function(e) {
-                    var fieldName = e.field.charAt(0).toUpperCase() + e.field.slice(1).replace('_', ' ');
-                    // Try to add inline error
-                    var input = document.getElementById('id_' + e.field);
-                    if (input) {
-                        input.classList.add('is-invalid');
-                        var span = document.createElement('span');
-                        span.className = 'field-error';
-                        span.textContent = e.text;
-                        input.parentNode.appendChild(span);
-                    }
-                    msgs.push(fieldName + ': ' + e.text);
-                });
-                if (msgs.length > 0) {
-                    setTimeout(function() {
-                        showAuthToast('error', 'Registration Failed', msgs.join('. '));
-                    }, 200);
-                }
-            } catch(ex) {}
-        }
-
-        // Button loading
+        if (msgEl) { msgEl.remove(); }
         var form = document.getElementById('registerForm');
         var btn = document.getElementById('submitBtn');
         if (form && btn) {
             form.addEventListener('submit', function() {
-                btn.classList.add('loading');
-                btn.disabled = true;
+                btn.classList.add('loading'); btn.disabled = true;
             });
         }
     })();

@@ -16,7 +16,7 @@ class TestSusuAccount:
         )
         assert acc.account_number.startswith('SUS-')
         assert acc.current_balance == Decimal('0.00')
-        assert acc.status == 'ACTIVE'
+        assert acc.status == SusuAccount.Status.INACTIVE
 
     def test_account_str(self, customer, cashier_user):
         acc = SusuAccount.objects.create(

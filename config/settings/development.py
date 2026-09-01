@@ -4,11 +4,15 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
+# Local development always uses an on-disk SQLite database.
+# This prevents the production DATABASE_URL from .env (which only resolves on
+# the Render host) from being used locally. Production uses config.settings.production,
+# which reads DATABASE_URL.
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
-        conn_max_age=600,
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
 }
 
 # Email - use console backend in development
