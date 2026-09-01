@@ -13,6 +13,7 @@ urlpatterns = [
     path('loans/', include('apps.loans.urls')),
     path('payments/', include('apps.payments.urls')),
     path('notifications/', include('apps.notifications.urls')),
+    path('campaigns/', include('apps.campaigns.urls')),
     path('reports/', include('apps.reports.urls')),
     path('audit/', include('apps.audit.urls')),
     path('api/', include('apps.core.api_urls')),

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}SMS Templates{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-envelope-open-text me-2"></i>SMS Templates</h4>
+    <a href="{% url 'template_create' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>New Template</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Name</th><th>Type</th><th class="d-none d-lg-table-cell">Message</th><th>Active</th><th>Created</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                {% for t in templates %}
+                    <tr>
+                        <td>{{ t.name }}</td>
+                        <td><span class="badge bg-secondary">{{ t.get_campaign_type_display }}</span></td>
+                        <td class="d-none d-lg-table-cell">{{ t.message|truncatechars:50 }}</td>
+                        <td>{% if t.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}</td>
+                        <td>{{ t.created_at|date:"d M Y" }}</td>
+                        <td>
+                            <a href="{% url 'template_edit' pk=t.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                            <form method="post" action="{% url 'template_delete' pk=t.pk %}" class="d-inline" onsubmit="return confirm('Delete this template?')">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Delete</button></form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">No templates yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Campaign History{% endblock %}
+
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-list me-2"></i>Campaign History</h4>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-sm-6 col-md-4">
+                <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search by name">
+            </div>
+            <div class="col-sm-6 col-md-4">
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-2"><button class="btn btn-primary w-100">Filter</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Name</th><th>Type</th><th class="d-none d-md-table-cell">Target</th>
+                        <th>Recipients</th><th>Delivered</th><th>Failed</th>
+                        <th>Status</th><th class="d-none d-lg-table-cell">Created</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for c in page %}
+                    <tr>
+                        <td>{{ c.name }}</td>
+                        <td><span class="badge bg-secondary">{{ c.get_campaign_type_display }}</span></td>
+                        <td class="d-none d-md-table-cell small">{{ c.get_target_group_display }}</td>
+                        <td>{{ c.recipient_count }}</td>
+                        <td class="text-success">{{ c.delivered_count }}</td>
+                        <td class="text-danger">{{ c.failed_count }}</td>
+                        <td><span class="badge {{ c.status|status_badge_class }}">{{ c.get_status_display }}</span></td>
+                        <td class="d-none d-lg-table-cell">{{ c.created_at|date:"d M Y" }}</td>
+                        <td><a href="{% url 'campaign_detail' pk=c.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="9" class="text-center text-muted py-4">No campaigns found.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if page.has_other_pages %}
+<nav class="mt-3">
+    <ul class="pagination">
+        {% if page.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page.previous_page_number }}">Prev</a></li>{% endif %}
+        <li class="page-item disabled"><span class="page-link">Page {{ page.number }} of {{ page.paginator.num_pages }}</span></li>
+        {% if page.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page.next_page_number }}">Next</a></li>{% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

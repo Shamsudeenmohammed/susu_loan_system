@@ -46,8 +46,24 @@ def status_badge_class(status):
         'INACTIVE': 'bg-secondary',
         'SENT': 'bg-info',
         'DELIVERED': 'bg-success',
+        'SCHEDULED': 'bg-info',
+        'SENDING': 'bg-info',
+        'PARTIAL': 'bg-warning',
+        'DRAFT': 'bg-secondary',
+        'QUEUED': 'bg-warning',
     }
     return status_map.get(str(status).upper(), 'bg-secondary')
+
+
+@register.filter
+def sms_units(value):
+    """Return an SMS units count as a small human string."""
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        n = 0
+    return f"{n} unit" if n == 1 else f"{n} units"
+
 
 
 @register.filter

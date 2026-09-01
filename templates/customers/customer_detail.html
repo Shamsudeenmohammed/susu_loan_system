@@ -50,7 +50,9 @@
                     <div class="col-sm-6"><small class="text-muted d-block">Occupation</small>{{ customer.occupation|default:"-" }}</div>
                     <div class="col-sm-6"><small class="text-muted d-block">Address</small>{{ customer.address|default:"-" }}</div>
                     <div class="col-sm-6"><small class="text-muted d-block">Emergency Contact</small>{{ customer.emergency_contact_name|default:"-" }} {{ customer.emergency_contact_phone }}</div>
-                    <div class="col-sm-6"><small class="text-muted d-block">ID</small>{{ customer.get_id_type_display|default:"-" }} {{ customer.id_number }}</div>
+                    <div class="col-sm-6"><small class="text-muted d-block">ID</small>{{ customer.get_id_type_display|default:"-" }} {{ customer.id_number }}
+                        {% if customer.photo %}<div class="mt-2"><a href="{{ customer.photo.url }}" target="_blank" rel="noopener"><img src="{{ customer.photo.url }}" alt="{{ customer.get_id_type_display|default:'ID document' }}" class="img-thumbnail" style="max-height:120px;"></a><div><a href="{{ customer.photo.url }}" target="_blank" rel="noopener" class="small">View uploaded ID document</a></div></div>{% endif %}
+                    </div>
                     <div class="col-sm-6"><small class="text-muted d-block">Registered</small>{{ customer.created_at|date:"d M Y H:i" }}</div>
                 </div>
             </div>

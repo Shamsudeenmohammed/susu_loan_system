@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}{% if campaign %}Send Test SMS{% elif preview %}Confirm Campaign{% else %}New Campaign{% endif %}{% endblock %}
+
+{% block content %}
+{% if test_form %}
+{# ===================== TEST SMS FLOW ===================== #}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header bg-white">
+                <i class="fas fa-paper-plane me-2"></i>Send Test SMS
+                <div class="text-muted small">Campaign: {{ campaign.name }}</div>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% for field in test_form %}
+                    <div class="mb-3">
+                        <label class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+                    </div>
+                    {% endfor %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'campaign_detail' pk=campaign.pk %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button class="btn btn-primary"><i class="fas fa-paper-plane me-1"></i>Send Test SMS</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+{# ===================== CREATE / PREVIEW FLOW ===================== #}
+<div class="row">
+    <div class="col-lg-8">
+        <h4 class="mb-4"><i class="fas fa-plus-circle me-2"></i>Create SMS Campaign</h4>
+
+        {% if estimate %}
+        <div class="alert alert-info">
+            <strong>Recipient estimate:</strong>
+            {{ estimate.recipients }} recipients &middot; {{ estimate.segments }} segment(s) per message &middot;
+            ~{{ estimate.units }} SMS units.
+        </div>
+        {% endif %}
+
+        {% if preview %}
+        <div class="card mb-4 border-success">
+            <div class="card-header bg-success text-white"><i class="fas fa-check-circle me-2"></i>Confirm Before Sending</div>
+            <div class="card-body">
+                <p>Preview shows <strong>{{ preview.recipients }}</strong> recipients
+                ({{ preview.valid }} with valid numbers, {{ preview.missing }} missing/invalid).
+                Estimated SMS units: <strong>{{ preview.units }}</strong>.</p>
+                {% if preview.valid == 0 %}
+                <div class="alert alert-danger py-2">No valid recipients. Check your target/filters.</div>
+                {% endif %}
+                <h6 class="mt-3">Message preview (first 5)</h6>
+                <ul class="small">
+                    {% for s in preview.sample %}
+                    <li><strong>{{ s.name }}</strong> ({{ s.phone }}) &mdash; {{ s.message }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% for field in form %}
+                    {% if field.name != 'manual_customers' %}
+                    <div class="mb-3">
+                        <label class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if form.target_group.value == 'MANUAL_SELECTION' %}
+                    <div class="mb-3">
+                        <label class="form-label">Select Customers (manual target)</label>
+                        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                            {{ manual_form.customers }}
+                        </div>
+                        {% if manual_form.customers.errors %}<div class="text-danger small">{{ manual_form.customers.errors }}</div>{% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="form-text mb-3">Placeholders: {% for h in placeholder_hints %}<span class="badge bg-light text-dark border">{{ h }}</span> {% endfor %}</div>
+
+                    {% if preview %}
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="confirm" name="confirm" value="1" required>
+                        <label class="form-check-label" for="confirm">I confirm that <strong>{{ preview.valid }}</strong> customers will receive this message.</label>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" name="action" value="preview" class="btn btn-outline-primary">
+                            <i class="fas fa-eye me-1"></i>Preview &amp; Estimate
+                        </button>
+                        {% if preview.valid %}
+                        <button type="submit" name="action" value="create" class="btn btn-success">
+                            {% if form.trigger.value == 'SCHEDULE' %}<i class="fas fa-clock me-1"></i>Schedule{% else %}<i class="fas fa-paper-plane me-1"></i>Send Now{% endif %}
+                        </button>
+                        {% else %}
+                        <button type="submit" name="action" value="create" class="btn btn-success disabled">Send</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

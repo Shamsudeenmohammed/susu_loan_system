@@ -30,23 +30,25 @@ def activate_susu_account(account, actor=None, ip_address=None):
     - SMS is sent after the status is committed so a provider failure never
       corrupts the account state.
     """
-    account = type(account).objects.select_for_update().get(pk=account.pk)
-
-    if account.status == account.Status.ACTIVE:
-        existing_sms = account.customer.sms_notifications.filter(
-            notification_type='SUSU_ACTIVATED'
-        ).first()
-        return ActivationResult(
-            changed=False,
-            sms_sent=existing_sms is not None,
-            sms_message=(
-                f'Account {account.account_number} is already active; no activation or SMS sent.'
-                if existing_sms is None
-                else f'Account {account.account_number} is already active. Activation SMS already sent.'
-            ),
-        )
-
+    # Lock + inspect + update must happen inside one explicit transaction
+    # (select_for_update() is rejected outside one on PostgreSQL).
     with transaction.atomic():
+        account = type(account).objects.select_for_update().get(pk=account.pk)
+
+        if account.status == account.Status.ACTIVE:
+            existing_sms = account.customer.sms_notifications.filter(
+                notification_type='SUSU_ACTIVATED'
+            ).first()
+            return ActivationResult(
+                changed=False,
+                sms_sent=existing_sms is not None,
+                sms_message=(
+                    f'Account {account.account_number} is already active; no activation or SMS sent.'
+                    if existing_sms is None
+                    else f'Account {account.account_number} is already active. Activation SMS already sent.'
+                ),
+            )
+
         account.status = account.Status.ACTIVE
         account.activated_at = timezone.now()
         account.save(update_fields=['status', 'activated_at', 'updated_at'])

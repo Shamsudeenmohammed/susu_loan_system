@@ -32,23 +32,26 @@ def approve_customer(customer, actor=None, ip_address=None):
       SMS-provider failure never corrupts the customer's approval state.
     - Returns an ApprovalResult describing what happened.
     """
-    customer = Customer.objects.select_for_update().get(pk=customer.pk)
-
-    if customer.status != Customer.Status.PENDING:
-        existing_sms = customer.sms_notifications.filter(
-            notification_type='CUSTOMER_APPROVED'
-        ).first()
-        return ApprovalResult(
-            changed=False,
-            sms_sent=existing_sms is not None,
-            sms_message=(
-                'Customer was already approved; no action taken.'
-                if existing_sms is None
-                else f'Customer was already approved. SMS already sent ({existing_sms.notification_number}).'
-            ),
-        )
-
+    # select_for_update() must run inside an explicit transaction (autocommit
+    # mode on PostgreSQL rejects it outside one). The whole transition is atomic:
+    # the row is locked, inspected and updated before the lock is released.
     with transaction.atomic():
+        customer = Customer.objects.select_for_update().get(pk=customer.pk)
+
+        if customer.status != Customer.Status.PENDING:
+            existing_sms = customer.sms_notifications.filter(
+                notification_type='CUSTOMER_APPROVED'
+            ).first()
+            return ApprovalResult(
+                changed=False,
+                sms_sent=existing_sms is not None,
+                sms_message=(
+                    'Customer was already approved; no action taken.'
+                    if existing_sms is None
+                    else f'Customer was already approved. SMS already sent ({existing_sms.notification_number}).'
+                ),
+            )
+
         customer.status = Customer.Status.ACTIVE
         customer.approved_at = timezone.now()
         customer.approved_by = actor
@@ -91,16 +94,16 @@ def reject_customer(customer, actor=None, ip_address=None, reason=''):
 
     Idempotent: rejecting an already-rejected/non-pending customer is a no-op.
     """
-    customer = Customer.objects.select_for_update().get(pk=customer.pk)
-
-    if customer.status != Customer.Status.PENDING:
-        return ApprovalResult(
-            changed=False,
-            sms_sent=False,
-            sms_message='Customer is not pending approval; no action taken.',
-        )
-
     with transaction.atomic():
+        customer = Customer.objects.select_for_update().get(pk=customer.pk)
+
+        if customer.status != Customer.Status.PENDING:
+            return ApprovalResult(
+                changed=False,
+                sms_sent=False,
+                sms_message='Customer is not pending approval; no action taken.',
+            )
+
         customer.status = Customer.Status.REJECTED
         customer.rejected_at = timezone.now()
         customer.rejected_by = actor

@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'apps.loans',
     'apps.payments',
     'apps.notifications',
+    'apps.campaigns',
     'apps.reports',
     'apps.audit',
     'apps.dashboard',

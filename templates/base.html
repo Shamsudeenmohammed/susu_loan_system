@@ -84,6 +84,21 @@
                 <a class="nav-link" href="{% url 'sms_notification_list' %}">
                     <i class="fas fa-sms"></i>SMS History
                 </a>
+                <a class="nav-link" href="{% url 'campaign_dashboard' %}">
+                    <i class="fas fa-bullhorn"></i>SMS Campaigns
+                </a>
+                <a class="nav-link" href="{% url 'campaign_create' %}">
+                    <i class="fas fa-plus-circle"></i>Create Campaign
+                </a>
+                <a class="nav-link" href="{% url 'campaign_history' %}">
+                    <i class="fas fa-list"></i>Campaign History
+                </a>
+                <a class="nav-link" href="{% url 'template_list' %}">
+                    <i class="fas fa-envelope-open-text"></i>SMS Templates
+                </a>
+                <a class="nav-link" href="{% url 'campaign_logs' %}">
+                    <i class="fas fa-stream"></i>SMS Sending Log
+                </a>
                 <a class="nav-link" href="{% url 'audit_log_list' %}">
                     <i class="fas fa-clipboard-list"></i>Audit Log
                 </a>
