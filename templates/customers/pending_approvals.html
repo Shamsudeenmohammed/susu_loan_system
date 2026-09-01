@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Pending Approvals{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Pending Customer Approvals <span class="badge bg-warning text-dark">{{ total_pending }}</span></h4>
+    <a href="{% url 'customer_list' %}" class="btn btn-outline-primary"><i class="fas fa-users me-1"></i>All Customers</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-warning">
+            <div class="card-body">
+                <small class="text-muted d-block">Pending Approval</small>
+                <h3 class="mb-0 text-warning">{{ total_pending }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-success">
+            <div class="card-body">
+                <small class="text-muted d-block">Approved / Active</small>
+                <h3 class="mb-0 text-success">{{ total_approved }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <small class="text-muted d-block">Total Customers</small>
+                <h3 class="mb-0">{{ total_all }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Customer #</th>
+                        <th>Full Name</th>
+                        <th class="d-none d-md-table-cell">Phone</th>
+                        <th class="d-none d-lg-table-cell">Email</th>
+                        <th class="d-none d-lg-table-cell">Registered</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for customer in pending_customers %}
+                <tr>
+                    <td><a href="{% url 'customer_detail' pk=customer.pk %}">{{ customer.customer_number }}</a></td>
+                    <td>{{ customer.get_full_name }}</td>
+                    <td class="d-none d-md-table-cell">{{ customer.phone }}</td>
+                    <td class="d-none d-lg-table-cell">{{ customer.email|default:"-" }}</td>
+                    <td class="d-none d-lg-table-cell">{{ customer.created_at|date:"d M Y H:i" }}</td>
+                    <td><span class="badge {{ customer.status|status_badge_class }}">{{ customer.status }}</span></td>
+                    <td>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'customer_detail' pk=customer.pk %}" class="btn btn-sm btn-outline-primary">Review</a>
+                            <form method="post" action="{% url 'customer_approve' pk=customer.pk %}"
+                                data-confirm="Are you sure you want to approve this customer? Their customer account will become active and an SMS notification will be sent."
+                                data-confirm-title="Approve Customer?"
+                                data-confirm-type="success"
+                                data-confirm-text="Approve Customer">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-check me-1"></i>Approve</button>
+                            </form>
+                            <form method="post" action="{% url 'customer_reject' pk=customer.pk %}"
+                                data-confirm="Are you sure you want to reject this customer registration?"
+                                data-confirm-title="Reject Customer?"
+                                data-confirm-type="danger"
+                                data-confirm-text="Reject Customer">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-times me-1"></i>Reject</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No customers awaiting approval.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
