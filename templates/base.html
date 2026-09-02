@@ -21,7 +21,7 @@
         {% if user.is_authenticated and user.role != 'CUSTOMER' %}
         <nav id="sidebar" class="sidebar">
             <div class="sidebar-header">
-                <h5><i class="fas fa-university me-2"></i>{{ organization_name.split.0 }}</h5>
+                <h5><i class="fas fa-university me-2"></i>{{ organization_name.split|first }}</h5>
                 <small>Staff Portal</small>
             </div>
             <div class="sidebar-nav">
@@ -248,7 +248,7 @@
         {% if user.is_authenticated and user.role == 'CUSTOMER' %}
         <nav id="sidebar" class="sidebar">
             <div class="sidebar-header">
-                <h5><i class="fas fa-university me-2"></i>{{ organization_name.split.0 }}</h5>
+                <h5><i class="fas fa-university me-2"></i>{{ organization_name.split|first }}</h5>
                 <small>My Account</small>
             </div>
             <div class="sidebar-nav">
@@ -294,7 +294,7 @@
 
                 <div class="user-area">
                     {% if user.is_authenticated %}
-                    <div class="user-avatar">{{ user.first_name.0|default:user.email.0|upper }}</div>
+                    <div class="user-avatar">{{ user.first_name|default:user.email|first|upper }}</div>
                     <div class="d-none d-sm-block">
                         <div style="font-size:0.825rem;font-weight:600;">{{ user.get_full_name|default:user.email }}</div>
                         <div style="font-size:0.7rem;color:var(--text-muted);">{{ user.get_role_display }}</div>
