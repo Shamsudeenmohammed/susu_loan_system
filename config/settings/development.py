@@ -4,6 +4,15 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
+
+# Strip null Origin header before CSRF check (some dev browsers send "null")
+_csrf_idx = MIDDLEWARE.index('django.middleware.csrf.CsrfViewMiddleware')
+MIDDLEWARE.insert(_csrf_idx, 'config.middleware.StripNullOriginMiddleware')
+
 # Local development always uses an on-disk SQLite database.
 # This prevents the production DATABASE_URL from .env (which only resolves on
 # the Render host) from being used locally. Production uses config.settings.production,

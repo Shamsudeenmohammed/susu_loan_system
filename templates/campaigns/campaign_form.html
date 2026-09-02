@@ -4,6 +4,21 @@
 {% block title %}{% if campaign %}Send Test SMS{% elif preview %}Confirm Campaign{% else %}New Campaign{% endif %}{% endblock %}
 
 {% block content %}
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if form.non_field_errors %}
+<div class="alert alert-danger">
+    {% for error in form.non_field_errors %}<p class="mb-0">{{ error }}</p>{% endfor %}
+</div>
+{% endif %}
+
 {% if test_form %}
 {# ===================== TEST SMS FLOW ===================== #}
 <div class="row justify-content-center">
@@ -103,12 +118,20 @@
                         <button type="submit" name="action" value="preview" class="btn btn-outline-primary">
                             <i class="fas fa-eye me-1"></i>Preview &amp; Estimate
                         </button>
-                        {% if preview.valid %}
-                        <button type="submit" name="action" value="create" class="btn btn-success">
-                            {% if form.trigger.value == 'SCHEDULE' %}<i class="fas fa-clock me-1"></i>Schedule{% else %}<i class="fas fa-paper-plane me-1"></i>Send Now{% endif %}
-                        </button>
+                        {% if preview %}
+                            {% if preview.valid > 0 %}
+                            <button type="submit" name="action" value="create" class="btn btn-success">
+                                {% if form.trigger.value == 'SCHEDULE' %}<i class="fas fa-clock me-1"></i>Schedule{% else %}<i class="fas fa-paper-plane me-1"></i>Send Now{% endif %}
+                            </button>
+                            {% else %}
+                            <button type="submit" name="action" value="create" class="btn btn-success" disabled>
+                                <i class="fas fa-paper-plane me-1"></i>Send
+                            </button>
+                            {% endif %}
                         {% else %}
-                        <button type="submit" name="action" value="create" class="btn btn-success disabled">Send</button>
+                        <button type="submit" name="action" value="create" class="btn btn-secondary" disabled>
+                            <i class="fas fa-paper-plane me-1"></i>Send (Preview first)
+                        </button>
                         {% endif %}
                     </div>
                 </form>
@@ -116,5 +139,22 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var defaultMessages = {{ default_messages_json|safe }};
+    var campaignTypeSelect = document.querySelector('select[name="campaign_type"]');
+    var messageTextarea = document.querySelector('textarea[name="message"]');
+
+    if (campaignTypeSelect && messageTextarea) {
+        campaignTypeSelect.addEventListener('change', function() {
+            var selectedType = this.value;
+            if (defaultMessages[selectedType]) {
+                messageTextarea.value = defaultMessages[selectedType];
+            }
+        });
+    }
+});
+</script>
 {% endif %}
 {% endblock %}

@@ -5,10 +5,10 @@ from apps.customers.models import Customer
 
 
 class LoginForm(AuthenticationForm):
-    username = forms.EmailField(
-        widget=forms.EmailInput(attrs={
+    username = forms.CharField(
+        widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Email address',
+            'placeholder': 'Username',
             'autofocus': True,
         })
     )
@@ -20,9 +20,84 @@ class LoginForm(AuthenticationForm):
     )
 
 
+class ForgotPasswordForm(forms.Form):
+    """Form to request password reset - asks for registered phone number."""
+    phone = forms.CharField(
+        max_length=20,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Registered Phone Number (e.g., 024XXXXXXX)',
+            'autofocus': True,
+        })
+    )
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+        from apps.core.utils import normalize_ghana_phone
+        from apps.customers.models import Customer
+        phone = normalize_ghana_phone(phone)
+        if not Customer.objects.filter(phone=phone).exists():
+            raise forms.ValidationError('No account found with this phone number.')
+        return phone
+
+
+class OTPVerificationForm(forms.Form):
+    """Form to verify OTP sent via SMS."""
+    otp = forms.CharField(
+        max_length=6,
+        min_length=6,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter 6-digit code',
+            'autofocus': True,
+            'maxlength': '6',
+        })
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.phone = kwargs.pop('phone', None)
+        super().__init__(*args, **kwargs)
+
+    def clean_otp(self):
+        otp = self.cleaned_data.get('otp')
+        if not otp.isdigit() or len(otp) != 6:
+            raise forms.ValidationError('Please enter a valid 6-digit code.')
+        return otp
+
+
+class PasswordResetForm(forms.Form):
+    """Form to set new password after OTP verification."""
+    password1 = forms.CharField(
+        label='New Password',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'New Password',
+            'autofocus': True,
+        }),
+        help_text='At least 8 characters.'
+    )
+    password2 = forms.CharField(
+        label='Confirm New Password',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirm New Password',
+        })
+    )
+
+    def clean_password2(self):
+        p1 = self.cleaned_data.get('password1')
+        p2 = self.cleaned_data.get('password2')
+        if p1 and p2 and p1 != p2:
+            raise forms.ValidationError('The two password fields did not match.')
+        if p1 and len(p1) < 8:
+            raise forms.ValidationError('Password must be at least 8 characters long.')
+        return p2
+
+
 class UserRegistrationForm(UserCreationForm):
     email = forms.EmailField(
-        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'})
+        required=False,
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email (optional)'})
     )
     first_name = forms.CharField(
         max_length=30,
@@ -40,17 +115,34 @@ class UserRegistrationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'phone', 'password1', 'password2']
+        fields = ['username', 'email', 'first_name', 'last_name', 'phone', 'password1', 'password2']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['username'] = forms.CharField(
+            max_length=150,
+            widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username', 'autofocus': True})
+        )
         self.fields['password1'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Password'})
         self.fields['password2'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Confirm Password'})
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if User.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError('A user with this username already exists.')
+        return username.lower()
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email and User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('A user with this email already exists.')
+        return email
 
 
 class StaffCreationForm(UserCreationForm):
     email = forms.EmailField(
-        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'})
+        required=False,
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email (optional)'})
     )
     first_name = forms.CharField(
         max_length=30,
@@ -72,12 +164,28 @@ class StaffCreationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'phone', 'role', 'password1', 'password2']
+        fields = ['username', 'email', 'first_name', 'last_name', 'phone', 'role', 'password1', 'password2']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['password1'].widget.attrs.update({'class': 'form-control'})
-        self.fields['password2'].widget.attrs.update({'class': 'form-control'})
+        self.fields['username'] = forms.CharField(
+            max_length=150,
+            widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username', 'autofocus': True})
+        )
+        self.fields['password1'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Password'})
+        self.fields['password2'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Confirm Password'})
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if User.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError('A user with this username already exists.')
+        return username.lower()
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email and User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('A user with this email already exists.')
+        return email
 
 
 class UserUpdateForm(forms.ModelForm):
@@ -94,10 +202,14 @@ class UserUpdateForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
+    email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={'class': 'form-control'})
+    )
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'phone']
+        fields = ['first_name', 'last_name', 'phone', 'email']
 
 
 class CustomerRegistrationForm(forms.Form):
@@ -105,6 +217,10 @@ class CustomerRegistrationForm(forms.Form):
     Public customer registration form capturing account credentials plus the
     full customer profile. Saves both a User and a Customer (status=PENDING).
     """
+    username = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Choose a Username', 'autofocus': True})
+    )
     first_name = forms.CharField(
         max_length=100,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'})
@@ -126,13 +242,9 @@ class CustomerRegistrationForm(forms.Form):
         max_length=20,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone Number (e.g., 024XXXXXXX)'})
     )
-    alt_phone = forms.CharField(
-        max_length=20,
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Alternative Phone'})
-    )
     email = forms.EmailField(
-        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email Address'})
+        required=False,
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email Address (optional)'})
     )
     address = forms.CharField(
         required=False,
@@ -141,14 +253,6 @@ class CustomerRegistrationForm(forms.Form):
     occupation = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Occupation'})
-    )
-    emergency_contact_name = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Emergency Contact Name'})
-    )
-    emergency_contact_phone = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Emergency Contact Phone'})
     )
     id_type = forms.ChoiceField(
         choices=[
@@ -176,15 +280,23 @@ class CustomerRegistrationForm(forms.Form):
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirm Password'})
     )
 
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if User.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError('A user with this username already exists.')
+        return username.lower()
+
     def clean_email(self):
         email = self.cleaned_data.get('email')
-        if User.objects.filter(email__iexact=email).exists():
+        if email and User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError('A user with this email already exists.')
         return email
 
     def clean_phone(self):
         phone = self.cleaned_data.get('phone')
-        if phone and Customer.objects.filter(phone=phone).exists():
+        from apps.core.utils import normalize_ghana_phone
+        phone = normalize_ghana_phone(phone)
+        if Customer.objects.filter(phone=phone).exists():
             raise forms.ValidationError('A customer with this phone number already exists.')
         return phone
 
@@ -194,5 +306,7 @@ class CustomerRegistrationForm(forms.Form):
         p2 = cleaned.get('password2')
         if p1 and p2 and p1 != p2:
             self.add_error('password2', 'The two password fields did not match.')
+        if p1 and len(p1) < 8:
+            self.add_error('password1', 'Password must be at least 8 characters long.')
         return cleaned
 

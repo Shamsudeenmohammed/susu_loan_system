@@ -13,6 +13,7 @@ User = get_user_model()
 @pytest.fixture
 def admin_user(db):
     return User.objects.create_user(
+        username='admin_test',
         email='admin@test.com',
         password='testpass123',
         first_name='Admin',
@@ -25,6 +26,7 @@ def admin_user(db):
 @pytest.fixture
 def cashier_user(db):
     return User.objects.create_user(
+        username='cashier_test',
         email='cashier@test.com',
         password='testpass123',
         first_name='Cashier',
@@ -36,6 +38,7 @@ def cashier_user(db):
 @pytest.fixture
 def customer_user(db):
     return User.objects.create_user(
+        username='customer_test',
         email='customer@test.com',
         password='testpass123',
         first_name='John',

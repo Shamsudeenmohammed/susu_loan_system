@@ -36,6 +36,7 @@ def loan_policy(db):
 def eligible_customer(db):
     """Customer registered 4 months ago with full KYC."""
     user = User.objects.create_user(
+        username='eligible_test',
         email='eligible@test.com', password='testpass123',
         first_name='Eligible', last_name='Member', role='CUSTOMER',
     )
@@ -57,6 +58,7 @@ def eligible_customer(db):
 def new_customer(db):
     """Brand new customer."""
     user = User.objects.create_user(
+        username='new_customer_test',
         email='new@test.com', password='testpass123',
         first_name='New', last_name='Customer', role='CUSTOMER',
     )
@@ -69,6 +71,7 @@ def new_customer(db):
 @pytest.fixture
 def admin_user(db):
     return User.objects.create_user(
+        username='admin_elig_test',
         email='admin@test.com', password='testpass123',
         first_name='Admin', last_name='User', role='SUPER_ADMIN', is_staff=True,
     )
@@ -77,6 +80,7 @@ def admin_user(db):
 @pytest.fixture
 def cashier_user(db):
     return User.objects.create_user(
+        username='cashier_elig_test',
         email='cashier@test.com', password='testpass123',
         first_name='Cashier', last_name='User', role='CASHIER',
     )
@@ -158,6 +162,7 @@ class TestNewCustomerCannotApply:
 
     def test_one_week_old_customer_not_eligible(self, db, loan_policy):
         user = User.objects.create_user(
+            username='week_old_test',
             email='week@test.com', password='testpass123',
             first_name='Week', last_name='Old', role='CUSTOMER',
         )
@@ -174,6 +179,7 @@ class TestNewCustomerCannotApply:
 
     def test_one_month_old_customer_not_eligible(self, db, loan_policy):
         user = User.objects.create_user(
+            username='month_old_test',
             email='month@test.com', password='testpass123',
             first_name='Month', last_name='Old', role='CUSTOMER',
         )
@@ -278,6 +284,7 @@ class TestOverdueLoanRestriction:
 class TestSuspendedCustomerBlocked:
     def test_suspended_not_eligible(self, db, loan_policy):
         user = User.objects.create_user(
+            username='suspended_test',
             email='suspended@test.com', password='testpass123',
             first_name='Suspended', last_name='User', role='CUSTOMER',
         )
@@ -295,6 +302,7 @@ class TestSuspendedCustomerBlocked:
 class TestIncompleteKYC:
     def test_incomplete_kyc_rejects(self, db, loan_policy):
         user = User.objects.create_user(
+            username='nokyc_test',
             email='nokyc@test.com', password='testpass123',
             first_name='No', last_name='KYC', role='CUSTOMER',
         )
@@ -312,6 +320,7 @@ class TestIncompleteKYC:
 
     def test_kyc_not_required_passes(self, db):
         user = User.objects.create_user(
+            username='nokyc2_test',
             email='nokyc2@test.com', password='testpass123',
             first_name='No', last_name='KYC2', role='CUSTOMER',
         )
@@ -500,6 +509,7 @@ class TestScoreCalculation:
 class TestWaitingPeriod:
     def test_waiting_period_enforced(self, db, loan_policy):
         user = User.objects.create_user(
+            username='wait_test',
             email='wait@test.com', password='testpass123',
             first_name='Wait', last_name='Test', role='CUSTOMER',
         )

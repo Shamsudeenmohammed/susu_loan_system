@@ -1,4 +1,5 @@
 import csv
+import json
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -14,7 +15,7 @@ from apps.audit.models import AuditLog
 from .forms import CampaignForm, TemplateForm, TestSMSSendForm, RecipientSelectionForm
 from .models import SMSCampaign, SMSMessageLog, SMSTemplate
 from .services.personalization import CAMPAIGN_PLACEHOLDERS, ALL_PLACEHOLDERS
-from .services.recipients import resolve_recipients
+from .services.recipients import resolve_recipients, resolve_slots
 from .services import sending
 from .services.sms_units import segments_for
 from .tasks import run_campaign_task, retry_failed_task
@@ -23,6 +24,76 @@ from .tasks import run_campaign_task, retry_failed_task
 CAMPAIGN_ROLES = ('SUPER_ADMIN', 'ADMIN', 'MANAGER')
 SEND_ROLES = ('SUPER_ADMIN', 'ADMIN')
 
+DEFAULT_MESSAGES = {
+    'GENERAL_ANNOUNCEMENT': (
+        "Dear {{customer_name}},\n\n"
+        "This is an important announcement from Zemzem Savings and Loans. "
+        "Please visit our office or contact us for more information.\n\n"
+        "Thank you for choosing Zemzem."
+    ),
+    'REPAYMENT_REMINDER': (
+        "Dear {{customer_name}},\n\n"
+        "This is a friendly reminder that your loan repayment of GHS {{repayment_amount}} "
+        "is due on {{due_date}}. Your current outstanding balance is GHS {{outstanding_balance}}.\n\n"
+        "Please make your payment on time to avoid penalties.\n\n"
+        "Zemzem Savings and Loans"
+    ),
+    'OVERDUE_REPAYMENT_REMINDER': (
+        "Dear {{customer_name}},\n\n"
+        "URGENT: Your loan repayment of GHS {{repayment_amount}} was due on {{due_date}} "
+        "and is now overdue. Your outstanding balance is GHS {{outstanding_balance}}.\n\n"
+        "Please pay immediately to avoid additional charges. Contact us if you need assistance.\n\n"
+        "Zemzem Savings and Loans"
+    ),
+    'CONTRIBUTION_REMINDER': (
+        "Dear {{customer_name}},\n\n"
+        "This is a reminder that your Susu contribution of GHS {{contribution_amount}} "
+        "is due on {{contribution_due_date}}. Your account number is {{account_number}}.\n\n"
+        "Keep saving consistently to reach your financial goals!\n\n"
+        "Zemzem Savings and Loans"
+    ),
+    'LOAN_NOTIFICATION': (
+        "Dear {{customer_name}},\n\n"
+        "Your loan account ({{account_number}}) has an outstanding balance of GHS {{outstanding_balance}}. "
+        "Please review your repayment schedule and make timely payments.\n\n"
+        "For questions, visit our office or call us.\n\n"
+        "Zemzem Savings and Loans"
+    ),
+    'ACCOUNT_APPROVAL': (
+        "Dear {{customer_name}},\n\n"
+        "Congratulations! Your account ({{account_number}}) has been approved. "
+        "You can now access all Zemzem Savings and Loans services.\n\n"
+        "Welcome to the Zemzem family!\n\n"
+        "Zemzem Savings and Loans"
+    ),
+    'ACCOUNT_ACTIVATION': (
+        "Dear {{customer_name}},\n\n"
+        "Your account ({{account_number}}) is now active! You can start making transactions "
+        "and enjoying our services.\n\n"
+        "Thank you for choosing Zemzem.\n\n"
+        "Zemzem Savings and Loans"
+    ),
+    'SUSU_ACTIVATION': (
+        "Dear {{customer_name}},\n\n"
+        "Your Susu account ({{account_number}}) has been activated. "
+        "Start making your contributions regularly to build your savings.\n\n"
+        "Together we grow!\n\n"
+        "Zemzem Savings and Loans"
+    ),
+    'PAYMENT_CONFIRMATION': (
+        "Dear {{customer_name}},\n\n"
+        "We confirm that your payment has been received successfully. "
+        "Your account ({{account_number}}) has been updated.\n\n"
+        "Thank you for your prompt payment!\n\n"
+        "Zemzem Savings and Loans"
+    ),
+    'CUSTOM_MESSAGE': (
+        "Dear {{customer_name}},\n\n"
+        "Type your custom message here.\n\n"
+        "Zemzem Savings and Loans"
+    ),
+}
+
 
 def _campaign_placeholder_hints(campaign_type):
     supported = CAMPAIGN_PLACEHOLDERS.get(campaign_type, set())
@@ -30,18 +101,35 @@ def _campaign_placeholder_hints(campaign_type):
 
 
 def _estimate_for(campaign, manual_ids):
-    """Resolve recipients and return counts + a small sample."""
+    """Resolve recipient slots and return counts + a small sample."""
+    from apps.core.utils import normalize_ghana_phone, validate_ghana_phone
+
     campaign.manual_customer_ids = manual_ids
-    recipients = resolve_recipients(campaign)
-    est = sending.estimate(campaign, recipients)
-    sample = [
-        {
-            'name': c.get_full_name(),
-            'phone': c.phone,
-            'message': sending.personal_message(campaign, c),
+    customers = resolve_recipients(campaign)
+    slots = resolve_slots(customers)
+    est = sending.estimate(campaign, slots)
+
+    valid = 0
+    missing = 0
+    for customer, account in slots:
+        phone = normalize_ghana_phone(customer.phone)
+        if phone and validate_ghana_phone(phone):
+            valid += 1
+        else:
+            missing += 1
+
+    sample = []
+    for customer, account in slots[:5]:
+        entry = {
+            'name': customer.get_full_name(),
+            'phone': customer.phone,
+            'message': sending.personal_message(campaign, customer, account),
         }
-        for c in recipients[:5]
-    ]
+        if account is not None:
+            entry['account_number'] = account.account_number
+        sample.append(entry)
+    est['valid'] = valid
+    est['missing'] = missing
     return est, sample
 
 
@@ -86,13 +174,15 @@ def campaign_create(request):
                     manual_ids = [int(pk) for pk in request.POST.getlist('customers') if pk]
                 estimate, sample = _estimate_for(campaign, manual_ids)
                 preview = {
-                    'valid': campaign.valid_phone_count,
-                    'missing': campaign.missing_phone_count,
-                    'recipients': campaign.recipient_count,
+                    'valid': estimate.get('valid', 0),
+                    'missing': estimate.get('missing', 0),
+                    'recipients': estimate['recipients'],
                     'segments': estimate['segments'] if estimate else 0,
                     'units': estimate['units'] if estimate else 0,
                     'sample': sample,
                 }
+            else:
+                form.add_error(None, 'Please fill in all required fields before previewing.')
             # Re-render the form with the submitted data so the user can confirm.
             return render(request, 'campaigns/campaign_form.html', {
                 'form': form,
@@ -101,13 +191,16 @@ def campaign_create(request):
                 'estimate': estimate,
                 'sample': sample,
                 'placeholder_hints': [t for _, t in ALL_PLACEHOLDERS.items()],
+                'default_messages_json': json.dumps(DEFAULT_MESSAGES),
             })
 
         if action == 'create':
             if not request.POST.get('confirm') == '1':
-                messages.error(request, 'Please confirm the campaign before sending.')
+                form.add_error(None, 'Please confirm the campaign before sending.')
                 return render(request, 'campaigns/campaign_form.html', {
                     'form': form, 'manual_form': manual_form, 'preview': preview,
+                    'placeholder_hints': [t for _, t in ALL_PLACEHOLDERS.items()],
+                    'default_messages_json': json.dumps(DEFAULT_MESSAGES),
                 })
             if form.is_valid():
                 campaign = form.save(commit=False)
@@ -137,7 +230,7 @@ def campaign_create(request):
                 else:
                     messages.success(request, 'Campaign scheduled.')
                 return redirect('campaign_detail', pk=campaign.pk)
-            messages.error(request, 'Please correct the errors below.')
+            form.add_error(None, 'Please correct the errors below.')
 
     context = {
         'form': form,
@@ -146,6 +239,7 @@ def campaign_create(request):
         'estimate': estimate,
         'sample': sample,
         'placeholder_hints': [t for _, t in ALL_PLACEHOLDERS.items()],
+        'default_messages_json': json.dumps(DEFAULT_MESSAGES),
     }
     return render(request, 'campaigns/campaign_form.html', context)
 

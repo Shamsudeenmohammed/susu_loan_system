@@ -52,10 +52,11 @@ def withdrawal_request(withdrawal_number, amount):
     )
 
 
-def withdrawal_approved(withdrawal_number, amount):
+def withdrawal_approved(withdrawal_number, amount, balance_after):
     return (
         f"{BRAND}: Your withdrawal request {withdrawal_number} for GHS {amount:.2f} "
-        f"has been approved and processed."
+        f"has been approved and processed. "
+        f"Your new savings balance is GHS {balance_after:,.2f}."
     )
 
 

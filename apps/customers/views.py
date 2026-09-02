@@ -36,6 +36,7 @@ def customer_list(request):
         'customers': customers.select_related('registered_by'),
         'form': form,
         'total_count': customers.count(),
+        'can_manage': request.user.has_role('SUPER_ADMIN', 'ADMIN'),
     }
     return render(request, 'customers/customer_list.html', context)
 
@@ -174,9 +175,73 @@ def susu_account_activate(request, pk):
     result = activate_susu_account(account, actor=request.user, ip_address=_client_ip(request))
     if result.changed:
         if result.sms_sent:
-            messages.success(request, f"Susu Account Activated � {result.sms_message}")
+            messages.success(request, f"Susu Account Activated - {result.sms_message}")
         else:
             messages.warning(request, result.sms_message)
     else:
         messages.info(request, result.sms_message)
     return redirect("susu_account_detail", pk=account.pk)
+
+
+@login_required
+@require_POST
+@role_required("SUPER_ADMIN", "ADMIN")
+def customer_toggle_status(request, pk):
+    customer = get_object_or_404(Customer, pk=pk)
+
+    if customer.status == Customer.Status.ACTIVE:
+        customer.status = Customer.Status.INACTIVE
+        customer.save(update_fields=['status', 'updated_at'])
+        messages.warning(request, f"{customer.get_full_name()} has been deactivated.")
+    elif customer.status == Customer.Status.INACTIVE:
+        customer.status = Customer.Status.ACTIVE
+        customer.save(update_fields=['status', 'updated_at'])
+        messages.success(request, f"{customer.get_full_name()} has been activated.")
+    else:
+        messages.info(request, f"Cannot toggle status for a customer with status: {customer.status}.")
+        return redirect("customer_list")
+
+    AuditLog = _get_audit_model()
+    if AuditLog:
+        AuditLog.log(
+            action="CUSTOMER_STATUS_TOGGLE",
+            description=f"Status changed to {customer.status} by {request.user.username}",
+            user=request.user,
+            object_type="Customer",
+            object_id=str(customer.pk),
+            ip_address=_client_ip(request),
+        )
+
+    return redirect("customer_list")
+
+
+@login_required
+@require_POST
+@role_required("SUPER_ADMIN", "ADMIN")
+def customer_delete(request, pk):
+    customer = get_object_or_404(Customer, pk=pk)
+    customer_name = customer.get_full_name()
+    customer_number = customer.customer_number
+
+    AuditLog = _get_audit_model()
+    if AuditLog:
+        AuditLog.log(
+            action="CUSTOMER_DELETED",
+            description=f"Customer {customer_number} ({customer_name}) deleted by {request.user.username}",
+            user=request.user,
+            object_type="Customer",
+            object_id=str(customer.pk),
+            ip_address=_client_ip(request),
+        )
+
+    customer.delete()
+    messages.success(request, f"Customer {customer_number} ({customer_name}) has been deleted.")
+    return redirect("customer_list")
+
+
+def _get_audit_model():
+    try:
+        from apps.core.models import AuditLog
+        return AuditLog
+    except ImportError:
+        return None

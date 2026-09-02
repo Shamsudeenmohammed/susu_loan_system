@@ -184,6 +184,35 @@ def apply_customer_filters(qs, filters):
     return qs
 
 
+def resolve_slots(customers):
+    """
+    Expand a list of Customer instances into per-message slots.
+
+    Each message slot is a ``(customer, susu_account_or_None)`` pair:
+      - A customer with one or more ACTIVE Susu accounts gets ONE slot per
+        active account (so a contact with several savings accounts receives
+        one SMS per account).
+      - A customer with NO active Susu account gets a single slot.
+    """
+    accounts_by_customer = {}
+    accounts = SusuAccount.objects.filter(
+        status=SusuAccount.Status.ACTIVE,
+        customer__in=customers,
+    ).order_by('-activated_at', '-opened_at').select_related('customer')
+    for acc in accounts:
+        accounts_by_customer.setdefault(acc.customer_id, []).append(acc)
+
+    slots = []
+    for customer in customers:
+        accs = accounts_by_customer.get(customer.pk, [])
+        if accs:
+            for acc in accs:
+                slots.append((customer, acc))
+        else:
+            slots.append((customer, None))
+    return slots
+
+
 def resolve_recipients(campaign, reference_date=None):
     """
     Resolve the candidate Customer queryset for a campaign given its target

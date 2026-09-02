@@ -182,12 +182,15 @@
        BUTTON LOADING STATE
        ------------------------------------------ */
     document.querySelectorAll('form').forEach(function (form) {
-        form.addEventListener('submit', function () {
-            var btn = form.querySelector('[type="submit"]');
+        form.addEventListener('submit', function (e) {
+            if (form.dataset.submitting === 'true') {
+                e.preventDefault();
+                return;
+            }
+            form.dataset.submitting = 'true';
+            var btn = e.submitter || form.querySelector('[type="submit"]:not([disabled])');
             if (btn && !btn.classList.contains('loading')) {
                 btn.classList.add('loading');
-                btn.disabled = true;
-                // Add spinner
                 var spinner = document.createElement('span');
                 spinner.className = 'spinner-border spinner-border-sm me-1';
                 btn.insertBefore(spinner, btn.firstChild);

@@ -76,12 +76,14 @@ def _next_repayment_context(customer):
     }
 
 
-def _next_contribution_context(customer, reference_date=None):
-    """Resolve the customer's active Susu account + contribution data."""
-    account = SusuAccount.objects.filter(
-        customer=customer,
-        status=SusuAccount.Status.ACTIVE,
-    ).order_by('-activated_at', '-opened_at').first()
+def _next_contribution_context(customer, reference_date=None, account=None):
+    """Resolve contribution data for a specific Susu account (or the most
+    recently activated one when a campaign is not per-account)."""
+    if account is None:
+        account = SusuAccount.objects.filter(
+            customer=customer,
+            status=SusuAccount.Status.ACTIVE,
+        ).order_by('-activated_at', '-opened_at').first()
     if account is None:
         return {}
     today = reference_date or timezone.now().date()
@@ -93,8 +95,13 @@ def _next_contribution_context(customer, reference_date=None):
     }
 
 
-def build_context(customer, campaign_type, reference_date=None):
-    """Build the personalization context dict for a customer + campaign type."""
+def build_context(customer, campaign_type, reference_date=None, account=None):
+    """Build the personalization context dict for a customer + campaign type.
+
+    When ``account`` (a SusuAccount) is provided, account-specific placeholders
+    resolve against that account — used when a customer has multiple active
+    Susu accounts and receives one SMS per account.
+    """
     ctx = {
         'customer_name': customer.get_full_name(),
         'first_name': customer.first_name,
@@ -107,7 +114,7 @@ def build_context(customer, campaign_type, reference_date=None):
     if campaign_type in (
         'CONTRIBUTION_REMINDER', 'SUSU_ACTIVATION', 'PAYMENT_CONFIRMATION',
     ):
-        ctx.update(_next_contribution_context(customer, reference_date))
+        ctx.update(_next_contribution_context(customer, reference_date, account))
     if campaign_type in ('ACCOUNT_ACTIVATION', 'ACCOUNT_APPROVAL'):
         ctx['account_number'] = customer.customer_number
     return ctx

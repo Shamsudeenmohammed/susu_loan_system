@@ -9,6 +9,15 @@
     <a href="{% url 'customer_create' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i><span class="d-none d-sm-inline">New Customer</span><span class="d-sm-none">New</span></a>
 </div>
 
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endfor %}
+{% endif %}
+
 <div class="card mb-4">
     <div class="card-body">
         <form method="get" class="row g-2">
@@ -34,7 +43,28 @@
                     <td class="d-none d-md-table-cell">{{ customer.phone }}</td>
                     <td><span class="badge {{ customer.status|status_badge_class }}">{{ customer.status }}</span></td>
                     <td class="d-none d-lg-table-cell">{{ customer.created_at|date:"d M Y" }}</td>
-                    <td><a href="{% url 'customer_detail' pk=customer.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'customer_detail' pk=customer.pk %}" class="btn btn-outline-primary" title="View"><i class="fas fa-eye"></i></a>
+                            {% if can_manage %}
+                                {% if customer.status == 'ACTIVE' %}
+                                    <form method="post" action="{% url 'customer_toggle_status' pk=customer.pk %}" style="display:inline;" onsubmit="return confirm('Deactivate {{ customer.get_full_name }}?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-warning" title="Deactivate"><i class="fas fa-user-slash"></i></button>
+                                    </form>
+                                {% elif customer.status == 'INACTIVE' %}
+                                    <form method="post" action="{% url 'customer_toggle_status' pk=customer.pk %}" style="display:inline;" onsubmit="return confirm('Activate {{ customer.get_full_name }}?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-success" title="Activate"><i class="fas fa-user-check"></i></button>
+                                    </form>
+                                {% endif %}
+                                <form method="post" action="{% url 'customer_delete' pk=customer.pk %}" style="display:inline;" onsubmit="return confirm('Permanently delete {{ customer.get_full_name }} ({{ customer.customer_number }})? This cannot be undone.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr><td colspan="6" class="text-center text-muted py-4">No customers found</td></tr>

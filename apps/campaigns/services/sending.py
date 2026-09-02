@@ -19,7 +19,7 @@ from apps.core.utils import normalize_ghana_phone, validate_ghana_phone
 from apps.notifications.services.sms import get_sms_service
 from apps.audit.models import AuditLog
 
-from .recipients import resolve_recipients
+from .recipients import resolve_recipients, resolve_slots
 from .personalization import build_context, personalize
 from .sms_units import segments_for
 
@@ -53,7 +53,12 @@ def generate_campaign_uid():
 
 
 def estimate(campaign, recipients):
-    """Compute estimated totals for a recipient list (no DB writes)."""
+    """Compute estimated totals for a recipient list (no DB writes).
+
+    ``recipients`` is a list of ``(customer, susu_account_or_None)`` slots so
+    that a single contact with multiple active Susu accounts counts once per
+    account.
+    """
     segments = segments_for(campaign.message)
     total_units = segments * len(recipients)
     return {
@@ -80,61 +85,72 @@ def audit(action, description, user, campaign):
 
 def prepare_campaign(campaign, actor=None):
     """
-    Resolve + validate recipients, persist the SMSMessageLog ledger and
+    Resolve + validate recipient slots, persist the SMSMessageLog ledger and
     campaign counts. Returns the ready campaign. Safe to call repeatedly for
     the same campaign (idempotent via unique_key).
+
+    Recipient slots: one message per ACTIVE Susu account (so a contact with
+    several savings accounts receives one SMS per account), and one message
+    for customers with no active Susu account.
     """
     from apps.campaigns.models import SMSMessageLog
 
-    recipients = resolve_recipients(campaign)
+    customers = resolve_recipients(campaign)
+    slots = resolve_slots(customers)
 
     valid = 0
     missing = 0
     units = 0
     with transaction.atomic():
-        for customer in recipients:
+        for customer, account in slots:
             phone = normalize_ghana_phone(customer.phone)
+            account_key = account.pk if account else 'none'
+            unique_key = f"campaign:{campaign.pk}:{customer.pk}:account:{account_key}"
+            message = personal_message(campaign, customer, account)
+            seg = segments_for(campaign.message)
             if not phone or not validate_ghana_phone(phone):
                 missing += 1
                 SMSMessageLog.objects.get_or_create(
-                    unique_key=f"campaign:{campaign.pk}:{customer.pk}",
+                    unique_key=unique_key,
                     defaults={
                         'campaign': campaign,
                         'customer': customer,
+                        'susu_account': account,
                         'phone_number': phone or '',
-                        'message': personal_message(campaign, customer),
+                        'message': message,
                         'status': SMSMessageLog.Status.REJECTED,
                         'error_message': 'Invalid or missing phone number',
-                        'sms_units': segments_for(campaign.message),
+                        'sms_units': seg,
                     },
                 )
                 continue
             valid += 1
-            units += segments_for(campaign.message)
+            units += seg
             SMSMessageLog.objects.get_or_create(
-                unique_key=f"campaign:{campaign.pk}:{customer.pk}",
+                unique_key=unique_key,
                 defaults={
                     'campaign': campaign,
                     'customer': customer,
+                    'susu_account': account,
                     'phone_number': phone,
-                    'message': personal_message(campaign, customer),
+                    'message': message,
                     'status': SMSMessageLog.Status.QUEUED,
-                    'sms_units': segments_for(campaign.message),
+                    'sms_units': seg,
                 },
             )
 
-        campaign.recipient_count = len(recipients)
+        campaign.recipient_count = len(slots)
         campaign.valid_phone_count = valid
         campaign.missing_phone_count = missing
-        campaign.excluded_count = max(0, len(recipients) - valid - missing)
+        campaign.excluded_count = max(0, len(slots) - valid - missing)
         campaign.sms_units = units
         campaign.save()
 
     return campaign
 
 
-def personal_message(campaign, customer):
-    ctx = build_context(customer, campaign.campaign_type)
+def personal_message(campaign, customer, account=None):
+    ctx = build_context(customer, campaign.campaign_type, account=account)
     return personalize(campaign.message, ctx)
 
 

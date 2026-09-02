@@ -104,13 +104,18 @@ def send_withdrawal_status_sms(withdrawal_pk, status):
     from apps.notifications.services.sms import get_sms_service
 
     try:
-        w = Withdrawal.objects.select_related('customer').get(pk=withdrawal_pk)
+        w = Withdrawal.objects.select_related('customer', 'account', 'transaction').get(pk=withdrawal_pk)
         phone = w.customer.phone
         if not phone:
             return
 
         if status == 'APPROVED':
-            msg = templates.withdrawal_approved(w.withdrawal_number, w.amount)
+            balance_after = (
+                w.transaction.balance_after
+                if w.transaction and w.transaction.balance_after is not None
+                else w.account.current_balance
+            )
+            msg = templates.withdrawal_approved(w.withdrawal_number, w.amount, balance_after)
             ntype = 'WITHDRAWAL_APPROVED'
             ukey = f'withdrawal_status:{w.pk}:APPROVED'
         elif status == 'REJECTED':

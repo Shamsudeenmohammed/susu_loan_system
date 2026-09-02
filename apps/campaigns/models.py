@@ -155,6 +155,14 @@ class SMSMessageLog(models.Model):
         null=True, blank=True,
         related_name='campaign_message_logs'
     )
+    susu_account = models.ForeignKey(
+        'susu.SusuAccount',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='campaign_message_logs',
+        help_text='The specific Susu account this message was sent for, when a '
+                  'customer has multiple active accounts.'
+    )
     phone_number = models.CharField(max_length=20, blank=True)
     message = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.QUEUED)

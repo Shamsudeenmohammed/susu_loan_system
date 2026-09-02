@@ -83,6 +83,7 @@ class TestRegisterView:
 
     def test_register_creates_pending_customer(self, client):
         resp = client.post(reverse('register'), {
+            'username': 'kwame_test',
             'first_name': 'Kwame',
             'last_name': 'Owusu',
             'phone': '0249998888',
@@ -95,6 +96,7 @@ class TestRegisterView:
         assert resp.status_code == 302
         customer = Customer.objects.get(email='kwame@test.com')
         assert customer.status == Customer.Status.PENDING
+        assert customer.user.username == 'kwame_test'
         assert customer.user.email == 'kwame@test.com'
 
 
@@ -106,7 +108,7 @@ class TestLoginGating:
             phone='0241234567', status=Customer.Status.PENDING, registered_by=customer_user,
         )
         resp = client.post(reverse('login'), {
-            'username': 'customer@test.com',
+            'username': 'customer_test',
             'password': 'testpass123',
         })
         # Login is blocked: the form is re-rendered (200) rather than redirecting
@@ -115,7 +117,7 @@ class TestLoginGating:
     def test_active_customer_can_login(self, client, customer_user, customer):
         assert customer.status == Customer.Status.ACTIVE
         resp = client.post(reverse('login'), {
-            'username': 'customer@test.com',
+            'username': 'customer_test',
             'password': 'testpass123',
         })
         assert resp.status_code == 302

@@ -13,13 +13,9 @@ class CustomerForm(forms.ModelForm):
         max_length=20,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone Number (e.g., 024XXXXXXX)'})
     )
-    alt_phone = forms.CharField(
-        max_length=20, required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Alternative Phone'})
-    )
     email = forms.EmailField(
         required=False,
-        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'})
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email (optional)'})
     )
     date_of_birth = forms.DateField(
         required=False,
@@ -36,14 +32,6 @@ class CustomerForm(forms.ModelForm):
     occupation = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Occupation'})
-    )
-    emergency_contact_name = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Emergency Contact Name'})
-    )
-    emergency_contact_phone = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Emergency Contact Phone'})
     )
     id_type = forms.ChoiceField(
         choices=[
@@ -65,8 +53,7 @@ class CustomerForm(forms.ModelForm):
         model = Customer
         fields = [
             'first_name', 'last_name', 'date_of_birth', 'gender',
-            'phone', 'alt_phone', 'email', 'address', 'occupation',
-            'emergency_contact_name', 'emergency_contact_phone',
+            'phone', 'email', 'address', 'occupation',
             'id_type', 'id_number', 'photo'
         ]
 

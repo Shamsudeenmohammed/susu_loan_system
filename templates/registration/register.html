@@ -29,7 +29,7 @@
         }
 
         .register-shell {
-            max-width: 860px;
+            max-width: 700px;
             margin: 0 auto;
         }
 
@@ -140,6 +140,24 @@
         .register-footer { text-align: center; font-size: 0.85rem; color: var(--muted); margin-top: 1.25rem; }
         .register-footer a { color: var(--primary); font-weight: 500; text-decoration: none; }
 
+        .password-strength {
+            height: 4px;
+            border-radius: 2px;
+            background: #e2e8f0;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+        .password-strength-bar {
+            height: 100%;
+            width: 0%;
+            transition: all 0.3s ease;
+            border-radius: 2px;
+        }
+        .password-strength-bar.weak { width: 25%; background: #ef4444; }
+        .password-strength-bar.fair { width: 50%; background: #f59e0b; }
+        .password-strength-bar.good { width: 75%; background: #3b82f6; }
+        .password-strength-bar.strong { width: 100%; background: #10b981; }
+
         /* Toasts (reuse auth toast style) */
         .auth-toast-container {
             position: fixed; top: 1.25rem; right: 1.25rem; z-index: 9999;
@@ -213,6 +231,15 @@
                 <form method="post" enctype="multipart/form-data" id="registerForm" novalidate>
                     {% csrf_token %}
 
+                    <!-- Account Credentials -->
+                    <div class="section-title"><i class="fas fa-key"></i> Account Credentials</div>
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="form-label required">Username</label>{{ form.username }}{{ form.username.errors }}</div>
+                        <div class="col-md-6"><label class="form-label">Email (optional)</label>{{ form.email }}{{ form.email.errors }}</div>
+                        <div class="col-md-6"><label class="form-label required">Password</label>{{ form.password1 }}{{ form.password1.errors }}</div>
+                        <div class="col-md-6"><label class="form-label required">Confirm Password</label>{{ form.password2 }}{{ form.password2.errors }}</div>
+                    </div>
+
                     <!-- Personal Information -->
                     <div class="section-title"><i class="fas fa-user"></i> Personal Information</div>
                     <div class="row g-3">
@@ -221,14 +248,6 @@
                         <div class="col-md-6"><label class="form-label">Date of Birth</label>{{ form.date_of_birth }}{{ form.date_of_birth.errors }}</div>
                         <div class="col-md-6"><label class="form-label">Gender</label>{{ form.gender }}{{ form.gender.errors }}</div>
                         <div class="col-md-6"><label class="form-label required">Phone Number</label>{{ form.phone }}{{ form.phone.errors }}</div>
-                        <div class="col-md-6"><label class="form-label">Alternative Phone</label>{{ form.alt_phone }}{{ form.alt_phone.errors }}</div>
-                        <div class="col-md-6"><label class="form-label required">Email Address</label>{{ form.email }}{{ form.email.errors }}</div>
-                    </div>
-
-                    <!-- Address Information -->
-                    <div class="section-title"><i class="fas fa-map-marker-alt"></i> Address Information</div>
-                    <div class="row g-3">
-                        <div class="col-12"><label class="form-label">Residential Address</label>{{ form.address }}{{ form.address.errors }}</div>
                         <div class="col-md-6"><label class="form-label">Occupation</label>{{ form.occupation }}{{ form.occupation.errors }}</div>
                     </div>
 
@@ -238,21 +257,6 @@
                         <div class="col-md-6"><label class="form-label">ID Type</label>{{ form.id_type }}{{ form.id_type.errors }}</div>
                         <div class="col-md-6"><label class="form-label">ID Number</label>{{ form.id_number }}{{ form.id_number.errors }}</div>
                         <div class="col-12"><label class="form-label">Photo (optional)</label>{{ form.photo }}{{ form.photo.errors }}</div>
-                    </div>
-
-                    <!-- Emergency Contact -->
-                    <div class="section-title"><i class="fas fa-phone-alt"></i> Emergency Contact</div>
-                    <div class="row g-3">
-                        <div class="col-md-6"><label class="form-label">Contact Name</label>{{ form.emergency_contact_name }}{{ form.emergency_contact_name.errors }}</div>
-                        <div class="col-md-6"><label class="form-label">Contact Phone</label>{{ form.emergency_contact_phone }}{{ form.emergency_contact_phone.errors }}</div>
-                    </div>
-
-                    <!-- Account Information -->
-                    <div class="section-title"><i class="fas fa-lock"></i> Account Information</div>
-                    <div class="row g-3">
-                        <div class="col-12"><label class="form-label required">{% if not organization_name %}Sign-in Identifier{% else %}Password{% endif %}</label><small class="text-muted d-block mb-1">Use your registered email to sign in</small></div>
-                        <div class="col-md-6"><label class="form-label required">Password</label>{{ form.password1 }}{{ form.password1.errors }}</div>
-                        <div class="col-md-6"><label class="form-label required">Confirm Password</label>{{ form.password2 }}{{ form.password2.errors }}</div>
                     </div>
 
                     <button type="submit" class="btn-register mt-4" id="submitBtn">
@@ -298,6 +302,51 @@
         if (form && btn) {
             form.addEventListener('submit', function() {
                 btn.classList.add('loading'); btn.disabled = true;
+            });
+        }
+
+        // Password strength meter
+        var passwordInput = document.querySelector('input[name="password1"]');
+        var strengthBar = document.getElementById('strengthBarFill');
+        var strengthText = document.getElementById('strengthText');
+
+        if (passwordInput && strengthBar) {
+            passwordInput.addEventListener('input', function() {
+                var val = this.value;
+                var strength = 0;
+                var label = 'At least 8 characters';
+
+                if (val.length >= 8) strength += 1;
+                if (val.length >= 12) strength += 1;
+                if (/[A-Z]/.test(val)) strength += 1;
+                if (/[a-z]/.test(val)) strength += 1;
+                if (/[0-9]/.test(val)) strength += 1;
+                if (/[^A-Za-z0-9]/.test(val)) strength += 1;
+
+                strengthBar.className = 'password-strength-bar';
+                if (strength <= 1) {
+                    strengthBar.classList.add('weak');
+                    label = 'Very weak - add more characters';
+                } else if (strength === 2) {
+                    strengthBar.classList.add('fair');
+                    label = 'Weak - add uppercase, numbers, or symbols';
+                } else if (strength === 3) {
+                    strengthBar.classList.add('good');
+                    label = 'Good - could be stronger';
+                } else {
+                    strengthBar.classList.add('strong');
+                    label = 'Strong password';
+                }
+
+                if (strengthText) strengthText.textContent = label;
+            });
+        }
+
+        // Username lowercase
+        var usernameInput = document.querySelector('input[name="username"]');
+        if (usernameInput) {
+            usernameInput.addEventListener('input', function() {
+                this.value = this.value.toLowerCase().replace(/[^a-z0-9._-]/g, '');
             });
         }
     })();

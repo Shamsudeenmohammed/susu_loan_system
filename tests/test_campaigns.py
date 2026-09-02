@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.core.exceptions import ValidationError
 
 from apps.campaigns.models import SMSCampaign, SMSMessageLog, SMSTemplate
-from apps.campaigns.services.recipients import resolve_recipients
+from apps.campaigns.services.recipients import resolve_recipients, resolve_slots
 from apps.campaigns.services.personalization import build_context, personalize
 from apps.campaigns.services import sending
 from apps.campaigns.services.sms_units import segments_for
@@ -20,6 +20,7 @@ User = get_user_model()
 
 def make_customer(db, phone, status='ACTIVE', first='A', last='B'):
     u = User.objects.create_user(
+        username=f'user_{phone}',
         email=f'{phone}@test.com', password='x', first_name=first,
         last_name=last, role='CUSTOMER',
     )
@@ -72,7 +73,73 @@ class TestRecipientResolution:
 
 
 @pytest.mark.django_db
-class TestPersonalization:
+class TestPerAccountMessaging:
+    def test_slots_one_per_active_susu_account(self, customer, susu_account):
+        second = SusuAccount.objects.create(
+            customer=customer, contribution_frequency='MONTHLY',
+            expected_contribution=Decimal('200.00'),
+            target_amount=Decimal('10000.00'), status='ACTIVE',
+        )
+        third = SusuAccount.objects.create(
+            customer=customer, contribution_frequency='WEEKLY',
+            expected_contribution=Decimal('50.00'),
+            target_amount=Decimal('2000.00'), status='INACTIVE',
+        )
+        slots = resolve_slots([customer])
+        accounts = {acc.pk for _, acc in slots}
+        # Only the two ACTIVE accounts produce slots; inactive does not.
+        assert len(slots) == 2
+        assert accounts == {susu_account.pk, second.pk}
+        assert third.pk not in accounts
+
+    def test_customer_without_account_gets_single_slot(self, customer):
+        other = make_customer(db=None, phone='0249999999', first='Alone', last='Person')
+        slots = resolve_slots([customer, other])
+        # customer has no Susu accounts -> single slot with account None
+        without = [a for _, a in slots if a is None]
+        assert len(slots) == 2
+        assert len(without) == 2
+
+    def test_prepare_creates_one_log_per_active_account(self, customer, susu_account, base_campaign):
+        from apps.campaigns.services import sending
+        base_campaign.campaign_type = 'CONTRIBUTION_REMINDER'
+        base_campaign.message = 'Pay {{contribution_amount}} for {{account_number}}, {{first_name}}'
+        base_campaign.save()
+        second = SusuAccount.objects.create(
+            customer=customer, contribution_frequency='MONTHLY',
+            expected_contribution=Decimal('200.00'),
+            target_amount=Decimal('10000.00'), status='ACTIVE',
+        )
+        sending.prepare_campaign(base_campaign)
+        base_campaign.refresh_from_db()
+        logs = SMSMessageLog.objects.filter(campaign=base_campaign)
+        assert logs.count() == 2
+        assert base_campaign.recipient_count == 2
+        assert base_campaign.valid_phone_count == 2
+        account_numbers = {log.susu_account.account_number for log in logs}
+        assert account_numbers == {susu_account.account_number, second.account_number}
+
+    def test_prepare_personalizes_per_account(self, customer, susu_account, base_campaign):
+        from apps.campaigns.services import sending
+        base_campaign.campaign_type = 'CONTRIBUTION_REMINDER'
+        base_campaign.message = 'Account {{account_number}} due {{contribution_amount}}'
+        base_campaign.save()
+        second = SusuAccount.objects.create(
+            customer=customer, contribution_frequency='MONTHLY',
+            expected_contribution=Decimal('250.00'),
+            target_amount=Decimal('10000.00'), status='ACTIVE',
+        )
+        sending.prepare_campaign(base_campaign)
+        msgs = {
+            log.susu_account_id: log.message
+            for log in SMSMessageLog.objects.filter(campaign=base_campaign)
+        }
+        assert susu_account.pk in msgs and second.pk in msgs
+        assert '100.00' in msgs[susu_account.pk]
+        assert '250.00' in msgs[second.pk]
+
+
+
     def test_placeholders_replaced(self, customer, base_campaign):
         ctx = build_context(customer, 'GENERAL_ANNOUNCEMENT')
         assert ctx['customer_name'] == 'John Customer'

@@ -28,6 +28,7 @@ def pending_customer(customer_user):
 @pytest.fixture
 def new_user():
     return User.objects.create_user(
+        username='kofi_test',
         email='kofi@test.com',
         password='testpass123',
         first_name='Kofi',
