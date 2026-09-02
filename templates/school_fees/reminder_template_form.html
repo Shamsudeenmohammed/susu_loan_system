@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Edit Reminder Template{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">Edit Reminder Template</h4>
+    </div>
+    <a href="{% url 'school_fees_reminder_template_list' %}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back</a>
+</div>
+
+<div class="alert alert-info">
+    Placeholders are replaced at send time: <code>{{ student_name }}</code>, <code>{{ parent_name }}</code>,
+    <code>{{ total_fees }}</code>, <code>{{ amount_paid }}</code>, <code>{{ balance }}</code>, <code>{{ due_date }}</code>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Name</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Reminder Type</label>
+                    {{ form.reminder_type }}
+                    {% if form.reminder_type.errors %}<div class="text-danger small">{{ form.reminder_type.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Message</label>
+                    {{ form.message }}
+                    {% if form.message.errors %}<div class="text-danger small">{{ form.message.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Active</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save Template</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

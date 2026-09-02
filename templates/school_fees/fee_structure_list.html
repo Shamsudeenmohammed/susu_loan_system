@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Fee Structures{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">Fee Structures <span class="badge bg-secondary">{{ structures.count }}</span></h4>
+    </div>
+    <a href="{% url 'school_fees_fee_structure_create' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>New Fee Structure</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-3">
+                <select name="academic_year" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Years</option>
+                    {% for y in academic_years %}
+                    <option value="{{ y.pk }}" {% if selected_year == y.pk|stringformat:"s" %}selected{% endif %}>{{ y.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="term" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Terms</option>
+                    {% for t in terms %}
+                    <option value="{{ t.pk }}" {% if selected_term == t.pk|stringformat:"s" %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="school_class" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Classes</option>
+                    {% for c in school_classes %}
+                    <option value="{{ c.pk }}" {% if selected_class == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3"><a href="{% url 'school_fees_fee_structure_list' %}" class="btn btn-outline-secondary w-100">Reset</a></div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Year / Term</th><th>Class</th><th>Category</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                {% for fs in structures %}
+                <tr>
+                    <td>{{ fs.academic_year.name }} {{ fs.term.name }}</td>
+                    <td>{{ fs.school_class.name }}</td>
+                    <td>{{ fs.fee_category.name }}</td>
+                    <td>{{ fs.amount|currency }}</td>
+                    <td>{{ fs.due_date|date:"d M Y" }}</td>
+                    <td><span class="badge {{ fs.is_active|yesno:'bg-success,bg-secondary' }}">{{ fs.is_active|yesno:"Active,Inactive" }}</span></td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'school_fees_fee_structure_update' pk=fs.pk %}" class="btn btn-outline-secondary" title="Edit"><i class="fas fa-edit"></i></a>
+                            {% if request.user|has_role:"SUPER_ADMIN,ADMIN,MANAGER" %}
+                            <form method="post" action="{% url 'school_fees_fee_structure_delete' pk=fs.pk %}" style="display:inline;" onsubmit="return confirm('Delete this fee structure?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No fee structures found</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

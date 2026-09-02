@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Academic Years{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">Academic Years <span class="badge bg-secondary">{{ years.count }}</span></h4>
+    </div>
+    <a href="{% url 'school_fees_academic_year_create' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>New Academic Year</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead><tr><th>Name</th><th>Start</th><th>End</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                {% for y in years %}
+                <tr>
+                    <td>{{ y.name }}</td>
+                    <td>{{ y.start_date|date:"d M Y"|default:"—" }}</td>
+                    <td>{{ y.end_date|date:"d M Y"|default:"—" }}</td>
+                    <td><span class="badge {{ y.is_active|yesno:'bg-success,bg-secondary' }}">{{ y.is_active|yesno:"Active,Inactive" }}</span></td>
+                    <td><a href="{% url 'school_fees_academic_year_update' pk=y.pk %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-edit"></i></a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">No academic years found</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

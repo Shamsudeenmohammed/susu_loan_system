@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Fee Payments{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">Fee Payments <span class="badge bg-secondary">{{ payments|length }}</span></h4>
+    </div>
+    <a href="{% url 'school_fees_payment_new' %}" class="btn btn-success"><i class="fas fa-money-bill-wave me-1"></i>Record Payment</a>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-value text-success">{{ total|currency }}</div><div class="stat-label">Total Collected (filtered)</div></div></div></div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-4"><input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search student, receipt, reference..."></div>
+            <div class="col-md-2"><input type="date" name="start_date" value="{{ start_date }}" class="form-control"></div>
+            <div class="col-md-2"><input type="date" name="end_date" value="{{ end_date }}" class="form-control"></div>
+            <div class="col-md-2">
+                <select name="method" class="form-select">
+                    <option value="">All Methods</option>
+                    {% for value, label in method_choices %}
+                    <option value="{{ value }}" {% if method == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2"><button class="btn btn-primary w-100"><i class="fas fa-search"></i></button></div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Receipt</th><th>Student</th><th>Class</th><th>Amount</th><th>Method</th><th>Date</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                {% for p in payments %}
+                <tr>
+                    <td><a href="{% url 'school_fees_receipt' pk=p.pk %}">{{ p.receipt_number }}</a></td>
+                    <td>{{ p.student.get_full_name }}</td>
+                    <td>{{ p.student.school_class.name }}</td>
+                    <td>{{ p.amount|currency }}</td>
+                    <td>{{ p.get_payment_method_display }}</td>
+                    <td>{{ p.payment_date|date:"d M Y" }}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'school_fees_receipt' pk=p.pk %}" class="btn btn-outline-primary" title="Receipt"><i class="fas fa-file-invoice"></i></a>
+                            <a href="{% url 'school_fees_payment_detail' pk=p.pk %}" class="btn btn-outline-secondary" title="View"><i class="fas fa-eye"></i></a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No payments found</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

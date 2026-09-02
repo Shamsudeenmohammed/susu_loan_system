@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}{{ student.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">{{ student.get_full_name }} <span class="badge bg-secondary">{{ student.student_id }}</span></h4>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'school_fees_student_update' pk=student.pk %}" class="btn btn-outline-primary"><i class="fas fa-edit me-1"></i>Edit</a>
+        <a href="{% url 'school_fees_payment_new' %}" class="btn btn-success"><i class="fas fa-money-bill-wave me-1"></i>Record Payment</a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3"><strong>Class:</strong> {{ student.school_class.name }}</div>
+            <div class="col-md-3"><strong>Parent:</strong> {{ student.parent_name }}</div>
+            <div class="col-md-3"><strong>Phone:</strong> {{ student.parent_phone }}</div>
+            <div class="col-md-3"><strong>Email:</strong> {{ student.parent_email|default:"—" }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card mb-4">
+            <div class="card-header bg-white"><strong>Fee Accounts</strong></div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr><th>Year / Term</th><th>Total Fees</th><th>Paid</th><th>Outstanding</th><th>Status</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                        {% for account in accounts %}
+                        <tr>
+                            <td>{{ account.academic_year.name }} {{ account.term.name }}</td>
+                            <td>{{ account.total_fees|currency }}</td>
+                            <td>{{ account.amount_paid|currency }}</td>
+                            <td>{{ account.outstanding_balance|currency }}</td>
+                            <td><span class="badge {{ account.status|status_badge_class }}">{{ account.get_status_display }}</span></td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'school_fees_fee_account_detail' pk=account.pk %}" class="btn btn-outline-primary" title="View"><i class="fas fa-eye"></i></a>
+                                    {% if account.outstanding_balance > 0 %}
+                                    <a href="{% url 'school_fees_payment_create' pk=account.pk %}" class="btn btn-outline-success" title="Pay"><i class="fas fa-money-bill-wave"></i></a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted py-4">No fee accounts. Fee accounts are created when fee structures are set for this class.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header bg-white"><strong>Payment History</strong></div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr><th>Receipt</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead>
+                        <tbody>
+                        {% for p in payments %}
+                        <tr>
+                            <td><a href="{% url 'school_fees_receipt' pk=p.pk %}">{{ p.receipt_number }}</a></td>
+                            <td>{{ p.amount|currency }}</td>
+                            <td>{{ p.payment_date|date:"d M Y" }}</td>
+                            <td><span class="badge {{ p.status|default:'APPROVED'|status_badge_class }}">Paid</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-4">No payments yet</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

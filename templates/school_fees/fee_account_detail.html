@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Fee Account {{ account.account_number }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">Fee Account <span class="badge bg-secondary">{{ account.account_number }}</span></h4>
+    </div>
+    <div class="btn-group">
+        {% if account.outstanding_balance > 0 %}
+        <a href="{% url 'school_fees_payment_create' pk=account.pk %}" class="btn btn-success"><i class="fas fa-money-bill-wave me-1"></i>Record Payment</a>
+        <a href="{% url 'school_fees_pay_online' pk=account.pk %}" class="btn btn-primary"><i class="fas fa-globe me-1"></i>Pay Online</a>
+        {% endif %}
+        <a href="{% url 'school_fees_fee_account_update' pk=account.pk %}" class="btn btn-outline-secondary"><i class="fas fa-edit me-1"></i>Edit</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="card stat-card"><div class="card-body">
+            <div class="stat-value">{{ account.student.get_full_name }}</div>
+            <div class="stat-label">Student</div>
+        </div></div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card stat-card"><div class="card-body">
+            <div class="stat-value">{{ account.total_fees|currency }}</div>
+            <div class="stat-label">Total Fees</div>
+        </div></div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card stat-card"><div class="card-body">
+            <div class="stat-value text-success">{{ account.amount_paid|currency }}</div>
+            <div class="stat-label">Amount Paid</div>
+        </div></div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card stat-card"><div class="card-body">
+            <div class="stat-value {% if account.outstanding_balance > 0 %}text-danger{% else %}text-success{% endif %}">{{ account.outstanding_balance|currency }}</div>
+            <div class="stat-label">Outstanding</div>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between">
+                <strong>Fee Account Details</strong>
+                <span class="badge {{ account.status|status_badge_class }}">{{ account.get_status_display }}</span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6"><strong>Student ID:</strong> {{ account.student.student_id }}</div>
+                    <div class="col-md-6"><strong>Class:</strong> {{ account.student.school_class.name }}</div>
+                    <div class="col-md-6"><strong>Academic Year:</strong> {{ account.academic_year.name }}</div>
+                    <div class="col-md-6"><strong>Term:</strong> {{ account.term.name }}</div>
+                    <div class="col-md-6"><strong>Due Date:</strong> {{ account.due_date|date:"d M Y"|default:"—" }}</div>
+                    <div class="col-md-6"><strong>Last Payment:</strong> {{ account.last_payment_date|date:"d M Y"|default:"—" }}</div>
+                </div>
+                {% if account.outstanding_balance > 0 and account.due_date %}
+                <form method="post" action="{% url 'school_fees_send_reminders' %}" class="mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="accounts" value="{{ account.pk }}">
+                    <button type="submit" name="reminder_type" value="OVERDUE" class="btn btn-sm btn-outline-danger"><i class="fas fa-sms me-1"></i>Send Overdue Reminder</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header bg-white"><strong>Payments</strong></div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr><th>Receipt</th><th>Amount</th><th>Date</th><th>Method</th></tr></thead>
+                        <tbody>
+                        {% for p in payments %}
+                        <tr>
+                            <td><a href="{% url 'school_fees_receipt' pk=p.pk %}">{{ p.receipt_number }}</a></td>
+                            <td>{{ p.amount|currency }}</td>
+                            <td>{{ p.payment_date|date:"d M Y" }}</td>
+                            <td>{{ p.get_payment_method_display }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-4">No payments yet</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

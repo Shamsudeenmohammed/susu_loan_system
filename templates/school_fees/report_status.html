@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">{{ title }} <span class="badge bg-secondary">{{ accounts|length }}</span></h4>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <form method="get" class="d-flex gap-2">
+            <select name="status" class="form-select" onchange="this.form.submit()">
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+                <option value="OVERDUE" {% if status == 'OVERDUE' %}selected{% endif %}>Overdue</option>
+            </select>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Student</th><th>Class</th><th>Year/Term</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                {% for a in accounts %}
+                <tr>
+                    <td>{{ a.student.get_full_name }}<br><small class="text-muted">{{ a.student.student_id }}</small></td>
+                    <td>{{ a.student.school_class.name }}</td>
+                    <td>{{ a.academic_year.name }} {{ a.term.name }}</td>
+                    <td>{{ a.total_fees|currency }}</td>
+                    <td>{{ a.amount_paid|currency }}</td>
+                    <td>{{ a.outstanding_balance|currency }}</td>
+                    <td><span class="badge {{ a.status|status_badge_class }}">{{ a.get_status_display }}</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No students found</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

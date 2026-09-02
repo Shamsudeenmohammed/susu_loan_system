@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Class/Program Fee Collections{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">Class/Program Fee Collections</h4>
+    </div>
+    <a href="{% url 'school_fees_reports' %}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Reports</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-4">
+                <select name="school_class" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Classes</option>
+                    {% for c in school_classes %}
+                    <option value="{{ c.pk }}" {% if selected_class == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2"><a href="{% url 'school_fees_report_class' %}" class="btn btn-outline-secondary w-100">Reset</a></div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4"><div class="card stat-card"><div class="card-body"><div class="stat-value">{{ total_expected|currency }}</div><div class="stat-label">Expected</div></div></div></div>
+    <div class="col-md-4"><div class="card stat-card"><div class="card-body"><div class="stat-value text-success">{{ total_collected|currency }}</div><div class="stat-label">Collected</div></div></div></div>
+    <div class="col-md-4"><div class="card stat-card"><div class="card-body"><div class="stat-value text-danger">{{ total_outstanding|currency }}</div><div class="stat-label">Outstanding</div></div></div></div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Class</th><th>Expected</th><th>Collected</th><th>Outstanding</th></tr>
+                </thead>
+                <tbody>
+                {% for r in reports %}
+                <tr>
+                    <td>{{ r.school_class.name }}</td>
+                    <td>{{ r.expected|currency }}</td>
+                    <td>{{ r.collected|currency }}</td>
+                    <td class="{% if r.outstanding > 0 %}text-danger{% else %}text-success{% endif %} fw-bold">{{ r.outstanding|currency }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-4">No classes found</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

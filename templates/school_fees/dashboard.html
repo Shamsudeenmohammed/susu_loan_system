@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}{{ school_name }} - School Fees Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0"><i class="fas fa-graduation-cap me-2"></i>School Fees Dashboard</h4>
+    </div>
+    <a href="{% url 'school_fees_student_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i><span class="d-none d-sm-inline">New Student</span><span class="d-sm-none">New</span>
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-3">
+                <select name="academic_year" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Academic Years</option>
+                    {% for y in academic_years %}
+                    <option value="{{ y.pk }}" {% if selected_year == y.pk|stringformat:"s" %}selected{% endif %}>{{ y.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="term" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Terms</option>
+                    {% for t in terms %}
+                    <option value="{{ t.pk }}" {% if selected_term == t.pk|stringformat:"s" %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="school_class" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Classes</option>
+                    {% for c in school_classes %}
+                    <option value="{{ c.pk }}" {% if selected_class == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <a href="{% url 'school_fees_dashboard' %}" class="btn btn-outline-secondary w-100">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-primary bg-opacity-10"><i class="fas fa-users text-primary"></i></div>
+                    <div class="ms-3">
+                        <div class="stat-value">{{ total_students }}</div>
+                        <div class="stat-label">Total Students</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-info bg-opacity-10"><i class="fas fa-file-invoice-dollar text-info"></i></div>
+                    <div class="ms-3">
+                        <div class="stat-value">{{ total_fees|currency }}</div>
+                        <div class="stat-label">Total Fees Expected</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-success bg-opacity-10"><i class="fas fa-money-bill-wave text-success"></i></div>
+                    <div class="ms-3">
+                        <div class="stat-value">{{ total_collected|currency }}</div>
+                        <div class="stat-label">Total Collected</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-warning bg-opacity-10"><i class="fas fa-exclamation-circle text-warning"></i></div>
+                    <div class="ms-3">
+                        <div class="stat-value">{{ total_outstanding|currency }}</div>
+                        <div class="stat-label">Total Outstanding</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-danger bg-opacity-10"><i class="fas fa-file-invoice text-danger"></i></div>
+                    <div class="ms-3">
+                        <div class="stat-value">{{ overdue }}</div>
+                        <div class="stat-label">Overdue</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-secondary bg-opacity-10"><i class="fas fa-user-graduate text-secondary"></i></div>
+                    <div class="ms-3">
+                        <div class="stat-value">{{ unpaid }}</div>
+                        <div class="stat-label">Unpaid</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-xl-4 col-lg-6">
+        <a href="{% url 'school_fees_report_status' %}?status=FULLY_PAID" class="card quick-action-card text-decoration-none">
+            <div class="card-body">
+                <h6>Fully Paid Accounts</h6>
+                <h3 class="mb-0 text-success">{{ full_paid }}</h3>
+            </div>
+        </a>
+    </div>
+    <div class="col-xl-4 col-lg-6">
+        <a href="{% url 'school_fees_report_status' %}?status=PARTIALLY_PAID" class="card quick-action-card text-decoration-none">
+            <div class="card-body">
+                <h6>Partially Paid Accounts</h6>
+                <h3 class="mb-0 text-warning">{{ partial }}</h3>
+            </div>
+        </a>
+    </div>
+    <div class="col-xl-4 col-lg-6">
+        <a href="{% url 'school_fees_outstanding' %}" class="card quick-action-card text-decoration-none">
+            <div class="card-body">
+                <h6>Accounts with Outstanding Balance</h6>
+                <h3 class="mb-0 text-danger">{{ total_outstanding|currency }}</h3>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header bg-white"><strong>Monthly Collections</strong></div>
+            <div class="card-body">
+                <canvas id="monthlyChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header bg-white"><strong>Payment Status</strong></div>
+            <div class="card-body">
+                <canvas id="statusChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var monthly = {{ monthly_chart|safe }};
+    var monthlyCtx = document.getElementById('monthlyChart');
+    if (monthlyCtx) {
+        new Chart(monthlyCtx, {
+            type: 'bar',
+            data: {
+                labels: monthly.map(function (m) { return m.label; }),
+                datasets: [{
+                    label: 'Collections (GHS)',
+                    data: monthly.map(function (m) { return m.amount; }),
+                    backgroundColor: 'rgba(13,110,253,0.6)'
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+    }
+    var status = {{ status_chart|safe }};
+    var statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: status.map(function (s) { return s.label; }),
+                datasets: [{
+                    data: status.map(function (s) { return s.value; }),
+                    backgroundColor: ['#dc3545', '#ffc107', '#198754', '#6c757d']
+                }]
+            },
+            options: { responsive: true }
+        });
+    }
+});
+</script>
+{% endblock %}

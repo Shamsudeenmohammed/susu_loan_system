@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Send Overdue Reminders{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">Send Overdue Reminders</h4>
+    </div>
+    <a href="{% url 'school_fees_send_reminders' %}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back</a>
+</div>
+
+<div class="alert alert-warning">This will send "Overdue" reminders to all {{ overdue_accounts|length }} account(s) that are past their due date.</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" {% if not overdue_accounts %}disabled{% endif %}>
+                <i class="fas fa-sms me-1"></i>Send Overdue Reminders to All
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead><tr><th>Student</th><th>Class</th><th>Year/Term</th><th>Outstanding</th><th>Parent Phone</th></tr></thead>
+                <tbody>
+                {% for a in overdue_accounts %}
+                <tr>
+                    <td>{{ a.student.get_full_name }}</td>
+                    <td>{{ a.student.school_class.name }}</td>
+                    <td>{{ a.academic_year.name }} {{ a.term.name }}</td>
+                    <td class="text-danger fw-bold">{{ a.outstanding_balance|currency }}</td>
+                    <td>{{ a.student.parent_phone }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">No overdue accounts</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

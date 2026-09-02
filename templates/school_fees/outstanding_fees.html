@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Outstanding Fees{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">Outstanding Fees <span class="badge bg-danger">{{ total_outstanding|currency }}</span></h4>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'school_fees_send_reminders' %}" class="btn btn-primary"><i class="fas fa-sms me-1"></i>Send Reminders</a>
+        <a href="{% url 'school_fees_export_csv' %}?type=outstanding" class="btn btn-outline-success"><i class="fas fa-download me-1"></i>Export CSV</a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-4">
+                <select name="school_class" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Classes</option>
+                    {% for c in school_classes %}
+                    <option value="{{ c.pk }}" {% if selected_class == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2"><a href="{% url 'school_fees_outstanding' %}" class="btn btn-outline-secondary w-100">Reset</a></div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Account #</th><th>Student</th><th>Class</th><th>Year/Term</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                {% for a in accounts %}
+                <tr>
+                    <td><a href="{% url 'school_fees_fee_account_detail' pk=a.pk %}">{{ a.account_number }}</a></td>
+                    <td>{{ a.student.get_full_name }}<br><small class="text-muted">{{ a.student.parent_name }}</small></td>
+                    <td>{{ a.student.school_class.name }}</td>
+                    <td>{{ a.academic_year.name }} {{ a.term.name }}</td>
+                    <td>{{ a.total_fees|currency }}</td>
+                    <td>{{ a.amount_paid|currency }}</td>
+                    <td class="text-danger fw-bold">{{ a.outstanding_balance|currency }}</td>
+                    <td><span class="badge {{ a.status|status_badge_class }}">{{ a.get_status_display }}</span></td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'school_fees_fee_account_detail' pk=a.pk %}" class="btn btn-outline-primary" title="View"><i class="fas fa-eye"></i></a>
+                            <a href="{% url 'school_fees_payment_create' pk=a.pk %}" class="btn btn-outline-success" title="Pay"><i class="fas fa-money-bill-wave"></i></a>
+                            <a href="{% url 'school_fees_pay_online' pk=a.pk %}" class="btn btn-outline-primary" title="Pay Online"><i class="fas fa-globe"></i></a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="text-center text-muted py-4">No outstanding fees</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

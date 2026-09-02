@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Fee Categories{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">Fee Categories <span class="badge bg-secondary">{{ categories.count }}</span></h4>
+    </div>
+    <a href="{% url 'school_fees_fee_category_create' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>New Category</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead><tr><th>Code</th><th>Category</th><th>Status</th></tr></thead>
+                <tbody>
+                {% for c in categories %}
+                <tr>
+                    <td>{{ c.code }}</td>
+                    <td>{{ c.name }}</td>
+                    <td><span class="badge {{ c.is_active|yesno:'bg-success,bg-secondary' }}">{{ c.is_active|yesno:"Active,Inactive" }}</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="text-center text-muted py-4">No fee categories found</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

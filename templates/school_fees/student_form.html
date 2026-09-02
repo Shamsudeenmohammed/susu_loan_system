@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">{{ title }}</h4>
+    </div>
+    {% if student %}
+    <a href="{% url 'school_fees_student_detail' pk=student.pk %}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back</a>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+            </div>
+            {% endif %}
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">First Name</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}<div class="text-danger small">{{ form.first_name.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Last Name</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}<div class="text-danger small">{{ form.last_name.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Class/Program</label>
+                    {{ form.school_class }}
+                    {% if form.school_class.errors %}<div class="text-danger small">{{ form.school_class.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Parent/Guardian Name</label>
+                    {{ form.parent_name }}
+                    {% if form.parent_name.errors %}<div class="text-danger small">{{ form.parent_name.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Parent/Guardian Phone</label>
+                    {{ form.parent_phone }}
+                    {% if form.parent_phone.errors %}<div class="text-danger small">{{ form.parent_phone.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Parent Email (optional)</label>
+                    {{ form.parent_email }}
+                    {% if form.parent_email.errors %}<div class="text-danger small">{{ form.parent_email.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check form-switch mt-4">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Active</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save Student</button>
+                <a href="{% url 'school_fees_student_list' %}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

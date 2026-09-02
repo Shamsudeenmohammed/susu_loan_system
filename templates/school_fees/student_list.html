@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Students{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">Students <span class="badge bg-secondary">{{ students.count }}</span></h4>
+    </div>
+    <a href="{% url 'school_fees_student_create' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>New Student</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-6">
+                <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search by name, ID, parent...">
+            </div>
+            <div class="col-md-4">
+                <select name="school_class" class="form-select">
+                    <option value="">All Classes</option>
+                    {% for c in school_classes %}
+                    <option value="{{ c.pk }}" {% if selected_class == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2"><button class="btn btn-primary w-100"><i class="fas fa-search"></i></button></div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Student ID</th><th>Name</th><th>Class</th><th>Parent</th><th class="d-none d-md-table-cell">Phone</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                {% for student in students %}
+                <tr>
+                    <td><a href="{% url 'school_fees_student_detail' pk=student.pk %}">{{ student.student_id }}</a></td>
+                    <td>{{ student.get_full_name }}</td>
+                    <td>{{ student.school_class.name }}</td>
+                    <td>{{ student.parent_name }}</td>
+                    <td class="d-none d-md-table-cell">{{ student.parent_phone }}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'school_fees_student_detail' pk=student.pk %}" class="btn btn-outline-primary" title="View"><i class="fas fa-eye"></i></a>
+                            <a href="{% url 'school_fees_student_update' pk=student.pk %}" class="btn btn-outline-secondary" title="Edit"><i class="fas fa-edit"></i></a>
+                            {% if request.user|has_role:"SUPER_ADMIN,ADMIN,MANAGER" %}
+                            <form method="post" action="{% url 'school_fees_student_delete' pk=student.pk %}" style="display:inline;" onsubmit="return confirm('Delete {{ student.get_full_name }}? This cannot be undone.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No students found</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

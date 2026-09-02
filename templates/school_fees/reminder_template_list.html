@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Fee Reminder Templates{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">Fee Reminder Templates</h4>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'school_fees_send_reminders' %}" class="btn btn-primary"><i class="fas fa-sms me-1"></i>Send Reminders</a>
+        <a href="{% url 'school_fees_reminder_log' %}" class="btn btn-outline-secondary"><i class="fas fa-history me-1"></i>Reminder History</a>
+    </div>
+</div>
+
+<div class="alert alert-info">
+    Available placeholders: <code>{{ student_name }}</code>, <code>{{ parent_name }}</code>,
+    <code>{{ total_fees }}</code>, <code>{{ amount_paid }}</code>, <code>{{ balance }}</code>, <code>{{ due_date }}</code>
+</div>
+
+<div class="row g-3">
+    {% for t in templates %}
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between">
+                <strong>{{ t.name }}</strong>
+                <span class="badge bg-info">{{ t.get_reminder_type_display }}</span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">{{ t.message }}</p>
+                <span class="badge {{ t.is_active|yesno:'bg-success,bg-secondary' }}">{{ t.is_active|yesno:"Active,Inactive" }}</span>
+            </div>
+            <div class="card-footer bg-white">
+                <a href="{% url 'school_fees_reminder_template_edit' pk=t.pk %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit me-1"></i>Edit</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12"><div class="text-center text-muted py-4">No templates found.</div></div>
+    {% endfor %}
+</div>
+{% endblock %}

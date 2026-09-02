@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Fee Reminder History{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">Fee Reminder History <span class="badge bg-secondary">{{ logs|length }}</span></h4>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'school_fees_send_reminders' %}" class="btn btn-primary"><i class="fas fa-sms me-1"></i>Send Reminders</a>
+        <a href="{% url 'school_fees_reminder_template_list' %}" class="btn btn-outline-secondary"><i class="fas fa-envelope-open-text me-1"></i>Templates</a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-5"><input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search student or phone..."></div>
+            <div class="col-md-2">
+                <select name="type" class="form-select">
+                    <option value="">All Types</option>
+                    {% for value, label in reminder_types %}
+                    <option value="{{ value }}" {% if selected_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="SENT" {% if selected_status == 'SENT' %}selected{% endif %}>Sent</option>
+                    <option value="FAILED" {% if selected_status == 'FAILED' %}selected{% endif %}>Failed</option>
+                </select>
+            </div>
+            <div class="col-md-1"><button class="btn btn-primary w-100"><i class="fas fa-search"></i></button></div>
+            <div class="col-md-2"><a href="{% url 'school_fees_reminder_log' %}" class="btn btn-outline-secondary w-100">Reset</a></div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Date</th><th>Student</th><th>Type</th><th>Phone</th><th>Status</th><th>Message</th><th>Sent By</th></tr>
+                </thead>
+                <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.created_at|date:"d M Y H:i" }}</td>
+                    <td>{{ log.student.get_full_name|default:"—" }}</td>
+                    <td><span class="badge bg-info">{{ log.get_reminder_type_display }}</span></td>
+                    <td>{{ log.parent_phone }}</td>
+                    <td><span class="badge {{ log.status|status_badge_class }}">{{ log.status }}</span></td>
+                    <td><small class="text-muted">{{ log.message|truncatechars:80 }}</small></td>
+                    <td>{{ log.sent_by.get_full_name|default:log.sent_by|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No reminders sent</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

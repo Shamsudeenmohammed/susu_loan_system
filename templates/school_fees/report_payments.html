@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">{{ title }} <span class="badge bg-secondary">{{ payments|length }}</span></h4>
+    </div>
+    <div class="btn-group">
+        {% if year %}
+        <form method="get" class="d-flex gap-2">
+            <input type="text" value="{{ year.name }}" class="form-control" disabled>
+        </form>
+        {% endif %}
+        <a href="{% url 'school_fees_report_daily' %}" class="btn btn-outline-secondary">Daily</a>
+        <a href="{% url 'school_fees_report_monthly' %}" class="btn btn-outline-secondary">Monthly</a>
+        <a href="{% url 'school_fees_report_year' %}" class="btn btn-outline-secondary">Year</a>
+        <a href="{% url 'school_fees_export_csv' %}?type=payments" class="btn btn-outline-success"><i class="fas fa-download me-1"></i>CSV</a>
+    </div>
+</div>
+
+{% if month or date or year %}
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            {% if not date %}
+            <div class="col-md-3">
+                {% if title == 'Daily Payments' %}
+                <label class="form-label">Date</label>
+                <input type="date" name="date" value="{{ date|date:'Y-m-d'|default:'' }}" class="form-control">
+                {% elif title == 'Monthly Payments' %}
+                <label class="form-label">Month</label>
+                <input type="month" name="month" value="{{ month }}" class="form-control">
+                {% elif title == 'Academic Year Collections' %}
+                <label class="form-label">Academic Year</label>
+                <select name="academic_year" class="form-select">
+                    <option value="">All Years</option>
+                    {% for y in academic_years %}
+                    <option value="{{ y.pk }}" {% if year and year.pk == y.pk %}selected{% endif %}>{{ y.name }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+            </div>
+            <div class="col-md-2"><button class="btn btn-primary w-100"><i class="fas fa-search"></i></button></div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-value text-success">{{ total|currency }}</div><div class="stat-label">Total Collected</div></div></div></div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Receipt</th><th>Student</th><th>Class</th><th>Amount</th><th>Method</th><th>Date</th><th>Reference</th></tr>
+                </thead>
+                <tbody>
+                {% for p in payments %}
+                <tr>
+                    <td><a href="{% url 'school_fees_receipt' pk=p.pk %}">{{ p.receipt_number }}</a></td>
+                    <td>{{ p.student.get_full_name }}</td>
+                    <td>{{ p.student.school_class.name }}</td>
+                    <td>{{ p.amount|currency }}</td>
+                    <td>{{ p.get_payment_method_display }}</td>
+                    <td>{{ p.payment_date|date:"d M Y" }}</td>
+                    <td>{{ p.reference|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No payments found</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
