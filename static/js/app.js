@@ -46,14 +46,63 @@
     });
 
     /* ------------------------------------------
-       HIGHLIGHT ACTIVE SIDEBAR LINK
+       HIGHLIGHT ACTIVE SIDEBAR LINK + EXPAND GROUP
        ------------------------------------------ */
     if (sidebar) {
         const currentPath = window.location.pathname;
-        sidebar.querySelectorAll('.nav-link').forEach(function (link) {
-            if (link.getAttribute('href') === currentPath) {
-                link.classList.add('active');
+
+        function isCurrentPath(link) {
+            const href = link.getAttribute('href');
+            if (!href || href.charAt(0) !== '/') return false;
+            if (href === currentPath) return true;
+            // Detail routes highlight their parent list link (e.g. /loans/ matches /loans/5/)
+            if (href.length > 1 && currentPath.indexOf(href) === 0) {
+                const next = currentPath.charAt(href.length);
+                if (next === '/' || next === '?') return true;
             }
+            return false;
+        }
+
+        const navLinks = Array.prototype.slice.call(sidebar.querySelectorAll('.nav-link'));
+        let bestMatch = null;
+        navLinks.forEach(function (link) {
+            if (link.classList.contains('menu-group-toggle')) return;
+            if (isCurrentPath(link)) {
+                const href = link.getAttribute('href') || '';
+                if (!bestMatch || href.length > bestMatch.href.length) {
+                    bestMatch = { link: link, href: href };
+                }
+            }
+        });
+
+        if (bestMatch) {
+            bestMatch.link.classList.add('active');
+            const group = bestMatch.link.closest('.menu-group');
+            if (group) {
+                group.classList.add('open');
+                const btn = group.querySelector('.menu-group-toggle');
+                if (btn) btn.setAttribute('aria-expanded', 'true');
+            }
+        }
+    }
+
+    /* ------------------------------------------
+       COLLAPSIBLE SIDEBAR GROUPS (mouse + touch)
+       ------------------------------------------ */
+    if (sidebar) {
+        sidebar.querySelectorAll('.menu-group-toggle').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const group = btn.closest('.menu-group');
+                if (!group) return;
+                const isOpen = group.classList.contains('open');
+                if (isOpen) {
+                    group.classList.remove('open');
+                    btn.setAttribute('aria-expanded', 'false');
+                } else {
+                    group.classList.add('open');
+                    btn.setAttribute('aria-expanded', 'true');
+                }
+            });
         });
     }
 

@@ -31,86 +31,215 @@
                 </a>
 
                 {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,CASHIER,COLLECTOR" %}
-                <div class="nav-section">Management</div>
-                <a class="nav-link" href="{% url 'customer_list' %}">
-                    <i class="fas fa-users"></i>Customers
-                </a>
+                <div class="menu-group" data-group="customers">
+                    <button type="button" class="menu-group-toggle" aria-expanded="false">
+                        <i class="fas fa-users"></i>Customers
+                        <span class="chevron">▸</span>
+                    </button>
+                    <div class="submenu">
+                        <a class="nav-link" href="{% url 'customer_list' %}">
+                            <i class="fas fa-users"></i>All Customers
+                        </a>
+                        <a class="nav-link" href="{% url 'customer_create' %}">
+                            <i class="fas fa-user-plus"></i>Create Customer
+                        </a>
+                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER" %}
+                        <a class="nav-link" href="{% url 'customer_pending_approvals' %}">
+                            <i class="fas fa-user-clock"></i>Customer Approval
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
                 {% endif %}
 
-                {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER" %}
-                <a class="nav-link" href="{% url 'customer_pending_approvals' %}">
-                    <i class="fas fa-user-clock"></i>Pending Approvals
-                </a>
-                {% endif %}
-
-                {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,CASHIER" %}
-                <a class="nav-link" href="{% url 'susu_account_list' %}">
-                    <i class="fas fa-piggy-bank"></i>Savings Accounts
-                </a>
-                <a class="nav-link" href="{% url 'record_contribution' %}">
-                    <i class="fas fa-hand-holding-usd"></i>Contribute
-                </a>
+                {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,CASHIER,COLLECTOR" %}
+                <div class="menu-group" data-group="savings">
+                    <button type="button" class="menu-group-toggle" aria-expanded="false">
+                        <i class="fas fa-piggy-bank"></i>Savings / Susu
+                        <span class="chevron">▸</span>
+                    </button>
+                    <div class="submenu">
+                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,CASHIER" %}
+                        <a class="nav-link" href="{% url 'susu_account_list' %}">
+                            <i class="fas fa-address-book"></i>Savings Accounts
+                        </a>
+                        <a class="nav-link" href="{% url 'susu_account_create' %}">
+                            <i class="fas fa-plus-circle"></i>New Savings Account
+                        </a>
+                        {% endif %}
+                        <a class="nav-link" href="{% url 'record_contribution' %}">
+                            <i class="fas fa-hand-holding-usd"></i>Make Contribution
+                        </a>
+                    </div>
+                </div>
                 {% endif %}
 
                 {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,LOAN_OFFICER,CASHIER" %}
-                <div class="nav-section">Loans</div>
-                <a class="nav-link" href="{% url 'loan_list' %}">
-                    <i class="fas fa-file-invoice-dollar"></i>Loans
-                </a>
-                <a class="nav-link" href="{% url 'loan_apply' %}">
-                    <i class="fas fa-plus-circle"></i>Apply for Loan
-                </a>
-                <a class="nav-link" href="{% url 'loan_eligibility' %}">
-                    <i class="fas fa-clipboard-check"></i>Loan Eligibility
-                </a>
-                <a class="nav-link" href="{% url 'record_repayment' %}">
-                    <i class="fas fa-money-check-alt"></i>Record Repayment
-                </a>
+                <div class="menu-group" data-group="loans">
+                    <button type="button" class="menu-group-toggle" aria-expanded="false">
+                        <i class="fas fa-file-invoice-dollar"></i>Loans
+                        <span class="chevron">▸</span>
+                    </button>
+                    <div class="submenu">
+                        <a class="nav-link" href="{% url 'loan_list' %}">
+                            <i class="fas fa-file-invoice-dollar"></i>Loans
+                        </a>
+                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,LOAN_OFFICER,CASHIER" %}
+                        <a class="nav-link" href="{% url 'loan_apply' %}">
+                            <i class="fas fa-plus-circle"></i>Loan Applications
+                        </a>
+                        {% endif %}
+                        <a class="nav-link" href="{% url 'loan_eligibility' %}">
+                            <i class="fas fa-clipboard-check"></i>Loan Eligibility
+                        </a>
+                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,LOAN_OFFICER,CASHIER" %}
+                        <a class="nav-link" href="{% url 'loan_repayment_list' %}">
+                            <i class="fas fa-money-check-alt"></i>Loan Repayments
+                        </a>
+                        <a class="nav-link" href="{% url 'record_repayment' %}">
+                            <i class="fas fa-hand-holding-usd"></i>Record Repayment
+                        </a>
+                        {% endif %}
+                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER" %}
+                        <a class="nav-link" href="{% url 'overdue_loans' %}">
+                            <i class="fas fa-exclamation-triangle"></i>Overdue Loans
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
                 {% endif %}
 
-                <div class="nav-section">Finance</div>
-                <a class="nav-link" href="{% url 'transaction_list' %}">
-                    <i class="fas fa-exchange-alt"></i>Transactions
-                </a>
-                <a class="nav-link" href="{% url 'withdrawal_list' %}">
-                    <i class="fas fa-money-bill-wave"></i>Withdrawals
-                </a>
+                {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,CASHIER" %}
+                <div class="menu-group" data-group="school_fees">
+                    <button type="button" class="menu-group-toggle" aria-expanded="false">
+                        <i class="fas fa-graduation-cap"></i>School Fees
+                        <span class="chevron">▸</span>
+                    </button>
+                    <div class="submenu">
+                        <a class="nav-link" href="{% url 'school_fees_dashboard' %}">
+                            <i class="fas fa-graduation-cap"></i>Fee Dashboard
+                        </a>
+                        <a class="nav-link" href="{% url 'school_fees_student_list' %}">
+                            <i class="fas fa-user-graduate"></i>Students
+                        </a>
+                        <a class="nav-link" href="{% url 'school_fees_fee_structure_list' %}">
+                            <i class="fas fa-file-invoice-dollar"></i>Fee Structures
+                        </a>
+                        <a class="nav-link" href="{% url 'school_fees_fee_account_list' %}">
+                            <i class="fas fa-address-book"></i>Fee Accounts
+                        </a>
+                        <a class="nav-link" href="{% url 'school_fees_payment_list' %}">
+                            <i class="fas fa-money-bill-wave"></i>Fee Payments
+                        </a>
+                        <a class="nav-link" href="{% url 'school_fees_outstanding' %}">
+                            <i class="fas fa-exclamation-circle"></i>Outstanding Fees
+                        </a>
+                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER" %}
+                        <a class="nav-link" href="{% url 'school_fees_reminder_template_list' %}">
+                            <i class="fas fa-sms"></i>Fee Reminders
+                        </a>
+                        <a class="nav-link" href="{% url 'school_fees_reminder_log' %}">
+                            <i class="fas fa-history"></i>Reminder History
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,CASHIER,COLLECTOR" %}
+                <div class="menu-group" data-group="payments">
+                    <button type="button" class="menu-group-toggle" aria-expanded="false">
+                        <i class="fas fa-exchange-alt"></i>Payments &amp; Transactions
+                        <span class="chevron">▸</span>
+                    </button>
+                    <div class="submenu">
+                        <a class="nav-link" href="{% url 'transaction_list' %}">
+                            <i class="fas fa-exchange-alt"></i>Transactions
+                        </a>
+                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,CASHIER" %}
+                        <a class="nav-link" href="{% url 'withdrawal_list' %}">
+                            <i class="fas fa-money-bill-wave"></i>Withdrawals
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
 
                 {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER" %}
-                <div class="nav-section">System</div>
-                <a class="nav-link" href="{% url 'report_index' %}">
-                    <i class="fas fa-chart-bar"></i>Reports
-                </a>
-                <a class="nav-link" href="{% url 'sms_notification_list' %}">
-                    <i class="fas fa-sms"></i>SMS History
-                </a>
-                <a class="nav-link" href="{% url 'campaign_dashboard' %}">
-                    <i class="fas fa-bullhorn"></i>SMS Campaigns
-                </a>
-                <a class="nav-link" href="{% url 'campaign_create' %}">
-                    <i class="fas fa-plus-circle"></i>Create Campaign
-                </a>
-                <a class="nav-link" href="{% url 'campaign_history' %}">
-                    <i class="fas fa-list"></i>Campaign History
-                </a>
-                <a class="nav-link" href="{% url 'template_list' %}">
-                    <i class="fas fa-envelope-open-text"></i>SMS Templates
-                </a>
-                <a class="nav-link" href="{% url 'campaign_logs' %}">
-                    <i class="fas fa-stream"></i>SMS Sending Log
-                </a>
-                <a class="nav-link" href="{% url 'audit_log_list' %}">
-                    <i class="fas fa-clipboard-list"></i>Audit Log
-                </a>
-                <a class="nav-link" href="{% url 'loan_product_list' %}">
-                    <i class="fas fa-cogs"></i>Loan Products
-                </a>
-                <a class="nav-link" href="{% url 'loan_policy_list' %}">
-                    <i class="fas fa-shield-alt"></i>Loan Policies
-                </a>
-                <a class="nav-link" href="{% url 'eligibility_audit_list' %}">
-                    <i class="fas fa-clipboard-list"></i>Eligibility Audit
-                </a>
+                <div class="menu-group" data-group="sms">
+                    <button type="button" class="menu-group-toggle" aria-expanded="false">
+                        <i class="fas fa-bullhorn"></i>SMS &amp; Notifications
+                        <span class="chevron">▸</span>
+                    </button>
+                    <div class="submenu">
+                        <a class="nav-link" href="{% url 'campaign_dashboard' %}">
+                            <i class="fas fa-bullhorn"></i>SMS Campaigns
+                        </a>
+                        <a class="nav-link" href="{% url 'campaign_create' %}">
+                            <i class="fas fa-plus-circle"></i>Create Campaign
+                        </a>
+                        <a class="nav-link" href="{% url 'campaign_history' %}">
+                            <i class="fas fa-list"></i>Campaign History
+                        </a>
+                        <a class="nav-link" href="{% url 'campaign_logs' %}">
+                            <i class="fas fa-stream"></i>SMS Sending Log
+                        </a>
+                        <a class="nav-link" href="{% url 'template_list' %}">
+                            <i class="fas fa-envelope-open-text"></i>SMS Templates
+                        </a>
+                        <a class="nav-link" href="{% url 'sms_notification_list' %}">
+                            <i class="fas fa-sms"></i>SMS History
+                        </a>
+                    </div>
+                </div>
+
+                <div class="menu-group" data-group="reports">
+                    <button type="button" class="menu-group-toggle" aria-expanded="false">
+                        <i class="fas fa-chart-bar"></i>Reports
+                        <span class="chevron">▸</span>
+                    </button>
+                    <div class="submenu">
+                        <a class="nav-link" href="{% url 'report_index' %}">
+                            <i class="fas fa-chart-bar"></i>Reports
+                        </a>
+                        <a class="nav-link" href="{% url 'customer_report' %}">
+                            <i class="fas fa-users"></i>Customer Reports
+                        </a>
+                        <a class="nav-link" href="{% url 'contributions_report' %}">
+                            <i class="fas fa-piggy-bank"></i>Savings Reports
+                        </a>
+                        <a class="nav-link" href="{% url 'loan_report' %}">
+                            <i class="fas fa-file-invoice-dollar"></i>Loan Reports
+                        </a>
+                        <a class="nav-link" href="{% url 'repayments_report' %}">
+                            <i class="fas fa-money-check-alt"></i>Repayment Reports
+                        </a>
+                        <a class="nav-link" href="{% url 'overdue_report' %}">
+                            <i class="fas fa-exclamation-triangle"></i>Overdue Reports
+                        </a>
+                    </div>
+                </div>
+
+                <div class="menu-group" data-group="system">
+                    <button type="button" class="menu-group-toggle" aria-expanded="false">
+                        <i class="fas fa-cogs"></i>System / Administration
+                        <span class="chevron">▸</span>
+                    </button>
+                    <div class="submenu">
+                        <a class="nav-link" href="{% url 'audit_log_list' %}">
+                            <i class="fas fa-clipboard-list"></i>Audit Log
+                        </a>
+                        <a class="nav-link" href="{% url 'loan_product_list' %}">
+                            <i class="fas fa-cogs"></i>Loan Products
+                        </a>
+                        <a class="nav-link" href="{% url 'loan_policy_list' %}">
+                            <i class="fas fa-shield-alt"></i>Loan Policies
+                        </a>
+                        <a class="nav-link" href="{% url 'eligibility_audit_list' %}">
+                            <i class="fas fa-clipboard-check"></i>Eligibility Audit
+                        </a>
+                    </div>
+                </div>
                 {% endif %}
             </div>
         </nav>

@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'apps.reports',
     'apps.audit',
     'apps.dashboard',
+    'apps.school_fees',
 ]
 
 MIDDLEWARE = [
@@ -154,6 +155,9 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@zemzemsavings
 # Site
 SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')
 ORGANIZATION_NAME = os.environ.get('ORGANIZATION_NAME', 'Zemzem Savings and Loans')
+# Branding for the School Fees Management module (separate from the core
+# savings/loans organisation branding).
+SCHOOL_NAME = os.environ.get('SCHOOL_NAME', 'Zemzem Golden Child Academy')
 
 LOGGING = {
     'version': 1,
