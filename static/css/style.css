@@ -1040,4 +1040,65 @@ a { text-decoration: none; transition: var(--transition); }
     padding: 0.2rem;
 }
 
+/* ============================================
+   GLOBAL RESPONSIVE & INTERACTION POLISH
+   Applies to every page via the shared base
+   ============================================ */
+
+/* Only lift elements on devices that actually support hover,
+   so hover/translate effects never "stick" on touch screens. */
+@media (hover: hover) {
+    .btn-primary:hover, .btn-success:hover, .btn-danger:hover,
+    .btn-warning:hover, .stat-card:hover, .quick-action-card:hover {
+        transform: translateY(-2px);
+    }
+}
+
+@media (hover: none) {
+    .btn-primary:hover, .btn-success:hover, .btn-danger:hover,
+    .btn-warning:hover, .stat-card:hover, .quick-action-card:hover {
+        transform: none;
+    }
+}
+
+/* Page header rows (title + action button) wrap cleanly on small screens
+   instead of overflowing. */
+.content-area .d-flex.justify-content-between {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+/* Keep card content inside the container even with long tokens
+   (receipt numbers, emails, reference codes). */
+.card, .card-body, #main-content, .content-area { min-width: 0; }
+.card h1, .card h2, .card h3, .card h4, .card h5, .card h6,
+.card .stat-value, .card .text-break {
+    overflow-wrap: anywhere;
+}
+
+/* Filter/toolbar rows wrap instead of squeezing into one line. */
+.content-area form.row [class*="col-"],
+.content-area .row.g-2 [class*="col-"] { min-width: 0; }
+
+/* Slim badges/pills align to baseline and stay tappable. */
+.badge { white-space: nowrap; }
+
+/* Small screens: comfortable tap targets and full-width controls. */
+@media (max-width: 575.98px) {
+    .content-area .btn { min-height: 40px; }
+    .content-area .form-control,
+    .content-area .form-select { min-height: 40px; font-size: 0.9rem; }
+    .menu-group-toggle { min-height: 44px; }
+    .submenu .nav-link { padding-top: 0.55rem; padding-bottom: 0.55rem; }
+}
+
+/* Small screens: table scroll container keeps visual hint without
+   forcing horizontal page scroll. */
+@media (max-width: 767.98px) {
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
 .searchable-select-selected .selected-clear:hover { color: var(--danger); }

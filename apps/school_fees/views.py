@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Sum, Count, Q
+from django.db.models.functions import TruncMonth
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -86,11 +87,22 @@ def dashboard(request):
 
     # Chart: collections by month (from payments)
     monthly = (FeePayment.objects
-               .extra(select={'month': "strftime('%Y-%m', payment_date)"})
+               .annotate(month=TruncMonth('payment_date'))
                .values('month')
                .annotate(total=Sum('amount'))
                .order_by('month'))
-    monthly_chart = [{'label': m['month'], 'amount': float(m['total'])} for m in monthly]
+    monthly_chart = []
+    for m in monthly:
+        month_val = m.get('month') if isinstance(m, dict) else None
+        if month_val is not None and hasattr(month_val, 'strftime'):
+            label = month_val.strftime('%Y-%m')
+        else:
+            label = str(month_val) if month_val else ''
+        try:
+            amount = float(m.get('total') if isinstance(m, dict) else getattr(m, 'total', 0))
+        except (TypeError, ValueError):
+            amount = 0.0
+        monthly_chart.append({'label': label, 'amount': amount})
 
     # Chart: distribution by status
     status_counts = {c['status']: c['n'] for c in counts}
