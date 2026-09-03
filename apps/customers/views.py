@@ -223,6 +223,25 @@ def customer_delete(request, pk):
     customer_name = customer.get_full_name()
     customer_number = customer.customer_number
 
+    # A customer with financial/loan history cannot be deleted outright — doing
+    # so would destroy protected financial records and break integrity. Refuse
+    # the hard delete and point the user to deactivation instead.
+    protected_related = ['loans', 'eligibility_audits', 'transactions', 'withdrawals']
+    blocked_by = []
+    for rel in protected_related:
+        manager = getattr(customer, rel, None)
+        if manager is not None and manager.exists():
+            blocked_by.append(rel)
+
+    if blocked_by:
+        detail = ", ".join(rel.replace('_', ' ') for rel in blocked_by)
+        messages.error(
+            request,
+            f"Customer {customer_number} ({customer_name}) cannot be deleted because they have "
+            f"financial records ({detail}). Deactivate the customer instead to disable their account.",
+        )
+        return redirect("customer_list")
+
     AuditLog = _get_audit_model()
     if AuditLog:
         AuditLog.log(
