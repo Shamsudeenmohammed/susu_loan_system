@@ -35,7 +35,7 @@ INSTALLED_APPS = [
     'apps.reports',
     'apps.audit',
     'apps.dashboard',
-    'apps.school_fees',
+    'apps.school_fees.apps.SchoolFeesConfig',
 ]
 
 MIDDLEWARE = [
@@ -253,7 +253,7 @@ JAZZMIN_SETTINGS = {
         'auth',
     ],
     'related_modal_active': False,
-    'show_ui_builder': True,
+    'show_ui_builder': False,
 
     # ------------------------------------------------------------------
     # Top menu
@@ -274,44 +274,9 @@ JAZZMIN_SETTINGS = {
     'show_changelist_header': True,
     'changeform_format': 'horizontal_tabs',
     'add_changeform_link_back': False,
-    'custom_css': 'jazzmin-custom/custom.css',
     'custom_js': None,
     'usermenu_links': [
         {'name': 'View Customer Site', 'url': '/', 'new_window': True},
     ],
     'langmenu_active': False,
-}
-
-# ----------------------------------------------------------------------------
-# Colour / UI tweaks
-# ----------------------------------------------------------------------------
-JAZZMIN_UI_TWEAKS = {
-    'navbar_small_text': False,
-    'footer_small_text': False,
-    'body_small_text': False,
-    'brand_small_text': False,
-    'brand_colour': 'navbar-dark',
-    'accent': 'accent-success',
-    'navbar': 'navbar-success navbar-dark',
-    'no_navbar_border': False,
-    'navbar_fixed': True,
-    'layout_boxed': False,
-    'footer_fixed': False,
-    'sidebar_fixed': True,
-    'sidebar': 'sidebar-dark-success',
-    'sidebar_nav_small_text': False,
-    'sidebar_disable_expand': False,
-    'sidebar_nav_child_indent': True,
-    'sidebar_nav_compact_style': False,
-    'sidebar_nav_legacy_style': True,
-    'sidebar_nav_flat_style': False,
-    'theme': 'slate',
-    'button_classes': {
-        'primary': 'btn-outline-primary',
-        'secondary': 'btn-outline-secondary',
-        'info': 'btn-info',
-        'warning': 'btn-warning',
-        'danger': 'btn-danger',
-        'success': 'btn-success',
-    },
 }

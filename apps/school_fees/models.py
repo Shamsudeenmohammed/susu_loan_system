@@ -17,6 +17,7 @@ class SchoolClass(models.Model):
 
     class Meta:
         ordering = ['name']
+        verbose_name_plural = 'School Classes'
 
     def __str__(self):
         return self.name
@@ -117,6 +118,7 @@ class FeeCategory(models.Model):
 
     class Meta:
         ordering = ['name']
+        verbose_name_plural = 'Fee Categories'
 
     def __str__(self):
         return self.name

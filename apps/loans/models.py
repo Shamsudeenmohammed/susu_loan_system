@@ -307,9 +307,9 @@ class LoanPolicy(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
     class Meta:
         ordering = ['-is_active', '-created_at']
+        verbose_name_plural = 'Loan Policies'
 
     def __str__(self):
         return f"{self.name} {'(Active)' if self.is_active else '(Inactive)'}"
