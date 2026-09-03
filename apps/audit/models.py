@@ -24,6 +24,7 @@ class AuditLog(models.Model):
         USER_PERMISSION_CHANGED = 'USER_PERMISSION_CHANGED', 'User Permission Changed'
         SMS_SENT = 'SMS_SENT', 'SMS Sent'
         SMS_FAILED = 'SMS_FAILED', 'SMS Failed'
+        PASSWORD_CHANGED = 'PASSWORD_CHANGED', 'Password Changed'
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
