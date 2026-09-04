@@ -32,7 +32,13 @@
                     <td>{{ loan.principal_amount|currency }}</td>
                     <td class="d-none d-md-table-cell">{{ loan.outstanding_balance|currency }}</td>
                     <td><span class="badge {{ loan.status|status_badge_class }}">{{ loan.get_status_display }}</span></td>
-                    <td><a href="{% url 'loan_detail' pk=loan.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                    <td class="text-nowrap">
+                        <a href="{% url 'loan_detail' pk=loan.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+                        {% if loan.status == 'DRAFT' %}<a href="{% url 'loan_submit' pk=loan.pk %}" class="btn btn-sm btn-primary">Submit</a>
+                        {% elif loan.status == 'SUBMITTED' or loan.status == 'UNDER_REVIEW' %}<a href="{% url 'loan_review' pk=loan.pk %}" class="btn btn-sm btn-warning">Review</a>
+                        {% elif loan.status == 'APPROVED' %}<a href="{% url 'loan_disburse' pk=loan.pk %}" class="btn btn-sm btn-success">Disburse</a>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% empty %}
                 <tr><td colspan="7" class="text-center text-muted py-4">No loans found</td></tr>

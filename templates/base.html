@@ -343,5 +343,22 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{% static 'js/app.js' %}?v={{ static_version }}"></script>
     {% block extra_js %}{% endblock %}
+
+    {% if tech_support_phones or complaint_support_phones %}
+    <footer class="text-center mt-4 py-3" style="border-top:1px solid var(--border,#e9ecef);font-size:0.78rem;color:var(--text-muted,#6c757d);">
+        <div class="d-flex flex-wrap justify-content-center gap-3">
+            {% if tech_support_phones %}
+            <span><i class="fas fa-headset me-1"></i>Technical Support:
+                {% for p in tech_support_phones %}<a href="tel:{{ p }}" style="color:inherit;">{{ p }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}
+            </span>
+            {% endif %}
+            {% if complaint_support_phones %}
+            <span><i class="fas fa-life-ring me-1"></i>Complaints / Support:
+                {% for p in complaint_support_phones %}<a href="tel:{{ p }}" style="color:inherit;">{{ p }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}
+            </span>
+            {% endif %}
+        </div>
+    </footer>
+    {% endif %}
 </body>
 </html>

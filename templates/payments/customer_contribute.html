@@ -22,7 +22,7 @@
                         <select name="account" id="accountSelect" class="form-select" required>
                             {% for acc in susu_accounts %}
                             <option value="{{ acc.pk }}" data-balance="{{ acc.current_balance }}" data-target="{{ acc.target_amount }}" data-frequency="{{ acc.get_contribution_frequency_display }}">
-                                {{ acc.account_number }} — Balance: GHS {{ acc.current_balance|currency }}
+                                {{ acc.account_number }} — Balance: {{ acc.current_balance|currency }}
                             </option>
                             {% endfor %}
                         </select>
@@ -58,8 +58,8 @@
                         <small class="text-muted">{{ acc.get_contribution_frequency_display }}</small>
                     </div>
                     <div class="text-end">
-                        <div class="text-success fw-bold" style="font-size:1.1rem;">GHS {{ acc.current_balance|currency }}</div>
-                        <small class="text-muted">Target: GHS {{ acc.target_amount|currency }}</small>
+                        <div class="text-success fw-bold" style="font-size:1.1rem;">{{ acc.current_balance|currency }}</div>
+                        <small class="text-muted">Target: {{ acc.target_amount|currency }}</small>
                     </div>
                 </div>
                 {% if acc.target_amount > 0 %}
@@ -117,7 +117,7 @@
 
         var handler = PaystackPop.setup({
             key: paystackKey,
-            email: '{{ request.user.email|escapejs }}',
+            email: '{{ paystack_email|escapejs }}',
             amount: Math.round(amount * 100),
             currency: 'GHS',
             ref: 'SUSU-' + Date.now(),

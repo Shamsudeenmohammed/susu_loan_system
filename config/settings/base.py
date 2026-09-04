@@ -159,6 +159,10 @@ ORGANIZATION_NAME = os.environ.get('ORGANIZATION_NAME', 'Zemzem Savings and Loan
 # savings/loans organisation branding).
 SCHOOL_NAME = os.environ.get('SCHOOL_NAME', 'Zemzem Golden Child Academy')
 
+# Customer support contact lines.
+TECH_SUPPORT_PHONES = os.environ.get('TECH_SUPPORT_PHONES', '0247213850,0556459984')
+COMPLAINT_SUPPORT_PHONES = os.environ.get('COMPLAINT_SUPPORT_PHONES', '0597902220,0200638682')
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

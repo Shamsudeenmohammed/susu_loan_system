@@ -214,6 +214,22 @@ def customer_contribute(request):
     customer = request.user.customer_profile
     susu_accounts = SusuAccount.objects.filter(customer=customer, status='ACTIVE')
 
+    # Paystack requires a valid email address. Prefer the customer's own, then
+    # the account email, then fall back to the first available staff/admin
+    # email so payments still initialize when a customer has no email set.
+    email = customer.email or request.user.email
+    if not email:
+        from apps.accounts.models import User as AccountUser
+        email = (
+            AccountUser.objects.filter(is_staff=True)
+            .exclude(email__isnull=True)
+            .exclude(email='')
+            .order_by('id')
+            .values_list('email', flat=True)
+            .first()
+            or f"{request.user.username}@customer.zemzem.local"
+        )
+
     if not susu_accounts.exists():
         messages.warning(request, 'You have no active susu account. Please contact support.')
         return redirect('customer_dashboard')
@@ -240,7 +256,7 @@ def customer_contribute(request):
         from .paystack import initialize_payment
         result = initialize_payment(
             amount=amount,
-            email=customer.email or request.user.email,
+            email=email,
             reference=reference,
             callback_url=callback_url,
             metadata={
@@ -265,6 +281,7 @@ def customer_contribute(request):
     context = {
         'susu_accounts': susu_accounts,
         'paystack_public_key': getattr(settings, 'PAYSTACK_PUBLIC_KEY', ''),
+        'paystack_email': email,
     }
     return render(request, 'payments/customer_contribute.html', context)
 

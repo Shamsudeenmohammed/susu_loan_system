@@ -7,6 +7,7 @@ urlpatterns = [
     path('products/<int:pk>/edit/', views.loan_product_update, name='loan_product_update'),
     path('', views.loan_list, name='loan_list'),
     path('apply/', views.loan_apply, name='loan_apply'),
+    path('<int:pk>/submit/', views.loan_submit, name='loan_submit'),
     path('eligibility/', views.loan_eligibility, name='loan_eligibility'),
     path('eligibility/audit/', views.eligibility_audit_list, name='eligibility_audit_list'),
     path('policy/', views.loan_policy_list, name='loan_policy_list'),

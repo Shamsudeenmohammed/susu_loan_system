@@ -137,6 +137,35 @@ def loan_apply(request):
 
 
 @login_required
+@role_required('SUPER_ADMIN', 'ADMIN', 'MANAGER', 'LOAN_OFFICER')
+def loan_submit(request, pk):
+    """Submit a draft loan for review.
+
+    Transitions a DRAFT loan to SUBMITTED so it can be reviewed and approved.
+    """
+    loan = get_object_or_404(Loan, pk=pk)
+    if loan.status != Loan.Status.DRAFT:
+        messages.info(request, f'Loan {loan.loan_number} is already submitted.')
+        return redirect('loan_detail', pk=pk)
+
+    loan.status = Loan.Status.SUBMITTED
+    loan.submitted_by = request.user
+    loan.calculate_financials()
+    loan.outstanding_balance = loan.total_amount
+    loan.save()
+
+    messages.success(request, f'Loan {loan.loan_number} submitted for review.')
+
+    from apps.notifications.tasks import send_loan_application_sms
+    try:
+        send_loan_application_sms.delay(loan.pk)
+    except Exception:
+        pass
+
+    return redirect('loan_review', pk=pk)
+
+
+@login_required
 def loan_detail(request, pk):
     loan = get_object_or_404(
         Loan.objects.select_related('customer', 'loan_product', 'approved_by', 'submitted_by'),
