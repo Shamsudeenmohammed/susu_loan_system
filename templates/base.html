@@ -226,6 +226,11 @@
                         <span class="chevron">▸</span>
                     </button>
                     <div class="submenu">
+                        {% if user.is_staff %}
+                        <a class="nav-link" href="{% url 'admin:index' %}">
+                            <i class="fas fa-tachometer-alt"></i>Admin Backend
+                        </a>
+                        {% endif %}
                         <a class="nav-link" href="{% url 'audit_log_list' %}">
                             <i class="fas fa-clipboard-list"></i>Audit Log
                         </a>
