@@ -1,0 +1,22 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script>
+        (function () {
+            var box = document.getElementById('id_apply_to_all');
+            if (!box) return;
+            function toggle() {
+                var showStudent = !box.checked;
+                var studentRow = document.getElementById('id_student');
+                if (studentRow) {
+                    var row = studentRow.closest('.form-group');
+                    if (row) row.style.display = showStudent ? '' : 'none';
+                }
+            }
+            box.addEventListener('change', toggle);
+            toggle();
+        })();
+    </script>
+{% endblock %}

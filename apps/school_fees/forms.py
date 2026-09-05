@@ -176,6 +176,61 @@ class FeeAccountForm(forms.ModelForm):
         return total
 
 
+class StudentFeeAccountAdminForm(forms.ModelForm):
+    """Add/edit form for a student fee account.
+
+    The add form lets the admin either pick one specific student (search by
+    name) or tick "Apply to all students" to create an account for every active
+    student for the selected academic year + term at once.
+    """
+
+    apply_to_all = forms.BooleanField(
+        required=False,
+        label='Apply to all students',
+        help_text=(
+            'Tick to create a fee account for every active student for the '
+            'selected academic year and term. Leave unticked to create one for '
+            'a single student (search by name below).'
+        ),
+    )
+
+    class Meta:
+        model = StudentFeeAccount
+        fields = [
+            'apply_to_all', 'student', 'academic_year', 'term',
+            'total_fees', 'amount_paid', 'status', 'last_payment_date',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['student'].required = False
+        self.fields['student'].help_text = (
+            'Search by student name, or tick "Apply to all students" instead.'
+        )
+
+    def clean(self):
+        cleaned = super().clean()
+        apply_all = cleaned.get('apply_to_all')
+        student = cleaned.get('student')
+        if apply_all and student:
+            raise forms.ValidationError(
+                'Choose either "Apply to all students" or a specific student, not both.'
+            )
+        if not apply_all and not student:
+            self.add_error('student', 'Select a student or tick "Apply to all students".')
+        if apply_all and (not cleaned.get('academic_year') or not cleaned.get('term')):
+            raise forms.ValidationError(
+                'An academic year and term are required when applying to all students.'
+            )
+        ay = cleaned.get('academic_year')
+        term = cleaned.get('term')
+        if ay and term and term.academic_year_id != ay.pk:
+            raise forms.ValidationError(
+                'The selected term does not belong to the selected academic year.'
+            )
+        return cleaned
+
+
 class ReminderTemplateForm(forms.ModelForm):
     class Meta:
         model = ReminderTemplate

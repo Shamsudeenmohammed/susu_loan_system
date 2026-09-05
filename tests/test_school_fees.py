@@ -336,3 +336,112 @@ class TestViewsWorkflow:
     def _login(self, client, user):
         client.force_login(user)
         return client
+
+
+@pytest.mark.django_db
+class TestStudentFeeAccountAdminForm:
+    def test_single_student_requires_student(self, academic_year, term):
+        from apps.school_fees.forms import StudentFeeAccountAdminForm
+        form = StudentFeeAccountAdminForm(data={
+            'apply_to_all': '',
+            'academic_year': academic_year.pk,
+            'term': term.pk,
+            'total_fees': '500.00',
+            'amount_paid': '0.00',
+            'status': 'NOT_PAID',
+        })
+        assert form.is_valid() is False
+        assert 'student' in form.errors
+
+    def test_apply_to_all_requires_year_and_term(self, student, academic_year, term):
+        from apps.school_fees.forms import StudentFeeAccountAdminForm
+        form = StudentFeeAccountAdminForm(data={
+            'apply_to_all': 'on',
+            'student': '',
+            'total_fees': '0.00',
+        })
+        assert form.is_valid() is False
+        assert 'academic year and term are required' in form.errors['__all__'][0]
+
+    def test_both_apply_all_and_student_rejected(self, student, academic_year, term):
+        from apps.school_fees.forms import StudentFeeAccountAdminForm
+        form = StudentFeeAccountAdminForm(data={
+            'apply_to_all': 'on',
+            'student': student.pk,
+            'academic_year': academic_year.pk,
+            'term': term.pk,
+            'total_fees': '500.00',
+        })
+        assert form.is_valid() is False
+
+    def test_term_must_belong_to_year(self, academic_year, category, staff_user):
+        from apps.school_fees.forms import StudentFeeAccountAdminForm
+        other_year = AcademicYear.objects.create(name='2026/2027')
+        wrong_term = Term.objects.create(
+            academic_year=other_year, name='First Term', term_number=1)
+        form = StudentFeeAccountAdminForm(data={
+            'apply_to_all': 'on',
+            'student': '',
+            'academic_year': academic_year.pk,
+            'term': wrong_term.pk,
+            'total_fees': '500.00',
+        })
+        assert form.is_valid() is False
+
+
+@pytest.mark.django_db
+class TestStudentFeeAccountBulkAdmin:
+    def test_apply_to_all_creates_accounts_for_every_active_student(
+            self, client, staff_user, academic_year, term, school_class, category, student):
+        from django.urls import reverse
+        from django.test import Client
+        staff_user.is_staff = True
+        staff_user.is_superuser = True
+        staff_user.save()
+        Student.objects.create(
+            first_name='Anna', last_name='Smith', school_class=school_class,
+            parent_name='Bob Smith', parent_phone='0249999999',
+            parent_email='b@test.com', created_by=staff_user)
+        make_fee_structure(term, school_class, category, Decimal('500.00'), staff_user=staff_user)
+        admin_client = Client()
+        admin_client.raise_request_exception = False
+        admin_client.force_login(staff_user)
+        resp = admin_client.post(reverse('admin:school_fees_studentfeeaccount_add'), {
+            'apply_to_all': 'on',
+            'academic_year': academic_year.pk,
+            'term': term.pk,
+            'total_fees': '500.00',
+            'amount_paid': '0.00',
+            'status': 'NOT_PAID',
+        })
+        assert resp.status_code == 302
+        accounts = StudentFeeAccount.objects.filter(term=term)
+        assert accounts.count() == 2
+        assert all(a.total_fees == Decimal('500.00') for a in accounts)
+
+    def test_apply_to_all_skips_existing(self, client, staff_user, academic_year, term,
+                                         student, school_class, category):
+        from django.urls import reverse
+        from django.test import Client
+        staff_user.is_staff = True
+        staff_user.is_superuser = True
+        staff_user.save()
+        make_fee_structure(term, school_class, category, Decimal('500.00'), staff_user=staff_user)
+        account_service.get_or_create_fee_account(student, term)
+        Student.objects.create(
+            first_name='Anna', last_name='Smith', school_class=school_class,
+            parent_name='Bob Smith', parent_phone='0249999999',
+            parent_email='b@test.com', created_by=staff_user)
+        admin_client = Client()
+        admin_client.raise_request_exception = False
+        admin_client.force_login(staff_user)
+        resp = admin_client.post(reverse('admin:school_fees_studentfeeaccount_add'), {
+            'apply_to_all': 'on',
+            'academic_year': academic_year.pk,
+            'term': term.pk,
+            'total_fees': '500.00',
+            'amount_paid': '0.00',
+            'status': 'NOT_PAID',
+        })
+        assert resp.status_code == 302
+        assert StudentFeeAccount.objects.filter(term=term).count() == 2

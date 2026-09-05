@@ -1,5 +1,6 @@
 import csv
 import io
+from decimal import Decimal
 
 from django.contrib import admin, messages
 from django.core.exceptions import PermissionDenied
@@ -25,6 +26,9 @@ from .models import (
     ReminderTemplate,
     ReminderLog,
 )
+
+from .forms import StudentFeeAccountAdminForm
+from .services import accounts as account_service
 
 
 @admin.register(SchoolClass)
@@ -302,6 +306,7 @@ class FeeStructureAdmin(admin.ModelAdmin):
 
 @admin.register(StudentFeeAccount)
 class StudentFeeAccountAdmin(admin.ModelAdmin):
+    form = StudentFeeAccountAdminForm
     list_display = [
         'account_number', 'student', 'academic_year', 'term', 'total_fees',
         'amount_paid', 'outstanding_balance', 'status', 'last_payment_date',
@@ -310,6 +315,57 @@ class StudentFeeAccountAdmin(admin.ModelAdmin):
     search_fields = ['account_number', 'student__student_id', 'student__first_name', 'student__last_name']
     readonly_fields = ['account_number', 'outstanding_balance', 'created_at', 'updated_at']
     autocomplete_fields = ['student', 'academic_year', 'term']
+
+    def save_model(self, request, obj, form, change):
+        apply_to_all = form.cleaned_data.get('apply_to_all')
+        if apply_to_all and not change:
+            created, skipped = self._create_for_all_students(
+                request,
+                year=form.cleaned_data['academic_year'],
+                term=form.cleaned_data['term'],
+                total_fees=form.cleaned_data.get('total_fees'),
+            )
+            obj._bulk_created = created
+            obj._bulk_skipped = skipped
+            return
+        return super().save_model(request, obj, form, change)
+
+    def response_add(self, request, obj, post_url_continue=None):
+        if getattr(obj, '_bulk_created', None) is not None:
+            messages.success(
+                request,
+                f'Created {obj._bulk_created} student fee account(s) '
+                f'({obj._bulk_skipped} already existed).',
+            )
+            return HttpResponseRedirect(reverse('admin:school_fees_studentfeeaccount_changelist'))
+        return super().response_add(request, obj, post_url_continue)
+
+    def log_addition(self, request, object, message):
+        if getattr(object, '_bulk_created', None) is not None:
+            return
+        return super().log_addition(request, object, message)
+
+    def _create_for_all_students(self, request, year, term, total_fees):
+        created = 0
+        skipped = 0
+        for student in Student.objects.filter(is_active=True).select_related('school_class').iterator():
+            _, was_created = StudentFeeAccount.objects.get_or_create(
+                student=student,
+                academic_year=year,
+                term=term,
+                defaults={'total_fees': total_fees or Decimal('0.00')},
+            )
+            if was_created:
+                account = StudentFeeAccount.objects.get(
+                    student=student, academic_year=year, term=term,
+                )
+                if total_fees is None or total_fees <= 0:
+                    account.total_fees = account_service.total_fees_for(student, term)
+                account.recalculate_status()
+                created += 1
+            else:
+                skipped += 1
+        return created, skipped
 
 
 @admin.register(FeePayment)
