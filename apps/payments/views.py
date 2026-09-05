@@ -11,7 +11,7 @@ from decimal import Decimal
 from apps.core.decorators import role_required
 from .models import Transaction, Withdrawal
 from .forms import ContributionForm, WithdrawalRequestForm, WithdrawalReviewForm
-from .services import record_contribution, record_withdrawal
+from .services import record_contribution, record_withdrawal, send_contribution_notification
 from apps.susu.models import SusuAccount
 from apps.core.utils import generate_unique_number
 
@@ -60,11 +60,7 @@ def record_contribution_view(request):
                     f'Transaction: {txn.transaction_number}'
                 )
 
-                from apps.notifications.tasks import send_contribution_sms
-                try:
-                    send_contribution_sms.delay(txn.pk)
-                except Exception:
-                    pass
+                send_contribution_notification(txn)
 
                 return redirect('transaction_detail', pk=txn.pk)
             else:
@@ -385,9 +381,8 @@ def customer_contribute_callback(request):
     txn.idempotency_key = verified_ref
     txn.save(update_fields=['idempotency_key'])
 
-    # --- Async SMS via Sailup (financial transaction already saved) ---
-    from apps.notifications.tasks import send_contribution_sms
-    send_contribution_sms.delay(txn.pk)
+    # --- SMS via Sailup (financial transaction already saved) ---
+    send_contribution_notification(txn)
 
     logger.info(
         "Contribution recorded. txn=%s amount=%.2f balance=%.2f customer=%s",
@@ -517,8 +512,7 @@ def paystack_webhook(request):
             txn.transaction_number, float(result['amount']), customer.pk,
         )
         try:
-            from apps.notifications.tasks import send_contribution_sms
-            send_contribution_sms.delay(txn.pk)
+            send_contribution_notification(txn)
         except Exception:
             pass
     else:

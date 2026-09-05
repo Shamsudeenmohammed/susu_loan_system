@@ -45,33 +45,6 @@ def send_sms_task(self, phone_number, message, notification_type='GENERAL',
 
 
 @shared_task
-def send_contribution_sms(transaction_pk):
-    """Send SMS for a contribution transaction."""
-    from apps.payments.models import Transaction
-    from apps.notifications.services.sms import get_sms_service
-
-    try:
-        txn = Transaction.objects.select_related('customer').get(pk=transaction_pk)
-        phone = txn.customer.phone
-        if not phone:
-            return
-
-        balance = txn.balance_after
-        msg = templates.contribution_received(txn.amount, balance, txn.transaction_number)
-        get_sms_service().send_sms(
-            phone_number=phone,
-            message=msg,
-            notification_type='CONTRIBUTION',
-            customer=txn.customer,
-            reference_model='Transaction',
-            reference_id=txn.pk,
-            unique_key=f'contribution:{txn.pk}',
-        )
-    except Exception as e:
-        logger.exception(f"Contribution SMS failed: {e}")
-
-
-@shared_task
 def send_withdrawal_request_sms(withdrawal_pk):
     """Send SMS for withdrawal request."""
     from apps.payments.models import Withdrawal

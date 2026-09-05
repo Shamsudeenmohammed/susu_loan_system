@@ -197,7 +197,7 @@ class TestDuplicateProtection:
 class TestTaskMessages:
     def test_contribution_sms(self, customer, susu_account):
         from apps.payments.models import Transaction
-        from apps.notifications.tasks import send_contribution_sms
+        from apps.payments.services import send_contribution_notification
         txn = Transaction.objects.create(
             customer=customer,
             account=susu_account,
@@ -210,7 +210,7 @@ class TestTaskMessages:
         expected = templates.contribution_received(Decimal('100.00'), Decimal('1250.00'), txn.transaction_number)
         assert 'contribution of ghs 100.00' in expected.lower()
         assert 'ghs 1,250.00' in expected.lower()
-        send_contribution_sms(txn.pk)
+        send_contribution_notification(txn)
         assert SMSNotification.objects.filter(
             customer=customer, notification_type='CONTRIBUTION'
         ).exists()
@@ -293,11 +293,11 @@ class TestTaskMessages:
             payment_method='PAYSTACK',
         )
         # No SMS should be created just by saving the transaction; it must be
-        # explicitly queued.
+        # explicitly sent.
         assert SMSNotification.objects.filter(customer=customer).count() == 0
 
-        from apps.notifications.tasks import send_contribution_sms
-        send_contribution_sms(txn.pk)
+        from apps.payments.services import send_contribution_notification
+        send_contribution_notification(txn)
         assert SMSNotification.objects.filter(
             customer=customer, notification_type='CONTRIBUTION'
         ).count() == 1

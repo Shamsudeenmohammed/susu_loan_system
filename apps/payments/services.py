@@ -1,9 +1,44 @@
 from decimal import Decimal
 from django.db import transaction as db_transaction
 from apps.core.utils import generate_unique_number
+from apps.notifications.services import messages as message_templates
+from apps.notifications.services.sms import get_sms_service
 import logging
 
 logger = logging.getLogger('apps.payments')
+
+
+def send_contribution_notification(txn):
+    """
+    Send the contribution SMS to the customer synchronously.
+
+    Mirrors the account activation flow (apps.susu.services._send_activation_sms):
+    sends inline through the SMS service instead of queueing a Celery task, so
+    the alert is delivered immediately when a contribution is recorded in
+    production. Never raises; a provider failure is logged and the caller's
+    financial flow is unaffected.
+    """
+    customer = txn.customer
+    phone = customer.phone
+    if not phone:
+        return False
+    try:
+        service = get_sms_service()
+        notification = service.send_sms(
+            phone_number=phone,
+            message=message_templates.contribution_received(
+                txn.amount, txn.balance_after, txn.transaction_number
+            ),
+            notification_type='CONTRIBUTION',
+            customer=customer,
+            reference_model='Transaction',
+            reference_id=txn.pk,
+            unique_key=f'contribution:{txn.pk}',
+        )
+        return notification.status in ('SENT', 'DELIVERED')
+    except Exception:
+        logger.exception("Contribution SMS failed for transaction %s", txn.pk)
+        return False
 
 
 def record_contribution(customer, amount, payment_method, created_by, reference='', notes='', account=None):
