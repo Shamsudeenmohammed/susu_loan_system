@@ -84,6 +84,14 @@
                         <a class="nav-link" href="{% url 'loan_list' %}">
                             <i class="fas fa-file-invoice-dollar"></i>Loans
                         </a>
+                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER" %}
+                        <a class="nav-link" href="{% url 'loan_product_list' %}">
+                            <i class="fas fa-tags"></i>Loan Products
+                        </a>
+                        <a class="nav-link" href="{% url 'overdue_loans' %}">
+                            <i class="fas fa-exclamation-triangle"></i>Overdue Loans
+                        </a>
+                        {% endif %}
                         {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,LOAN_OFFICER,CASHIER" %}
                         <a class="nav-link" href="{% url 'loan_apply' %}">
                             <i class="fas fa-plus-circle"></i>Loan Applications
@@ -100,11 +108,7 @@
                             <i class="fas fa-hand-holding-usd"></i>Record Repayment
                         </a>
                         {% endif %}
-                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER" %}
-                        <a class="nav-link" href="{% url 'overdue_loans' %}">
-                            <i class="fas fa-exclamation-triangle"></i>Overdue Loans
-                        </a>
-                        {% endif %}
+
                     </div>
                 </div>
                 {% endif %}
@@ -233,9 +237,6 @@
                         {% endif %}
                         <a class="nav-link" href="{% url 'audit_log_list' %}">
                             <i class="fas fa-clipboard-list"></i>Audit Log
-                        </a>
-                        <a class="nav-link" href="{% url 'loan_product_list' %}">
-                            <i class="fas fa-cogs"></i>Loan Products
                         </a>
                         <a class="nav-link" href="{% url 'loan_policy_list' %}">
                             <i class="fas fa-shield-alt"></i>Loan Policies
