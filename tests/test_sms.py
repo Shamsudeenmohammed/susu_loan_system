@@ -41,8 +41,12 @@ def real_sms_settings(settings):
 
 @pytest.mark.django_db
 class TestSendSMS:
-    def test_sms_disabled_creates_record(self, customer):
-        # SAILUP_ENABLED=False by default in test settings -> TEST-MODE
+    def test_sms_disabled_creates_record(self, customer, settings):
+        # Force disabled/test mode explicitly: the CI/test environment may load
+        # a real .env with Sailup configured, so never rely on the defaults.
+        settings.SAILUP_API_KEY = ''
+        settings.SAILUP_ENABLED = False
+        settings.SMS_TEST_MODE = True
         notification = send_sms(
             phone_number='0241234567',
             message='Test message',
@@ -217,7 +221,7 @@ class TestTaskMessages:
 
     def test_loan_application_sms(self, customer, loan_product, cashier_user):
         from apps.loans.models import Loan
-        from apps.notifications.tasks import send_loan_application_sms
+        from apps.loans.sms import send_loan_application_sms
         loan = Loan.objects.create(
             customer=customer,
             loan_product=loan_product,
@@ -234,7 +238,7 @@ class TestTaskMessages:
 
     def test_loan_approved_sms(self, customer, loan_product, cashier_user):
         from apps.loans.models import Loan
-        from apps.notifications.tasks import send_loan_approved_sms
+        from apps.loans.sms import send_loan_approved_sms
         loan = Loan.objects.create(
             customer=customer,
             loan_product=loan_product,
@@ -249,7 +253,7 @@ class TestTaskMessages:
 
     def test_loan_repayment_sms(self, customer, loan_product, cashier_user):
         from apps.loans.models import Loan, LoanRepayment, RepaymentSchedule
-        from apps.notifications.tasks import send_repayment_sms
+        from apps.loans.sms import send_repayment_sms
         loan = Loan.objects.create(
             customer=customer,
             loan_product=loan_product,

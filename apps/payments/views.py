@@ -112,11 +112,8 @@ def withdrawal_request_view(request):
             withdrawal.save()
             messages.success(request, f'Withdrawal request {withdrawal.withdrawal_number} submitted.')
 
-            from apps.notifications.tasks import send_withdrawal_request_sms
-            try:
-                send_withdrawal_request_sms.delay(withdrawal.pk)
-            except Exception:
-                pass
+            from apps.notifications.tasks import send_withdrawal_request_sms, dispatch_sms_task
+            dispatch_sms_task(send_withdrawal_request_sms, withdrawal.pk)
 
             if request.user.has_role('CUSTOMER'):
                 return redirect('customer_dashboard')
@@ -146,22 +143,16 @@ def withdrawal_review(request, pk):
                 txn, success, error = record_withdrawal(withdrawal, request.user)
                 if success:
                     messages.success(request, f'Withdrawal {withdrawal.withdrawal_number} approved and completed.')
-                    try:
-                        from apps.notifications.tasks import send_withdrawal_status_sms
-                        send_withdrawal_status_sms.delay(withdrawal.pk, 'APPROVED')
-                    except Exception:
-                        pass
+                    from apps.notifications.tasks import send_withdrawal_status_sms, dispatch_sms_task
+                    dispatch_sms_task(send_withdrawal_status_sms, withdrawal.pk, 'APPROVED')
                 else:
                     messages.error(request, f'Approval succeeded but processing failed: {error}')
             else:
                 withdrawal.status = Withdrawal.Status.REJECTED
                 withdrawal.save()
                 messages.info(request, f'Withdrawal {withdrawal.withdrawal_number} rejected.')
-                try:
-                    from apps.notifications.tasks import send_withdrawal_status_sms
-                    send_withdrawal_status_sms.delay(withdrawal.pk, 'REJECTED')
-                except Exception:
-                    pass
+                from apps.notifications.tasks import send_withdrawal_status_sms, dispatch_sms_task
+                dispatch_sms_task(send_withdrawal_status_sms, withdrawal.pk, 'REJECTED')
 
             return redirect('withdrawal_list')
     else:

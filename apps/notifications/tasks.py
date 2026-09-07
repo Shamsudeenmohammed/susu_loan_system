@@ -6,6 +6,30 @@ from apps.notifications.services import messages as templates
 logger = logging.getLogger('apps.notifications')
 
 
+def dispatch_sms_task(task, *args, **kwargs):
+    """
+    Enqueue ``task`` (*args, **kwargs) on the Celery broker.
+
+    If the broker is unreachable -- e.g. Redis is not configured yet or the
+    worker is not running -- fall back to running the task synchronously in the
+    current process, so SMS notifications are never silently dropped. SMS task
+    bodies catch their own exceptions, so the fallback never blocks the caller
+    or breaks the request flow.
+    """
+    try:
+        task.delay(*args, **kwargs)
+        return
+    except Exception as exc:
+        logger.warning(
+            f"Celery broker unavailable for {task.name} ({exc}); "
+            f"dispatching synchronously"
+        )
+    try:
+        task.apply(args=args, kwargs=kwargs)
+    except Exception:
+        logger.exception(f"Synchronous dispatch failed for {task.name}")
+
+
 @shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
 def send_sms_task(self, phone_number, message, notification_type='GENERAL',
                   customer_id=None, reference_model='', reference_id=None,
@@ -109,139 +133,6 @@ def send_withdrawal_status_sms(withdrawal_pk, status):
         )
     except Exception as e:
         logger.exception(f"Withdrawal status SMS failed: {e}")
-
-
-@shared_task
-def send_loan_application_sms(loan_pk):
-    """Send SMS for loan application."""
-    from apps.loans.models import Loan
-    from apps.notifications.services.sms import get_sms_service
-
-    try:
-        loan = Loan.objects.select_related('customer').get(pk=loan_pk)
-        phone = loan.customer.phone
-        if not phone:
-            return
-
-        msg = templates.loan_application_submitted(loan.loan_number, loan.principal_amount)
-        get_sms_service().send_sms(
-            phone_number=phone,
-            message=msg,
-            notification_type='LOAN_APPLICATION',
-            customer=loan.customer,
-            reference_model='Loan',
-            reference_id=loan.pk,
-            unique_key=f'loan_application:{loan.pk}',
-        )
-    except Exception as e:
-        logger.exception(f"Loan application SMS failed: {e}")
-
-
-@shared_task
-def send_loan_approved_sms(loan_pk):
-    """Send SMS for loan approval."""
-    from apps.loans.models import Loan
-    from apps.notifications.services.sms import get_sms_service
-
-    try:
-        loan = Loan.objects.select_related('customer').get(pk=loan_pk)
-        phone = loan.customer.phone
-        if not phone:
-            return
-
-        msg = templates.loan_approved(loan.loan_number, loan.principal_amount)
-        get_sms_service().send_sms(
-            phone_number=phone,
-            message=msg,
-            notification_type='LOAN_APPROVED',
-            customer=loan.customer,
-            reference_model='Loan',
-            reference_id=loan.pk,
-            unique_key=f'loan_approved:{loan.pk}',
-        )
-    except Exception as e:
-        logger.exception(f"Loan approved SMS failed: {e}")
-
-
-@shared_task
-def send_loan_rejected_sms(loan_pk):
-    """Send SMS for loan rejection."""
-    from apps.loans.models import Loan
-    from apps.notifications.services.sms import get_sms_service
-
-    try:
-        loan = Loan.objects.select_related('customer').get(pk=loan_pk)
-        phone = loan.customer.phone
-        if not phone:
-            return
-
-        reason = loan.rejection_reason or 'Please contact us for details.'
-        msg = templates.loan_rejected(loan.loan_number, loan.principal_amount, reason)
-        get_sms_service().send_sms(
-            phone_number=phone,
-            message=msg,
-            notification_type='LOAN_REJECTED',
-            customer=loan.customer,
-            reference_model='Loan',
-            reference_id=loan.pk,
-            unique_key=f'loan_rejected:{loan.pk}',
-        )
-    except Exception as e:
-        logger.exception(f"Loan rejected SMS failed: {e}")
-
-
-@shared_task
-def send_loan_disbursement_sms(loan_pk):
-    """Send SMS for loan disbursement."""
-    from apps.loans.models import Loan
-    from apps.notifications.services.sms import get_sms_service
-
-    try:
-        loan = Loan.objects.select_related('customer').get(pk=loan_pk)
-        phone = loan.customer.phone
-        if not phone:
-            return
-
-        msg = templates.loan_disbursed(loan.loan_number, loan.disbursement_amount or loan.principal_amount)
-        get_sms_service().send_sms(
-            phone_number=phone,
-            message=msg,
-            notification_type='LOAN_DISBURSEMENT',
-            customer=loan.customer,
-            reference_model='Loan',
-            reference_id=loan.pk,
-            unique_key=f'loan_disbursement:{loan.pk}',
-        )
-    except Exception as e:
-        logger.exception(f"Loan disbursement SMS failed: {e}")
-
-
-@shared_task
-def send_repayment_sms(repayment_pk):
-    """Send SMS for loan repayment."""
-    from apps.loans.models import LoanRepayment
-    from apps.notifications.services.sms import get_sms_service
-
-    try:
-        r = LoanRepayment.objects.select_related('loan', 'loan__customer').get(pk=repayment_pk)
-        phone = r.loan.customer.phone
-        if not phone:
-            return
-
-        msg = templates.loan_repayment_received(
-            r.amount, r.loan.loan_number, r.loan.outstanding_balance
-        )
-        get_sms_service().send_sms(
-            phone_number=phone,
-            message=msg,
-            notification_type='LOAN_REPAYMENT',
-            customer=r.loan.customer,
-            reference_model='LoanRepayment',
-            reference_id=r.pk,
-            unique_key=f'repayment:{r.pk}',
-        )
-    except Exception as e:
-        logger.exception(f"Repayment SMS failed: {e}")
 
 
 @shared_task

@@ -116,11 +116,8 @@ def loan_apply(request):
 
             messages.success(request, f'Loan application {loan.loan_number} submitted.')
 
-            from apps.notifications.tasks import send_loan_application_sms
-            try:
-                send_loan_application_sms.delay(loan.pk)
-            except Exception:
-                pass
+            from apps.loans.sms import send_loan_application_sms
+            send_loan_application_sms(loan.pk)
 
             if request.user.has_role('CUSTOMER'):
                 return redirect('customer_dashboard')
@@ -156,11 +153,8 @@ def loan_submit(request, pk):
 
     messages.success(request, f'Loan {loan.loan_number} submitted for review.')
 
-    from apps.notifications.tasks import send_loan_application_sms
-    try:
-        send_loan_application_sms.delay(loan.pk)
-    except Exception:
-        pass
+    from apps.loans.sms import send_loan_application_sms
+    send_loan_application_sms(loan.pk)
 
     return redirect('loan_review', pk=pk)
 
@@ -208,11 +202,8 @@ def loan_review(request, pk):
                 loan.save()
                 messages.success(request, f'Loan {loan.loan_number} approved.')
 
-                from apps.notifications.tasks import send_loan_approved_sms
-                try:
-                    send_loan_approved_sms.delay(loan.pk)
-                except Exception:
-                    pass
+                from apps.loans.sms import send_loan_approved_sms
+                send_loan_approved_sms(loan.pk)
             else:
                 loan.status = Loan.Status.REJECTED
                 loan.rejected_by = request.user
@@ -220,11 +211,8 @@ def loan_review(request, pk):
                 loan.save()
                 messages.info(request, f'Loan {loan.loan_number} rejected.')
 
-                from apps.notifications.tasks import send_loan_rejected_sms
-                try:
-                    send_loan_rejected_sms.delay(loan.pk)
-                except Exception:
-                    pass
+                from apps.loans.sms import send_loan_rejected_sms
+                send_loan_rejected_sms(loan.pk)
             return redirect('loan_detail', pk=pk)
     else:
         form = LoanReviewForm()
@@ -288,11 +276,8 @@ def loan_disburse(request, pk):
 
         messages.success(request, f'Loan {loan.loan_number} disbursed and repayment schedule generated.')
 
-        from apps.notifications.tasks import send_loan_disbursement_sms
-        try:
-            send_loan_disbursement_sms.delay(loan.pk)
-        except Exception:
-            pass
+        from apps.loans.sms import send_loan_disbursement_sms
+        send_loan_disbursement_sms(loan.pk)
 
         return redirect('loan_detail', pk=pk)
 
@@ -369,11 +354,8 @@ def record_repayment(request):
 
             messages.success(request, f'Repayment of GHS {amount:.2f} recorded. {repayment.repayment_number}')
 
-            from apps.notifications.tasks import send_repayment_sms
-            try:
-                send_repayment_sms.delay(repayment.pk)
-            except Exception:
-                pass
+            from apps.loans.sms import send_repayment_sms
+            send_repayment_sms(repayment.pk)
 
             return redirect('loan_detail', pk=loan.pk)
     else:

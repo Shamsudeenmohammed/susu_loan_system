@@ -88,8 +88,8 @@ class SMSService:
 
     def send_sms_async(self, *args, **kwargs):
         """Schedule the SMS via Celery. Never blocks the financial flow."""
-        from apps.notifications.tasks import send_sms_task
-        send_sms_task.delay(*args, **kwargs)
+        from apps.notifications.tasks import send_sms_task, dispatch_sms_task
+        dispatch_sms_task(send_sms_task, *args, **kwargs)
 
     # ------------------------------------------------------------------
     # Internals

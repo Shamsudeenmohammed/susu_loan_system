@@ -79,14 +79,13 @@
 
                     <div id="scopeClasses" style="display:none;">
                         <label class="form-label">Classes / Programs <span class="text-muted small">(one or more)</span></label>
-                        <input type="text" id="classSearch" class="form-control mb-2" placeholder="Type to filter classes (e.g. JHS, Primary, SHS...)">
                         <div class="mb-2 d-flex gap-2">
                             <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllClasses()"><i class="fas fa-check-double me-1"></i>Select All Classes</button>
                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearClasses()"><i class="fas fa-undo me-1"></i>Clear</button>
                         </div>
                         {{ form.classes }}
                         {% if form.classes.errors %}<div class="text-danger small">{{ form.classes.errors.0 }}</div>{% endif %}
-                        <div class="form-text">Search above to filter. Ctrl/Cmd + click to pick multiple, or use "Select All Classes".</div>
+                        <div class="form-text">Type to search classes (e.g. JHS, Primary, SHS...). Picked classes appear as tags.</div>
                     </div>
 
                     <div id="scopeSingle" style="display:none;">
@@ -156,7 +155,16 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<link href="{% static 'vendor/select2/css/select2.min.css' %}" rel="stylesheet">
+<style>
+.select2-container { width: 100% !important; }
+</style>
+{% endblock %}
+
 {% block extra_js %}
+<script src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
+<script src="{% static 'vendor/select2/js/select2.min.js' %}"></script>
 <script>
 (function () {
     var scopeClasses = 'classes';
@@ -164,6 +172,15 @@
     var classesBox = document.getElementById('scopeClasses');
     var singleBox = document.getElementById('scopeSingle');
     var classSelect = document.getElementById('id_classes');
+
+    // Select2 on the classes multi-select (search + tag picker)
+    if (classSelect && window.jQuery && jQuery.fn.select2) {
+        jQuery(classSelect).select2({
+            placeholder: 'Search and select classes...',
+            allowClear: true,
+            width: '100%'
+        });
+    }
 
     function updateScope() {
         var selected = document.querySelector('input[name="scope"]:checked');
@@ -177,25 +194,25 @@
     });
     updateScope();
 
-    // Filter the class multi-select options
-    var classSearch = document.getElementById('classSearch');
-    if (classSearch) {
-        classSearch.addEventListener('input', function () {
-            var term = classSearch.value.toLowerCase();
-            Array.prototype.forEach.call(classSelect.options, function (opt) {
-                opt.style.display = (opt.text.toLowerCase().indexOf(term) > -1) ? '' : 'none';
-            });
-        });
+    // Select / clear through Select2 so the visible tags update too
+    function allClassValues() {
+        var vals = [];
+        Array.prototype.forEach.call(classSelect.options, function (opt) { vals.push(opt.value); });
+        return vals;
     }
-
-    // Select all visible class options
     window.selectAllClasses = function () {
-        Array.prototype.forEach.call(classSelect.options, function (opt) {
-            if (opt.style.display !== 'none') { opt.selected = true; }
-        });
+        if (classSelect && window.jQuery && jQuery.fn.select2) {
+            jQuery(classSelect).val(allClassValues()).trigger('change');
+        } else {
+            Array.prototype.forEach.call(classSelect.options, function (opt) { opt.selected = true; });
+        }
     };
     window.clearClasses = function () {
-        Array.prototype.forEach.call(classSelect.options, function (opt) { opt.selected = false; });
+        if (classSelect && window.jQuery && jQuery.fn.select2) {
+            jQuery(classSelect).val([]).trigger('change');
+        } else {
+            Array.prototype.forEach.call(classSelect.options, function (opt) { opt.selected = false; });
+        }
     };
 
     // Student search -> autocomplete results as radio list
