@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}Assign Fees{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <small class="text-muted text-uppercase fw-bold">{{ school_name }}</small>
+        <h4 class="mb-0">Assign Fees</h4>
+    </div>
+    <a href="{% url 'school_fees_fee_account_list' %}" class="btn btn-outline-secondary"><i class="fas fa-address-book me-1"></i>Fee Accounts</a>
+</div>
+
+<div class="alert alert-info">
+    Assign a fee to <strong>all students</strong>, to students in <strong>specific classes</strong>,
+    or to a <strong>single student</strong>. The fee is applied for the selected academic year and term
+    and the matching fee accounts are created or updated automatically.
+</div>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" id="assignFeeForm" novalidate>
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Academic Year</label>
+                            {{ form.academic_year }}
+                            {% if form.academic_year.errors %}<div class="text-danger small">{{ form.academic_year.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Term</label>
+                            {{ form.term }}
+                            {% if form.term.errors %}<div class="text-danger small">{{ form.term.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Fee Category</label>
+                            {{ form.fee_category }}
+                            {% if form.fee_category.errors %}<div class="text-danger small">{{ form.fee_category.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Amount (GHS)</label>
+                            {{ form.amount }}
+                            {% if form.amount.errors %}<div class="text-danger small">{{ form.amount.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Due Date</label>
+                            {{ form.due_date }}
+                            {% if form.due_date.errors %}<div class="text-danger small">{{ form.due_date.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Description (optional)</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <label class="form-label fw-semibold">Assign to</label>
+                    {% if form.scope.errors %}<div class="text-danger small">{{ form.scope.errors.0 }}</div>{% endif %}
+                    <div class="mb-3">
+                        {% for radio in form.scope %}
+                        <div class="form-check mb-1">
+                            {{ radio.tag }}
+                            <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div id="scopeClasses" style="display:none;">
+                        <label class="form-label">Classes / Programs <span class="text-muted small">(one or more)</span></label>
+                        <input type="text" id="classSearch" class="form-control mb-2" placeholder="Type to filter classes (e.g. JHS, Primary, SHS...)">
+                        <div class="mb-2 d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllClasses()"><i class="fas fa-check-double me-1"></i>Select All Classes</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearClasses()"><i class="fas fa-undo me-1"></i>Clear</button>
+                        </div>
+                        {{ form.classes }}
+                        {% if form.classes.errors %}<div class="text-danger small">{{ form.classes.errors.0 }}</div>{% endif %}
+                        <div class="form-text">Search above to filter. Ctrl/Cmd + click to pick multiple, or use "Select All Classes".</div>
+                    </div>
+
+                    <div id="scopeSingle" style="display:none;">
+                        <label class="form-label">Student</label>
+                        <input type="text" id="studentSearch" class="form-control mb-2" placeholder="Search by student name, ID, or parent name...">
+                        <div id="studentResults" class="list-group" style="max-height:240px;overflow:auto;"></div>
+                        {{ form.student }}
+                        {% if form.student.errors %}<div class="text-danger small">{{ form.student.errors.0 }}</div>{% endif %}
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-check-double me-1"></i>Assign Fee</button>
+                        <a href="{% url 'school_fees_assign_fee' %}" class="btn btn-outline-secondary">Reset</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        {% if result %}
+        <div class="card border-success">
+            <div class="card-header bg-success text-white"><i class="fas fa-check-circle me-1"></i>Assignment Complete</div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-3">
+                    <li><i class="fas fa-file-invoice-dollar text-muted me-1"></i>Fee structure(s) created/updated: <strong>{{ result.structures|length }}</strong></li>
+                    <li><i class="fas fa-user-graduate text-muted me-1"></i>Fee account(s) updated: <strong>{{ result.accounts|length }}</strong></li>
+                    {% if result.student %}
+                    <li><i class="fas fa-user text-muted me-1"></i>Student: <strong>{{ result.student.get_full_name }}</strong></li>
+                    {% endif %}
+                </ul>
+                {% if result.structures %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr><th>Class</th><th>Category</th><th>Amount</th><th>Due</th></tr>
+                        </thead>
+                        <tbody>
+                        {% for s in result.structures %}
+                            <tr>
+                                <td>{{ s.school_class.name }}</td>
+                                <td>{{ s.fee_category.name }}</td>
+                                <td>{{ s.amount|currency }}</td>
+                                <td>{{ s.due_date|date:"d M Y" }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+                <a href="{% url 'school_fees_fee_account_list' %}" class="btn btn-sm btn-outline-primary mt-3"><i class="fas fa-address-book me-1"></i>View Fee Accounts</a>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body text-muted">
+                <p><i class="fas fa-info-circle me-1"></i>How it works:</p>
+                <ul class="mb-0">
+                    <li><strong>All Students</strong> assigns the fee to every active student across all classes.</li>
+                    <li><strong>Specific Classes</strong> assigns only to students in the classes you pick (one or more).</li>
+                    <li><strong>Single Student</strong> assigns to one student, searchable by name, ID, or parent.</li>
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var scopeClasses = 'classes';
+    var scopeSingle = 'single';
+    var classesBox = document.getElementById('scopeClasses');
+    var singleBox = document.getElementById('scopeSingle');
+    var classSelect = document.getElementById('id_classes');
+
+    function updateScope() {
+        var selected = document.querySelector('input[name="scope"]:checked');
+        var val = selected ? selected.value : null;
+        classesBox.style.display = (val === scopeClasses) ? 'block' : 'none';
+        singleBox.style.display = (val === scopeSingle) ? 'block' : 'none';
+    }
+
+    document.querySelectorAll('input[name="scope"]').forEach(function (r) {
+        r.addEventListener('change', updateScope);
+    });
+    updateScope();
+
+    // Filter the class multi-select options
+    var classSearch = document.getElementById('classSearch');
+    if (classSearch) {
+        classSearch.addEventListener('input', function () {
+            var term = classSearch.value.toLowerCase();
+            Array.prototype.forEach.call(classSelect.options, function (opt) {
+                opt.style.display = (opt.text.toLowerCase().indexOf(term) > -1) ? '' : 'none';
+            });
+        });
+    }
+
+    // Select all visible class options
+    window.selectAllClasses = function () {
+        Array.prototype.forEach.call(classSelect.options, function (opt) {
+            if (opt.style.display !== 'none') { opt.selected = true; }
+        });
+    };
+    window.clearClasses = function () {
+        Array.prototype.forEach.call(classSelect.options, function (opt) { opt.selected = false; });
+    };
+
+    // Student search -> autocomplete results as radio list
+    var studentSearch = document.getElementById('studentSearch');
+    var studentResults = document.getElementById('studentResults');
+    var studentSelect = document.getElementById('id_student');
+    if (studentSelect) { studentSelect.style.display = 'none'; }
+    var timer = null;
+
+    function renderStudents(results) {
+        studentResults.innerHTML = '';
+        if (!results.length) {
+            studentResults.innerHTML = '<div class="list-group-item text-muted">No students found. Try a different search.</div>';
+            return;
+        }
+        results.forEach(function (s) {
+            var item = document.createElement('label');
+            item.className = 'list-group-item list-group-item-action d-flex align-items-center gap-2';
+            item.style.cursor = 'pointer';
+            item.innerHTML = '<input type="radio" name="student_pick" value="' + s.id + '" class="form-check-input mt-0"> <span>' + s.text + '</span>';
+            var radio = item.querySelector('input[name="student_pick"]');
+            radio.addEventListener('change', function (e) {
+                studentSelect.value = s.id;
+                Array.prototype.forEach.call(studentResults.querySelectorAll('input[name="student_pick"]'), function (r) {
+                    if (r !== e.target) { r.checked = false; }
+                });
+            });
+            // clicking anywhere on the row selects it
+            item.addEventListener('click', function (e) {
+                if (e.target.tagName !== 'INPUT') {
+                    radio.checked = true;
+                    studentSelect.value = s.id;
+                }
+            });
+            studentResults.appendChild(item);
+        });
+    }
+
+    function doSearch() {
+        var q = studentSearch.value.trim();
+        if (q.length < 1) { studentResults.innerHTML = '<div class="list-group-item text-muted">Type at least 1 character to search...</div>'; return; }
+        fetch('{% url "school_fees_student_autocomplete" %}?q=' + encodeURIComponent(q))
+            .then(function (r) { return r.json(); })
+            .then(function (data) { renderStudents(data.results || []); })
+            .catch(function () { studentResults.innerHTML = '<div class="list-group-item text-danger">Search failed.</div>'; });
+    }
+
+    if (studentSearch) {
+        studentSearch.addEventListener('input', function () {
+            clearTimeout(timer);
+            timer = setTimeout(doSearch, 300);
+        });
+    }
+})();
+</script>
+{% endblock %}
