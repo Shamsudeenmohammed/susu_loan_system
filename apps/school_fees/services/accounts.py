@@ -8,6 +8,9 @@ from ..models import (
     StudentFeeAccount,
     AcademicYear,
     Term,
+    SchoolClass,
+    FeeCategory,
+    Student,
 )
 
 logger = logging.getLogger('apps.school_fees')
@@ -66,3 +69,78 @@ def active_fee_accounts():
     if active_term:
         qs = qs.filter(term=active_term)
     return qs
+
+
+def _upsert_fee_structure(term, school_class, fee_category, amount, due_date, description=''):
+    """Create or update a fee structure for a term + class + category."""
+    structure, created = FeeStructure.objects.get_or_create(
+        academic_year=term.academic_year,
+        term=term,
+        school_class=school_class,
+        fee_category=fee_category,
+        defaults={
+            'amount': amount,
+            'due_date': due_date,
+            'description': description,
+            'is_active': True,
+        },
+    )
+    if not created:
+        changed = False
+        if structure.amount != amount:
+            structure.amount = amount
+            changed = True
+        if structure.due_date != due_date:
+            structure.due_date = due_date
+            changed = True
+        if structure.description != description and description:
+            structure.description = description
+            changed = True
+        if not structure.is_active:
+            structure.is_active = True
+            changed = True
+        if changed:
+            structure.save()
+    return structure
+
+
+def assign_fee_results(term_classes, fee_category, amount, due_date, description=''):
+    """Return (assignments, structures) for a set of (term, class) combinations."""
+    structures = []
+    for term, school_class in term_classes:
+        structures.append(_upsert_fee_structure(
+            term, school_class, fee_category, amount, due_date, description))
+    return structures
+
+
+def assign_fee_to_classes(term, classes, fee_category, amount, due_date, description=''):
+    """Assign a fee to all active students in the given classes."""
+    structures = []
+    accounts = []
+    for school_class in classes:
+        structure = _upsert_fee_structure(
+            term, school_class, fee_category, amount, due_date, description)
+        structures.append(structure)
+        if structure.is_active:
+            students = Student.objects.filter(school_class=school_class, is_active=True)
+            for student in students:
+                accounts.append(get_or_create_fee_account(student, term))
+    return {'structures': structures, 'accounts': accounts}
+
+
+def assign_fee_to_all(term, fee_category, amount, due_date, description=''):
+    """Assign a fee to all active students across every class."""
+    classes = SchoolClass.objects.filter(is_active=True, students__is_active=True).distinct()
+    return assign_fee_to_classes(term, classes, fee_category, amount, due_date, description)
+
+
+def assign_fee_to_student(student, term, fee_category, amount, due_date, description=''):
+    """Assign a fee to a single student."""
+    structure = _upsert_fee_structure(
+        term, student.school_class, fee_category, amount, due_date, description)
+    account = get_or_create_fee_account(student, term)
+    return {
+        'structures': [structure],
+        'accounts': [account],
+        'student': student,
+    }

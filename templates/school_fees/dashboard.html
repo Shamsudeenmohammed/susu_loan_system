@@ -15,9 +15,13 @@
 </div>
 
 <div class="card mb-4">
-    <div class="card-body">
-        <form method="get" class="row g-2">
-            <div class="col-md-3">
+    <div class="card-header bg-white">
+        <i class="fas fa-filter me-2 text-muted"></i><strong>Filter Fee Accounts</strong>
+    </div>
+    <div class="card-body pt-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-6 col-lg-3">
+                <label class="form-label small text-muted mb-1">Academic Year</label>
                 <select name="academic_year" class="form-select" onchange="this.form.submit()">
                     <option value="">All Academic Years</option>
                     {% for y in academic_years %}
@@ -25,7 +29,8 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6 col-lg-3">
+                <label class="form-label small text-muted mb-1">Term</label>
                 <select name="term" class="form-select" onchange="this.form.submit()">
                     <option value="">All Terms</option>
                     {% for t in terms %}
@@ -33,7 +38,8 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6 col-lg-3">
+                <label class="form-label small text-muted mb-1">Class</label>
                 <select name="school_class" class="form-select" onchange="this.form.submit()">
                     <option value="">All Classes</option>
                     {% for c in school_classes %}
@@ -41,88 +47,88 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
-                <a href="{% url 'school_fees_dashboard' %}" class="btn btn-outline-secondary w-100">Reset</a>
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'school_fees_dashboard' %}" class="btn btn-outline-secondary w-100"><i class="fas fa-rotate-left me-1"></i>Reset</a>
             </div>
         </form>
     </div>
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card stat-card">
+    <div class="col-6 col-lg-4">
+        <div class="card stat-card primary stagger-item">
             <div class="card-body">
-                <div class="d-flex align-items-center">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Total Students</p>
+                        <h3 class="stat-value" data-counter="{{ total_students }}">{{ total_students }}</h3>
+                    </div>
                     <div class="stat-icon bg-primary bg-opacity-10"><i class="fas fa-users text-primary"></i></div>
-                    <div class="ms-3">
-                        <div class="stat-value">{{ total_students }}</div>
-                        <div class="stat-label">Total Students</div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card stat-card">
+    <div class="col-6 col-lg-4">
+        <div class="card stat-card info stagger-item">
             <div class="card-body">
-                <div class="d-flex align-items-center">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Total Fees Expected</p>
+                        <h3 class="stat-value">{{ total_fees|currency }}</h3>
+                    </div>
                     <div class="stat-icon bg-info bg-opacity-10"><i class="fas fa-file-invoice-dollar text-info"></i></div>
-                    <div class="ms-3">
-                        <div class="stat-value">{{ total_fees|currency }}</div>
-                        <div class="stat-label">Total Fees Expected</div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card stat-card">
+    <div class="col-6 col-lg-4">
+        <div class="card stat-card success stagger-item">
             <div class="card-body">
-                <div class="d-flex align-items-center">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Total Collected</p>
+                        <h3 class="stat-value">{{ total_collected|currency }}</h3>
+                    </div>
                     <div class="stat-icon bg-success bg-opacity-10"><i class="fas fa-money-bill-wave text-success"></i></div>
-                    <div class="ms-3">
-                        <div class="stat-value">{{ total_collected|currency }}</div>
-                        <div class="stat-label">Total Collected</div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card stat-card">
+    <div class="col-6 col-lg-4">
+        <div class="card stat-card warning stagger-item">
             <div class="card-body">
-                <div class="d-flex align-items-center">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Total Outstanding</p>
+                        <h3 class="stat-value">{{ total_outstanding|currency }}</h3>
+                    </div>
                     <div class="stat-icon bg-warning bg-opacity-10"><i class="fas fa-exclamation-circle text-warning"></i></div>
-                    <div class="ms-3">
-                        <div class="stat-value">{{ total_outstanding|currency }}</div>
-                        <div class="stat-label">Total Outstanding</div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card stat-card">
+    <div class="col-6 col-lg-4">
+        <div class="card stat-card danger stagger-item">
             <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="stat-icon bg-danger bg-opacity-10"><i class="fas fa-file-invoice text-danger"></i></div>
-                    <div class="ms-3">
-                        <div class="stat-value">{{ overdue }}</div>
-                        <div class="stat-label">Overdue</div>
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Overdue</p>
+                        <h3 class="stat-value" data-counter="{{ overdue }}">{{ overdue }}</h3>
                     </div>
+                    <div class="stat-icon bg-danger bg-opacity-10"><i class="fas fa-clock text-danger"></i></div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card stat-card">
+    <div class="col-6 col-lg-4">
+        <div class="card stat-card secondary stagger-item">
             <div class="card-body">
-                <div class="d-flex align-items-center">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Unpaid</p>
+                        <h3 class="stat-value" data-counter="{{ unpaid }}">{{ unpaid }}</h3>
+                    </div>
                     <div class="stat-icon bg-secondary bg-opacity-10"><i class="fas fa-user-graduate text-secondary"></i></div>
-                    <div class="ms-3">
-                        <div class="stat-value">{{ unpaid }}</div>
-                        <div class="stat-label">Unpaid</div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -131,26 +137,44 @@
 
 <div class="row g-4 mb-4">
     <div class="col-xl-4 col-lg-6">
-        <a href="{% url 'school_fees_report_status' %}?status=FULLY_PAID" class="card quick-action-card text-decoration-none">
-            <div class="card-body">
-                <h6>Fully Paid Accounts</h6>
-                <h3 class="mb-0 text-success">{{ full_paid }}</h3>
+        <a href="{% url 'school_fees_report_status' %}?status=FULLY_PAID" class="card quick-action-card text-decoration-none stagger-item">
+            <div class="card-body quick-action-body">
+                <div class="quick-left">
+                    <div class="quick-icon bg-success bg-opacity-10"><i class="fas fa-check-circle text-success"></i></div>
+                    <div>
+                        <h6 class="mb-1">Fully Paid Accounts</h6>
+                        <h3 class="mb-0 text-success">{{ full_paid }}</h3>
+                    </div>
+                </div>
+                <div class="quick-arrow"><i class="fas fa-chevron-right"></i></div>
             </div>
         </a>
     </div>
     <div class="col-xl-4 col-lg-6">
-        <a href="{% url 'school_fees_report_status' %}?status=PARTIALLY_PAID" class="card quick-action-card text-decoration-none">
-            <div class="card-body">
-                <h6>Partially Paid Accounts</h6>
-                <h3 class="mb-0 text-warning">{{ partial }}</h3>
+        <a href="{% url 'school_fees_report_status' %}?status=PARTIALLY_PAID" class="card quick-action-card text-decoration-none stagger-item">
+            <div class="card-body quick-action-body">
+                <div class="quick-left">
+                    <div class="quick-icon bg-warning bg-opacity-10"><i class="fas fa-clock text-warning"></i></div>
+                    <div>
+                        <h6 class="mb-1">Partially Paid Accounts</h6>
+                        <h3 class="mb-0 text-warning">{{ partial }}</h3>
+                    </div>
+                </div>
+                <div class="quick-arrow"><i class="fas fa-chevron-right"></i></div>
             </div>
         </a>
     </div>
     <div class="col-xl-4 col-lg-6">
-        <a href="{% url 'school_fees_outstanding' %}" class="card quick-action-card text-decoration-none">
-            <div class="card-body">
-                <h6>Accounts with Outstanding Balance</h6>
-                <h3 class="mb-0 text-danger">{{ total_outstanding|currency }}</h3>
+        <a href="{% url 'school_fees_outstanding' %}" class="card quick-action-card text-decoration-none stagger-item">
+            <div class="card-body quick-action-body">
+                <div class="quick-left">
+                    <div class="quick-icon bg-danger bg-opacity-10"><i class="fas fa-exclamation-triangle text-danger"></i></div>
+                    <div>
+                        <h6 class="mb-1">Accounts with Outstanding Balance</h6>
+                        <h3 class="mb-0 text-danger">{{ total_outstanding|currency }}</h3>
+                    </div>
+                </div>
+                <div class="quick-arrow"><i class="fas fa-chevron-right"></i></div>
             </div>
         </a>
     </div>
@@ -159,17 +183,22 @@
 <div class="row g-4">
     <div class="col-lg-7">
         <div class="card h-100">
-            <div class="card-header bg-white"><strong>Monthly Collections</strong></div>
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-chart-column me-2 text-primary"></i><strong>Monthly Collections</strong></span>
+                <span class="badge bg-primary bg-opacity-10 text-primary">{{ total_collected|currency }}</span>
+            </div>
             <div class="card-body">
-                <canvas id="monthlyChart" height="120"></canvas>
+                <div style="height: 300px;"><canvas id="monthlyChart"></canvas></div>
             </div>
         </div>
     </div>
     <div class="col-lg-5">
         <div class="card h-100">
-            <div class="card-header bg-white"><strong>Payment Status</strong></div>
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-chart-pie me-2 text-primary"></i><strong>Payment Status</strong></span>
+            </div>
             <div class="card-body">
-                <canvas id="statusChart" height="120"></canvas>
+                <div style="height: 300px;"><canvas id="statusChart"></canvas></div>
             </div>
         </div>
     </div>
@@ -187,28 +216,102 @@ document.addEventListener('DOMContentLoaded', function () {
             data: {
                 labels: monthly.map(function (m) { return m.label; }),
                 datasets: [{
-                    label: 'Collections (GHS)',
+                    label: 'Collections',
                     data: monthly.map(function (m) { return m.amount; }),
-                    backgroundColor: 'rgba(13,110,253,0.6)'
+                    backgroundColor: generateBarColors(monthly.length),
+                    hoverBackgroundColor: 'rgba(13,110,253,0.9)',
+                    borderRadius: 6,
+                    maxBarThickness: 42
                 }]
             },
-            options: { responsive: true, plugins: { legend: { display: false } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return ' GHS ' + Number(ctx.raw).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: function (v) { return 'GHS ' + v; } },
+                        grid: { color: 'rgba(148,163,184,0.15)' }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
         });
     }
     var status = {{ status_chart|safe }};
     var statusCtx = document.getElementById('statusChart');
     if (statusCtx) {
-        new Chart(statusCtx, {
+        var statusChart = new Chart(statusCtx, {
             type: 'doughnut',
             data: {
                 labels: status.map(function (s) { return s.label; }),
                 datasets: [{
                     data: status.map(function (s) { return s.value; }),
-                    backgroundColor: ['#dc3545', '#ffc107', '#198754', '#6c757d']
+                    backgroundColor: ['#dc3545', '#ffc107', '#198754', '#6c757d'],
+                    borderColor: '#fff',
+                    borderWidth: 3,
+                    hoverOffset: 8
                 }]
             },
-            options: { responsive: true }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                var label = ctx.label || '';
+                                var total = ctx.dataset.data.reduce(function (a, b) { return a + b; }, 0);
+                                var pct = total ? Math.round((ctx.parsed / total) * 100) : 0;
+                                return label + ': ' + ctx.parsed + ' (' + pct + '%)';
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'centerText',
+                afterDraw: function (chart) {
+                    if (chart.getDatasetMeta(0).data.length === 0) return;
+                    var total = chart.data.datasets[0].data.reduce(function (a, b) { return a + b; }, 0);
+                    var ctx = chart.ctx;
+                    var x = chart.getDatasetMeta(0).data[0].x;
+                    var y = chart.getDatasetMeta(0).data[0].y;
+                    ctx.save();
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#334155';
+                    ctx.font = '700 22px system-ui, sans-serif';
+                    ctx.fillText(total, x, y - 6);
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.font = '500 11px system-ui, sans-serif';
+                    ctx.fillText('Accounts', x, y + 14);
+                    ctx.restore();
+                }
+            }]
         });
+    }
+    function generateBarColors(n) {
+        var colors = ['rgba(13,110,253,0.75)', 'rgba(59,130,246,0.7)', 'rgba(139,92,246,0.7)',
+                      'rgba(16,185,129,0.7)', 'rgba(245,158,11,0.7)', 'rgba(236,72,153,0.7)'];
+        var out = [];
+        for (var i = 0; i < n; i++) out.push(colors[i % colors.length]);
+        return out;
     }
 });
 </script>

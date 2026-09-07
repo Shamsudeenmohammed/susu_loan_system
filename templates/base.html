@@ -129,6 +129,11 @@
                         <a class="nav-link" href="{% url 'school_fees_fee_structure_list' %}">
                             <i class="fas fa-file-invoice-dollar"></i>Fee Structures
                         </a>
+                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER" %}
+                        <a class="nav-link" href="{% url 'school_fees_assign_fee' %}">
+                            <i class="fas fa-hand-holding-dollar"></i>Assign Fees
+                        </a>
+                        {% endif %}
                         <a class="nav-link" href="{% url 'school_fees_fee_account_list' %}">
                             <i class="fas fa-address-book"></i>Fee Accounts
                         </a>

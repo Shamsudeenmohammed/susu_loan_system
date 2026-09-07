@@ -33,6 +33,7 @@ from .forms import (
     FeePaymentForm,
     FeeAccountForm,
     ReminderTemplateForm,
+    AssignFeeForm,
 )
 from .services import accounts as account_service
 from .services import payments as payment_service
@@ -440,6 +441,95 @@ def fee_structure_delete(request, pk):
         messages.success(request, 'Fee structure deleted.')
         return redirect('school_fees_fee_structure_list')
     return redirect('school_fees_fee_structure_list')
+
+
+# ---------------------------------------------------------------------------
+# Assign fees
+# ---------------------------------------------------------------------------
+@login_required
+@role_required('SUPER_ADMIN', 'ADMIN', 'MANAGER')
+def assign_fee(request):
+    """Assign a fee to all students, specific classes, or a single student."""
+    result = None
+    if request.method == 'POST':
+        form = AssignFeeForm(request.POST)
+        if form.is_valid():
+            scope = form.cleaned_data['scope']
+            term = form.cleaned_data['term']
+            fee_category = form.cleaned_data['fee_category']
+            amount = form.cleaned_data['amount']
+            due_date = form.cleaned_data['due_date']
+            description = form.cleaned_data.get('description', '')
+
+            if scope == 'all':
+                result = account_service.assign_fee_to_all(
+                    term, fee_category, amount, due_date, description)
+                messages.success(
+                    request,
+                    f'Fee assigned to all active students across every class '
+                    f'({len(result["accounts"])} account(s) updated).'
+                )
+            elif scope == 'classes':
+                classes = form.cleaned_data['classes']
+                result = account_service.assign_fee_to_classes(
+                    term, classes, fee_category, amount, due_date, description)
+                class_names = ', '.join(c.name for c in classes)
+                messages.success(
+                    request,
+                    f'Fee assigned to {len(result["accounts"])} student(s) in: {class_names}.'
+                )
+            else:  # single
+                student = form.cleaned_data['student']
+                result = account_service.assign_fee_to_student(
+                    student, term, fee_category, amount, due_date, description)
+                messages.success(
+                    request,
+                    f'Fee assigned to {student.get_full_name()}.'
+                )
+
+            context = {
+                'form': AssignFeeForm(),
+                'academic_years': AcademicYear.objects.all(),
+                'terms': Term.objects.select_related('academic_year'),
+                'fee_categories': FeeCategory.objects.filter(is_active=True),
+                'school_classes': SchoolClass.objects.filter(is_active=True),
+                'result': result,
+            }
+            return render(request, 'school_fees/assign_fee.html', context)
+    else:
+        form = AssignFeeForm()
+
+    context = {
+        'form': form,
+        'academic_years': AcademicYear.objects.all(),
+        'terms': Term.objects.select_related('academic_year'),
+        'fee_categories': FeeCategory.objects.filter(is_active=True),
+        'school_classes': SchoolClass.objects.filter(is_active=True),
+    }
+    return render(request, 'school_fees/assign_fee.html', context)
+
+
+@login_required
+@role_required(*STAFF_ROLES)
+def student_autocomplete(request):
+    """JSON endpoint for searching students (for the assign-fee single scope)."""
+    query = request.GET.get('q', '').strip()
+    students = Student.objects.filter(is_active=True).select_related('school_class')
+    if query:
+        students = students.filter(
+            Q(first_name__icontains=query) | Q(last_name__icontains=query)
+            | Q(student_id__icontains=query) | Q(parent_name__icontains=query))
+    students = students[:20]
+    from django.http import JsonResponse
+    return JsonResponse({
+        'results': [
+            {
+                'id': s.pk,
+                'text': f"{s.student_id} - {s.get_full_name()} ({s.school_class.name})",
+            }
+            for s in students
+        ]
+    })
 
 
 # ---------------------------------------------------------------------------

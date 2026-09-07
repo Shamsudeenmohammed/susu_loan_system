@@ -9,6 +9,7 @@ urlpatterns = [
 
     # Students
     path('students/', views.student_list, name='school_fees_student_list'),
+    path('students/autocomplete/', views.student_autocomplete, name='school_fees_student_autocomplete'),
     path('students/new/', views.student_create, name='school_fees_student_create'),
     path('students/<int:pk>/', views.student_detail, name='school_fees_student_detail'),
     path('students/<int:pk>/edit/', views.student_update, name='school_fees_student_update'),
@@ -38,6 +39,9 @@ urlpatterns = [
     path('fee-structures/new/', views.fee_structure_create, name='school_fees_fee_structure_create'),
     path('fee-structures/<int:pk>/edit/', views.fee_structure_update, name='school_fees_fee_structure_update'),
     path('fee-structures/<int:pk>/delete/', views.fee_structure_delete, name='school_fees_fee_structure_delete'),
+
+    # Assign fees
+    path('assign-fees/', views.assign_fee, name='school_fees_assign_fee'),
 
     # Fee accounts
     path('accounts/', views.fee_account_list, name='school_fees_fee_account_list'),

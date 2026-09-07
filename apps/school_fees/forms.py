@@ -231,6 +231,86 @@ class StudentFeeAccountAdminForm(forms.ModelForm):
         return cleaned
 
 
+class AssignFeeForm(forms.Form):
+    """Assign a fee to all students, specific classes, or a single student.
+
+    The admin picks an academic year, term, fee category, amount and due date,
+    then chooses the scope: all students (every class), specific classes
+    (one or more), or a single student (search by name / ID).
+    """
+
+    SCOPE_ALL = 'all'
+    SCOPE_CLASSES = 'classes'
+    SCOPE_SINGLE = 'single'
+    SCOPE_CHOICES = [
+        (SCOPE_ALL, 'All Students (every class)'),
+        (SCOPE_CLASSES, 'Specific Classes (one or more)'),
+        (SCOPE_SINGLE, 'Single Student'),
+    ]
+
+    academic_year = forms.ModelChoiceField(
+        queryset=AcademicYear.objects.all(), widget=forms.Select(attrs={'class': 'form-select'}))
+    term = forms.ModelChoiceField(
+        queryset=Term.objects.all(), widget=forms.Select(attrs={'class': 'form-select'}))
+    fee_category = forms.ModelChoiceField(
+        queryset=FeeCategory.objects.filter(is_active=True),
+        widget=forms.Select(attrs={'class': 'form-select'}))
+    amount = forms.DecimalField(
+        max_digits=12, decimal_places=2,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}))
+    due_date = forms.DateField(
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}))
+    description = forms.CharField(
+        required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}))
+
+    scope = forms.ChoiceField(
+        choices=SCOPE_CHOICES,
+        initial=SCOPE_ALL,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}))
+
+    classes = forms.ModelMultipleChoiceField(
+        queryset=SchoolClass.objects.filter(is_active=True),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': '8'}))
+
+    student = forms.ModelChoiceField(
+        queryset=Student.objects.filter(is_active=True),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.fields['academic_year'].initial:
+            ay = AcademicYear.objects.filter(is_active=True).first()
+            if ay:
+                self.fields['academic_year'].initial = ay.pk
+                self.fields['term'].initial = (Term.objects
+                                               .filter(academic_year=ay)
+                                               .order_by('term_number').first().pk)
+        self.fields['student'].label_from_instance = (
+            lambda s: f"{s.student_id} - {s.get_full_name()} ({s.school_class.name})"
+        )
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get('amount')
+        if amount is not None and amount <= 0:
+            raise forms.ValidationError('Amount must be greater than zero.')
+        return amount
+
+    def clean(self):
+        cleaned = super().clean()
+        scope = cleaned.get('scope')
+        ay = cleaned.get('academic_year')
+        term = cleaned.get('term')
+        if ay and term and ay.pk != term.academic_year_id:
+            self.add_error('term', 'Selected term does not belong to the selected academic year.')
+        if scope == self.SCOPE_CLASSES and not cleaned.get('classes'):
+            self.add_error('classes', 'Select at least one class, or choose a different scope.')
+        if scope == self.SCOPE_SINGLE and not cleaned.get('student'):
+            self.add_error('student', 'Select a student to assign the fee to.')
+        return cleaned
+
+
 class ReminderTemplateForm(forms.ModelForm):
     class Meta:
         model = ReminderTemplate

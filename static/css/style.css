@@ -367,6 +367,7 @@ a { text-decoration: none; transition: var(--transition); }
 .stat-card.warning::before { background: var(--warning); }
 .stat-card.danger::before { background: var(--danger); }
 .stat-card.info::before { background: var(--info); }
+.stat-card.secondary::before { background: #6c757d; }
 
 /* ===== Tables ===== */
 .table {
@@ -705,6 +706,46 @@ a { text-decoration: none; transition: var(--transition); }
     font-size: 0.85rem;
     color: var(--text-primary);
     margin: 0;
+}
+
+.quick-action-card .quick-action-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.quick-action-card .quick-left {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+}
+
+.quick-action-card .quick-arrow {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    border-radius: 50%;
+    background: var(--bg-body);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    transition: var(--transition);
+}
+
+.quick-action-card:hover .quick-arrow {
+    background: var(--primary);
+    color: #fff;
+    transform: translateX(3px);
+}
+
+.quick-action-card .quick-icon {
+    margin: 0;
+    width: 46px;
+    height: 46px;
+    font-size: 1.15rem;
 }
 
 /* ===== Progress Bar ===== */

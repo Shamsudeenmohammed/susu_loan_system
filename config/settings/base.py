@@ -138,8 +138,8 @@ SAILUP_API_KEY = os.environ.get('SAILUP_API_KEY', '')
 SAILUP_BASE_URL = os.environ.get('SAILUP_BASE_URL', 'https://api.sailup.io/v1')
 SAILUP_SENDER_ID = os.environ.get('SAILUP_SENDER_ID', 'ZEMZEM')
 SAILUP_TIMEOUT = int(os.environ.get('SAILUP_TIMEOUT', '10'))
-SAILUP_ENABLED = os.environ.get('SAILUP_ENABLED', 'False') == 'True'
-SMS_TEST_MODE = os.environ.get('SMS_TEST_MODE', 'True') == 'True'
+SAILUP_ENABLED = os.environ.get('SAILUP_ENABLED', 'True') == 'True'
+SMS_TEST_MODE = os.environ.get('SMS_TEST_MODE', 'False') == 'True'
 
 # Paystack
 PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY', '')
