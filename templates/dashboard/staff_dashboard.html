@@ -66,7 +66,37 @@
     </div>
 </div>
 
-<!-- Row 2: Loan Stats -->
+<!-- Row 2: Savings Activity -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card danger stagger-item">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Total Withdrawals</p>
+                        <h3 class="stat-value">{{ total_withdrawals|currency }}</h3>
+                    </div>
+                    <div class="stat-icon bg-danger bg-opacity-10"><i class="fas fa-money-bill-wave text-danger"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card success stagger-item">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="stat-label mb-1">Savings Balance</p>
+                        <h3 class="stat-value">{{ savings_balance|currency }}</h3>
+                    </div>
+                    <div class="stat-icon bg-success bg-opacity-10"><i class="fas fa-coins text-success"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Row 3: Loan Stats -->
 <div class="row g-3 mb-4">
     <div class="col-xl-3 col-md-6">
         <div class="card stat-card danger stagger-item">

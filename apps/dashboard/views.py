@@ -51,6 +51,10 @@ def _staff_dashboard(request):
         transaction_type='LOAN_REPAYMENT'
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
+    savings_balance = (
+        total_contributions - total_withdrawals + total_disbursed - total_repayments
+    )
+
     overdue_count = RepaymentSchedule.objects.filter(
         due_date__lt=today,
         status__in=['PENDING', 'PARTIALLY_PAID', 'Overdue']
@@ -80,6 +84,7 @@ def _staff_dashboard(request):
         'total_contributions': total_contributions,
         'today_contributions': today_contributions,
         'total_withdrawals': total_withdrawals,
+        'savings_balance': savings_balance,
         'outstanding_loans': outstanding_loans,
         'total_disbursed': total_disbursed,
         'total_repayments': total_repayments,

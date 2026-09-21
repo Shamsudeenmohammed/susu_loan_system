@@ -223,38 +223,19 @@ def customer_delete(request, pk):
     customer_name = customer.get_full_name()
     customer_number = customer.customer_number
 
-    # A customer with financial/loan history cannot be deleted outright — doing
-    # so would destroy protected financial records and break integrity. Refuse
-    # the hard delete and point the user to deactivation instead.
-    protected_related = ['loans', 'eligibility_audits', 'transactions', 'withdrawals']
-    blocked_by = []
-    for rel in protected_related:
-        manager = getattr(customer, rel, None)
-        if manager is not None and manager.exists():
-            blocked_by.append(rel)
+    # Deleting a customer removes their entire financial history — susu accounts,
+    # contributions/withdrawals, loans, repayments and eligibility audits all
+    # cascade along with them (see delete_customer_cascade).
+    from apps.customers.services import delete_customer_cascade
 
-    if blocked_by:
-        detail = ", ".join(rel.replace('_', ' ') for rel in blocked_by)
-        messages.error(
-            request,
-            f"Customer {customer_number} ({customer_name}) cannot be deleted because they have "
-            f"financial records ({detail}). Deactivate the customer instead to disable their account.",
-        )
-        return redirect("customer_list")
+    deleted = delete_customer_cascade(customer, actor=request.user, ip_address=_client_ip(request))
 
-    AuditLog = _get_audit_model()
-    if AuditLog:
-        AuditLog.log(
-            action="CUSTOMER_DELETED",
-            description=f"Customer {customer_number} ({customer_name}) deleted by {request.user.username}",
-            user=request.user,
-            object_type="Customer",
-            object_id=str(customer.pk),
-            ip_address=_client_ip(request),
-        )
-
-    customer.delete()
-    messages.success(request, f"Customer {customer_number} ({customer_name}) has been deleted.")
+    messages.success(
+        request,
+        f"Customer {customer_number} ({customer_name}) has been deleted, including their "
+        f"{deleted['transactions']} transaction(s), {deleted['accounts']} susu account(s), "
+        f"{deleted['loans']} loan(s) and {deleted['withdrawals']} withdrawal(s).",
+    )
     return redirect("customer_list")
 
 

@@ -139,6 +139,79 @@ def reject_customer(customer, actor=None, ip_address=None, reason=''):
     )
 
 
+def delete_customer_cascade(customer, actor=None, ip_address=None):
+    """
+    Permanently delete a customer and ALL of their associated records.
+
+    The customer's transactions (contributions, withdrawals, disbursements,
+    repayments), susu accounts, loans, repayment history and eligibility audits
+    are removed along with them so the deletion never trips a PROTECT-constraint
+    and nothing is left orphaned. Runs atomically — if any step fails the whole
+    delete is rolled back.
+
+    Returns a dict summarising how many records of each type were removed.
+    """
+    from apps.loans.models import Loan, LoanRepayment, RepaymentSchedule, EligibilityAudit
+    from apps.payments.models import Transaction, Withdrawal
+    from apps.susu.models import SusuAccount
+    from apps.audit.models import AuditLog
+
+    summary = {}
+
+    with transaction.atomic():
+        # Delete in dependency order so PROTECT constraints are never violated.
+
+        repayment_count = LoanRepayment.objects.filter(loan__customer=customer).count()
+        LoanRepayment.objects.filter(loan__customer=customer).delete()
+
+        schedule_count = RepaymentSchedule.objects.filter(loan__customer=customer).count()
+        RepaymentSchedule.objects.filter(loan__customer=customer).delete()
+
+        loan_count = Loan.objects.filter(customer=customer).count()
+        Loan.objects.filter(customer=customer).delete()
+
+        audit_count = EligibilityAudit.objects.filter(customer=customer).count()
+        EligibilityAudit.objects.filter(customer=customer).delete()
+
+        withdrawal_count = Withdrawal.objects.filter(customer=customer).count()
+        Withdrawal.objects.filter(customer=customer).delete()
+
+        transaction_count = Transaction.objects.filter(customer=customer).count()
+        Transaction.objects.filter(customer=customer).delete()
+
+        account_count = SusuAccount.objects.filter(customer=customer).count()
+        SusuAccount.objects.filter(customer=customer).delete()
+
+        customer_number = customer.customer_number
+        customer_name = customer.get_full_name()
+        customer_pk = customer.pk
+        customer.delete()
+
+        summary.update({
+            'repayments': repayment_count,
+            'schedules': schedule_count,
+            'loans': loan_count,
+            'eligibility_audits': audit_count,
+            'withdrawals': withdrawal_count,
+            'transactions': transaction_count,
+            'accounts': account_count,
+        })
+
+    AuditLog.log(
+        action="CUSTOMER_DELETED",
+        description=(
+            f"Customer {customer_number} ({customer_name}) permanently deleted by "
+            f"{getattr(actor, 'username', 'system')} (cascade: {summary})"
+        ),
+        user=actor,
+        object_type='Customer',
+        object_id=str(customer_pk),
+        ip_address=ip_address,
+    )
+
+    return summary
+
+
 def _send_approval_sms(customer):
     """Send + log the approval SMS. Uses unique_key for duplicate protection."""
     phone = customer.phone
