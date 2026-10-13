@@ -33,16 +33,18 @@ from .services import accounts as account_service
 
 @admin.register(SchoolClass)
 class SchoolClassAdmin(admin.ModelAdmin):
-    list_display = ['code', 'name', 'is_active', 'created_at']
-    list_filter = ['is_active']
+    list_display = ['code', 'name', 'school', 'is_active', 'created_at']
+    list_filter = ['school', 'is_active']
     search_fields = ['name', 'code']
+    autocomplete_fields = ['school']
 
 
 @admin.register(AcademicYear)
 class AcademicYearAdmin(admin.ModelAdmin):
-    list_display = ['name', 'start_date', 'end_date', 'is_active', 'created_at']
-    list_filter = ['is_active']
+    list_display = ['name', 'school', 'start_date', 'end_date', 'is_active', 'created_at']
+    list_filter = ['school', 'is_active']
     search_fields = ['name']
+    autocomplete_fields = ['school']
 
 
 @admin.register(Term)
@@ -54,14 +56,14 @@ class TermAdmin(admin.ModelAdmin):
 
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ['student_id', 'first_name', 'last_name', 'school_class', 'is_active', 'created_at']
-    list_filter = ['school_class', 'is_active']
+    list_display = ['student_id', 'first_name', 'last_name', 'school_class', 'school', 'is_active', 'created_at']
+    list_filter = ['school', 'school_class', 'is_active']
     search_fields = ['student_id', 'first_name', 'last_name', 'parent_name', 'parent_phone']
     readonly_fields = ['student_id', 'created_at', 'updated_at']
-    autocomplete_fields = ['school_class']
+    autocomplete_fields = ['school_class', 'school']
 
     REQUIRED_FIELDS = ['first_name', 'last_name', 'school_class', 'parent_name', 'parent_phone']
-    OPTIONAL_FIELDS = ['parent_email', 'is_active']
+    OPTIONAL_FIELDS = ['parent_email', 'is_active', 'school']
     HEADER_ALIASES = {
         'firstname': 'first_name',
         'first_name': 'first_name',
@@ -90,6 +92,11 @@ class StudentAdmin(admin.ModelAdmin):
         'isactive': 'is_active',
         'is_active': 'is_active',
         'active': 'is_active',
+        'school': 'school',
+        'schoolcode': 'school',
+        'school_code': 'school',
+        'school code': 'school',
+        'branch': 'school',
     }
 
     actions = ['import_students']
@@ -144,8 +151,8 @@ class StudentAdmin(admin.ModelAdmin):
         response['Content-Disposition'] = 'attachment; filename="student_import_template.csv"'
         writer = csv.writer(response)
         writer.writerow(self.REQUIRED_FIELDS + self.OPTIONAL_FIELDS)
-        writer.writerow(['Akuapem', 'Kufuor', 'JHS 2', 'Mr. Kufuor', '0244000001', '', '1'])
-        writer.writerow(['Adjoa', 'Mensah', 'Primary 4', 'Mrs. Mensah', '0203000002', 'parent@example.com', '1'])
+        writer.writerow(['Akuapem', 'Kufuor', 'JHS 2', 'Mr. Kufuor', '0244000001', '', '1', 'MANKARIGU'])
+        writer.writerow(['Adjoa', 'Mensah', 'Primary 4', 'Mrs. Mensah', '0203000002', 'parent@example.com', '1', 'LINGBINSI'])
         return response
 
     def _parse_csv(self, upload):
@@ -234,13 +241,32 @@ class StudentAdmin(admin.ModelAdmin):
                 problems.append((idx, f'Missing required field(s): {", ".join(missing)}'))
                 continue
             class_ref = row['school_class'].strip()
-            school_class = (
-                SchoolClass.objects.filter(code__iexact=class_ref).first()
-                or SchoolClass.objects.filter(name__iexact=class_ref).first()
-            )
-            if not school_class:
+            school_ref = (row.get('school') or '').strip()
+            class_qs = SchoolClass.objects.all()
+            if school_ref:
+                from apps.schools.models import School
+                school = (
+                    School.objects.filter(code__iexact=school_ref).first()
+                    or School.objects.filter(short_name__iexact=school_ref).first()
+                    or School.objects.filter(name__iexact=school_ref).first()
+                )
+                if not school:
+                    problems.append((idx, f"School '{school_ref}' not found (match by code, short name or name)"))
+                    continue
+                class_qs = class_qs.filter(school=school)
+            matches = list(class_qs.filter(code__iexact=class_ref)) or \
+                list(class_qs.filter(name__iexact=class_ref))
+            if not matches:
                 problems.append((idx, f"SchoolClass '{class_ref}' not found (match by name or code)"))
                 continue
+            if len(matches) > 1:
+                problems.append((
+                    idx,
+                    f"SchoolClass '{class_ref}' exists in multiple schools; "
+                    f"add a 'school' column to disambiguate",
+                ))
+                continue
+            school_class = matches[0]
             first_name = row['first_name'].strip()
             last_name = row['last_name'].strip()
             parent_email = row.get('parent_email') or ''
@@ -291,17 +317,18 @@ class StudentAdmin(admin.ModelAdmin):
 
 @admin.register(FeeCategory)
 class FeeCategoryAdmin(admin.ModelAdmin):
-    list_display = ['code', 'name', 'is_active', 'created_at']
-    list_filter = ['is_active']
+    list_display = ['code', 'name', 'school', 'is_active', 'created_at']
+    list_filter = ['school', 'is_active']
     search_fields = ['name', 'code']
+    autocomplete_fields = ['school']
 
 
 @admin.register(FeeStructure)
 class FeeStructureAdmin(admin.ModelAdmin):
-    list_display = ['academic_year', 'term', 'school_class', 'fee_category', 'amount', 'due_date', 'is_active']
-    list_filter = ['academic_year', 'term', 'school_class', 'fee_category', 'is_active']
+    list_display = ['academic_year', 'term', 'school_class', 'fee_category', 'school', 'amount', 'due_date', 'is_active']
+    list_filter = ['school', 'academic_year', 'term', 'school_class', 'fee_category', 'is_active']
     search_fields = ['academic_year__name', 'school_class__name', 'fee_category__name', 'description']
-    autocomplete_fields = ['academic_year', 'term', 'school_class', 'fee_category']
+    autocomplete_fields = ['academic_year', 'term', 'school_class', 'fee_category', 'school']
 
 
 @admin.register(StudentFeeAccount)
@@ -311,7 +338,7 @@ class StudentFeeAccountAdmin(admin.ModelAdmin):
         'account_number', 'student', 'academic_year', 'term', 'total_fees',
         'amount_paid', 'outstanding_balance', 'status', 'last_payment_date',
     ]
-    list_filter = ['academic_year', 'term', 'status']
+    list_filter = ['school', 'academic_year', 'term', 'status']
     search_fields = ['account_number', 'student__student_id', 'student__first_name', 'student__last_name']
     readonly_fields = ['account_number', 'outstanding_balance', 'created_at', 'updated_at']
     autocomplete_fields = ['student', 'academic_year', 'term']
@@ -348,7 +375,13 @@ class StudentFeeAccountAdmin(admin.ModelAdmin):
     def _create_for_all_students(self, request, year, term, total_fees):
         created = 0
         skipped = 0
-        for student in Student.objects.filter(is_active=True).select_related('school_class').iterator():
+        students = Student.objects.filter(is_active=True).select_related('school_class')
+        # Keep bulk creation within one school when the year/term belongs to one.
+        school_id = year.school_id or (
+            term.academic_year.school_id if term and term.academic_year_id else None)
+        if school_id:
+            students = students.filter(school_id=school_id)
+        for student in students.iterator():
             _, was_created = StudentFeeAccount.objects.get_or_create(
                 student=student,
                 academic_year=year,
@@ -374,10 +407,10 @@ class FeePaymentAdmin(admin.ModelAdmin):
         'receipt_number', 'student', 'account', 'amount', 'payment_date',
         'payment_method', 'reference', 'is_online', 'recorded_by', 'created_at',
     ]
-    list_filter = ['payment_method', 'payment_date', 'academic_year', 'term', 'is_online']
+    list_filter = ['school', 'payment_method', 'payment_date', 'academic_year', 'term', 'is_online']
     search_fields = ['receipt_number', 'reference', 'student__first_name', 'student__last_name']
     readonly_fields = ['receipt_number', 'previous_balance', 'remaining_balance', 'created_at']
-    autocomplete_fields = ['student', 'account', 'academic_year', 'term', 'recorded_by']
+    autocomplete_fields = ['student', 'account', 'academic_year', 'term', 'recorded_by', 'school']
 
 
 @admin.register(ReminderTemplate)
@@ -389,7 +422,7 @@ class ReminderTemplateAdmin(admin.ModelAdmin):
 
 @admin.register(ReminderLog)
 class ReminderLogAdmin(admin.ModelAdmin):
-    list_display = ['student', 'parent_phone', 'reminder_type', 'status', 'created_at']
-    list_filter = ['status', 'reminder_type', 'created_at']
+    list_display = ['student', 'school', 'parent_phone', 'reminder_type', 'status', 'created_at']
+    list_filter = ['school', 'status', 'reminder_type', 'created_at']
     search_fields = ['student__first_name', 'student__last_name', 'parent_phone', 'message']
     readonly_fields = ['student', 'parent_phone', 'message', 'status', 'unique_key', 'created_at']

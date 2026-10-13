@@ -1,0 +1,60 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}{% if instance %}Edit{% else %}New{% endif %} Grading Scale{% endblock %}
+{% block ac_eyebrow %}Academics · Grading Scales{% endblock %}
+{% block ac_heading %}{% if instance %}Edit grading scale{% else %}New grading scale{% endif %}{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Map percentage ranges to grades. Ranges that overlap or leave gaps should be avoided.</p>{% endblock %}
+{% block ac_crumb %}{% if instance %}Edit{% else %}New{% endif %}{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:grading_scale_list' %}">Grading Scales</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:grading_scale_list' %}"><i class="fas fa-arrow-left me-1"></i>Back</a>
+{% endblock %}
+
+{% block ac_body %}
+<form method="post" data-guard-unsaved>
+    {% csrf_token %}
+    <div class="ac-form-section">
+        <header><i class="fas fa-ranking-star"></i><div><h3>Scale details</h3><small>Fields marked with * are required.</small></div></header>
+        <div class="ac-form-body">
+            {% include 'academics/_form.html' with form=form %}
+        </div>
+    </div>
+
+    <div class="ac-form-section">
+        <header><i class="fas fa-layer-group"></i><div><h3>Grade bands</h3><small>Leave unused rows blank.</small></div></header>
+        <div class="ac-table-wrap">
+            <table class="ac-table">
+                <thead>
+                    <tr><th>Grade</th><th>Description</th><th class="num">Min %</th><th class="num">Max %</th><th>Remark</th><th class="num">Order</th><th class="center">Delete</th></tr>
+                </thead>
+                <tbody>
+                {{ formset.management_form }}
+                {% for f in formset %}
+                    <tr>
+                        <td>{{ f.id }}{{ f.grade }}{% for e in f.grade.errors %}<div class="ac-error"><span>{{ e }}</span></div>{% endfor %}</td>
+                        <td>{{ f.description }}</td>
+                        <td>{{ f.min_score }}</td>
+                        <td>{{ f.max_score }}</td>
+                        <td>{{ f.remark }}</td>
+                        <td>{{ f.order }}</td>
+                        <td class="center">{% if f.instance.pk %}{{ f.DELETE }}{% else %}<span class="ac-faint">—</span>{% endif %}</td>
+                    </tr>
+                    {% if f.non_field_errors %}
+                    <tr><td colspan="7" class="ac-error"><span>{{ f.non_field_errors|join:" " }}</span></td></tr>
+                    {% endif %}
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="ac-card-body tight ac-cell-sub">Each band maps a percentage range to a grade and remark used across marks and reports.</div>
+    </div>
+
+    <div class="ac-form-actions">
+        <button class="btn btn-primary"><i class="fas fa-floppy-disk me-1"></i>{% if instance %}Save changes{% else %}Create scale{% endif %}</button>
+        <a class="btn btn-outline-secondary" href="{% url 'academics:grading_scale_list' %}">Cancel</a>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}{% if instance %}Edit{% else %}New{% endif %} Class Subject{% endblock %}
+{% block ac_eyebrow %}Academics · Class Subjects{% endblock %}
+{% block ac_heading %}{% if instance %}Edit class subject{% else %}New class subject{% endif %}{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Link a subject to a class so it can be taught and assessed.</p>{% endblock %}
+{% block ac_crumb %}{% if instance %}Edit{% else %}New{% endif %}{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:class_subject_list' %}">Class Subjects</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:class_subject_list' %}"><i class="fas fa-arrow-left me-1"></i>Back</a>
+{% endblock %}
+
+{% block ac_body %}
+<form method="post" data-guard-unsaved>
+    {% csrf_token %}
+    <div class="ac-form-section">
+        <header><i class="fas fa-layer-group"></i><div><h3>Class subject details</h3><small>Fields marked with * are required.</small></div></header>
+        <div class="ac-form-body">
+            {% include 'academics/_form.html' with form=form %}
+        </div>
+    </div>
+    <div class="ac-form-actions">
+        <button class="btn btn-primary"><i class="fas fa-floppy-disk me-1"></i>{% if instance %}Save changes{% else %}Create link{% endif %}</button>
+        <a class="btn btn-outline-secondary" href="{% url 'academics:class_subject_list' %}">Cancel</a>
+    </div>
+</form>
+{% endblock %}

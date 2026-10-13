@@ -1,0 +1,13 @@
+{% comment %}
+Priority badge for an update request. Colour follows urgency so the head
+teacher can scan for what matters most at a glance.
+{% endcomment %}
+{% if priority == 'URGENT' %}
+<span class="ac-badge danger bare">Urgent</span>
+{% elif priority == 'HIGH' %}
+<span class="ac-badge warning bare">High</span>
+{% elif priority == 'MEDIUM' %}
+<span class="ac-badge info bare">Medium</span>
+{% else %}
+<span class="ac-badge neutral bare">Low</span>
+{% endif %}

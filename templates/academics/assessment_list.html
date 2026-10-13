@@ -1,0 +1,113 @@
+{% extends 'academics/base_academics.html' %}
+{% load core_tags %}
+
+{% block title %}Assessments{% endblock %}
+{% block ac_eyebrow %}Academics · Records{% endblock %}
+{% block ac_heading %}Assessments{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Tests, exams and assignments, and the marks captured for them.</p>{% endblock %}
+{% block ac_crumb %}Assessments{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-primary" href="{% url 'academics:assessment_create' %}">
+    <i class="fas fa-plus me-1"></i>New Assessment
+</a>
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-filter"></i>Filter assessments</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="asSearch">Search</label>
+                <div class="ac-input-icon">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input id="asSearch" type="search" name="q" value="{{ filters.q }}" class="form-control" placeholder="Name, class or subject">
+                </div>
+            </div>
+            <div class="ac-field">
+                <label for="asClass">Class</label>
+                <select id="asClass" name="school_class" class="form-select" onchange="this.form.submit()">
+                    <option value="">All classes</option>
+                    {% for c in classes %}<option value="{{ c.pk }}" {% if selected_class == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="asSubject">Subject</label>
+                <select id="asSubject" name="subject" class="form-select">
+                    <option value="">All subjects</option>
+                    {% for s in subjects %}<option value="{{ s.pk }}" {% if filters.subject == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="asTerm">Term</label>
+                <select id="asTerm" name="term" class="form-select">
+                    <option value="">All terms</option>
+                    {% for t in terms %}<option value="{{ t.pk }}" {% if filters.term == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.academic_year.name }} · {{ t.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="asStatus">Status</label>
+                <select id="asStatus" name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="archived" {% if filters.status == 'archived' %}selected{% endif %}>Archived</option>
+                </select>
+            </div>
+        </div>
+        <div class="ac-toolbar-actions">
+            <button class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Apply</button>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'academics:assessment_list' %}">Reset</a>
+            <span class="ac-muted small ms-auto">{{ total_count }} assessment{{ total_count|pluralize }}</span>
+        </div>
+    </form>
+</div>
+
+<div class="ac-card">
+    <div class="ac-table-wrap">
+        <table class="ac-table">
+            <thead>
+                <tr><th>Name</th><th>Class</th><th>Subject</th><th>Term</th>
+                <th class="num">Max</th><th class="num">Weight</th><th>Due</th><th>Status</th><th class="text-end">Actions</th></tr>
+            </thead>
+            <tbody>
+            {% for a in assessments %}
+                <tr>
+                    <td class="ac-cell-primary">{{ a.name }}</td>
+                    <td>{{ a.school_class.name }}</td>
+                    <td>{{ a.subject.name }}</td>
+                    <td>{{ a.term.name }}</td>
+                    <td class="num">{{ a.max_score }}</td>
+                    <td class="num">{{ a.weight }}</td>
+                    <td class="ac-cell-sub">{{ a.marks_due_date|date:"d M Y"|default:"—" }}</td>
+                    <td>{% if a.is_active %}<span class="ac-badge success">Active</span>{% else %}<span class="ac-badge neutral">Archived</span>{% endif %}</td>
+                    <td class="text-end">
+                        <span class="ac-row-actions">
+                            <a class="btn btn-sm btn-primary" title="Enter marks" href="{% url 'academics:mark_entry' a.pk %}"><i class="fas fa-pen-to-square"></i></a>
+                            <a class="btn btn-sm btn-outline-secondary" title="Edit" href="{% url 'academics:assessment_edit' a.pk %}"><i class="fas fa-pen"></i></a>
+                            {% if user|has_role:"SUPER_ADMIN,ADMIN,PROPRIETOR,HEAD_TEACHER" %}
+                            <form method="post" action="{% url 'academics:assessment_delete' a.pk %}" class="d-inline"
+                                  data-confirm="Archive this assessment? Marks stay saved but it will be hidden from active lists."
+                                  data-confirm-title="Archive assessment?" data-confirm-type="warning" data-confirm-text="Archive">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-outline-danger" title="Archive"><i class="fas fa-box-archive"></i></button>
+                            </form>
+                            {% endif %}
+                        </span>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr class="ac-table-empty"><td colspan="9">
+                    {% if filters.q or filters.status or filters.school_class or filters.subject or filters.term %}
+                        No assessments match these filters. <a href="{% url 'academics:assessment_list' %}">Clear filters</a>.
+                    {% else %}
+                        No assessments yet. <a href="{% url 'academics:assessment_create' %}">Create the first assessment</a>.
+                    {% endif %}
+                </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'academics/_pagination.html' %}
+</div>
+{% endblock %}

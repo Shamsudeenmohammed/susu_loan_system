@@ -1,0 +1,77 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Take Attendance{% endblock %}
+{% block ac_eyebrow %}Academics · Attendance{% endblock %}
+{% block ac_heading %}{{ school_class.name }}{% endblock %}
+{% block ac_subtitle %}
+<p class="ac-page-sub">
+    {{ date|date:"l, d M Y" }} · {{ session_label }}
+    {% if subject %} · {{ subject.name }}{% endif %}
+    {% if term %} · {{ term.name }}{% endif %}
+</p>
+{% endblock %}
+{% block ac_crumb %}Register{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:attendance_index' %}">Attendance</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:attendance_index' %}"><i class="fas fa-arrow-left me-1"></i>Back</a>
+{% endblock %}
+
+{% block ac_body %}
+<form method="post" data-attendance>
+    {% csrf_token %}
+    <div class="ac-card">
+        <div class="ac-card-head">
+            <span class="ac-card-title"><i class="fas fa-users"></i>{{ rows|length }} student{{ rows|length|pluralize }}</span>
+            <span class="ac-inline">
+                <button type="button" class="btn btn-sm btn-outline-success" data-att-all="PRESENT"><i class="fas fa-check-double me-1"></i>All present</button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-att-all="ABSENT">All absent</button>
+            </span>
+        </div>
+        <div class="ac-card-body tight ac-inline">
+            {% for value, label in status_choices %}
+            <span class="ac-chip"><span class="ac-faint">{{ label }}</span> <strong data-att-count="{{ value }}">0</strong></span>
+            {% endfor %}
+        </div>
+        <div class="ac-table-wrap">
+            <table class="ac-table">
+                <thead><tr><th>Student</th><th style="width:180px">Status</th><th>Note</th></tr></thead>
+                <tbody>
+                {% for row in rows %}
+                    <tr>
+                        <td class="ac-cell-primary">{{ row.student.get_full_name }} <span class="ac-cell-sub">{{ row.student.student_id }}</span></td>
+                        <td>
+                            <select name="status_{{ row.student.pk }}" class="form-select form-select-sm" data-att-status aria-label="Status for {{ row.student.get_full_name }}">
+                                {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if row.record and row.record.status == value %}selected{% elif not row.record and value == 'PRESENT' %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td><input type="text" class="form-control form-control-sm" name="note_{{ row.student.pk }}" value="{{ row.record.note|default:'' }}" placeholder="Optional note"></td>
+                    </tr>
+                {% empty %}
+                    <tr class="ac-table-empty"><td colspan="3">No active students in this class.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="ac-form-section">
+        <div class="ac-form-body">
+            <div class="ac-field">
+                <label for="attReason" class="form-label">Reason (optional)</label>
+                <input id="attReason" type="text" name="reason" class="form-control" placeholder="Recorded with any corrections to the register">
+                <div class="ac-help">Used for the audit trail when a previously saved status is changed.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ac-form-actions">
+        <button class="btn btn-primary"><i class="fas fa-floppy-disk me-1"></i>Save attendance</button>
+        <a class="btn btn-outline-secondary" href="{% url 'academics:attendance_index' %}">Cancel</a>
+    </div>
+</form>
+{% endblock %}

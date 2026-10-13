@@ -23,15 +23,19 @@ INSTALLED_APPS = [
     'django_filters',
     'corsheaders',
     'apps.core',
+    'apps.schools',
     'apps.accounts',
     'apps.customers',
     'apps.susu',
     'apps.loans',
     'apps.payments',
     'apps.notifications',
+    'apps.campaigns',
     'apps.reports',
     'apps.audit',
     'apps.dashboard',
+    'apps.school_fees.apps.SchoolFeesConfig',
+    'apps.academics.apps.AcademicsConfig',
 ]
 
 MIDDLEWARE = [
@@ -58,6 +62,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'apps.core.context_processors.site_context',
+                'apps.schools.context_processors.school_context',
             ],
         },
     },

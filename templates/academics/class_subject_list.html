@@ -1,0 +1,83 @@
+{% extends 'academics/base_academics.html' %}
+{% load core_tags %}
+
+{% block title %}Class Subjects{% endblock %}
+{% block ac_eyebrow %}Academics · Configuration{% endblock %}
+{% block ac_heading %}Class Subjects{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Map the subjects offered by each class.</p>{% endblock %}
+{% block ac_crumb %}Class Subjects{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-primary" href="{% url 'academics:class_subject_create' %}">
+    <i class="fas fa-plus me-1"></i>New Class Subject
+</a>
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-filter"></i>Filter class subjects</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="csSearch">Search</label>
+                <div class="ac-input-icon">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input id="csSearch" type="search" name="q" value="{{ filters.q }}" class="form-control" placeholder="Class or subject">
+                </div>
+            </div>
+            <div class="ac-field">
+                <label for="csClass">Class</label>
+                <select id="csClass" name="school_class" class="form-select">
+                    <option value="">All classes</option>
+                    {% for c in classes %}<option value="{{ c.pk }}" {% if selected_class == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="csStatus">Status</label>
+                <select id="csStatus" name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if filters.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+        </div>
+        <div class="ac-toolbar-actions">
+            <button class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Apply</button>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'academics:class_subject_list' %}">Reset</a>
+            <span class="ac-muted small ms-auto">{{ total_count }} record{{ total_count|pluralize }}</span>
+        </div>
+    </form>
+</div>
+
+<div class="ac-card">
+    <div class="ac-table-wrap">
+        <table class="ac-table">
+            <thead><tr><th>Class</th><th>Subject</th><th>School</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+            <tbody>
+            {% for cs in class_subjects %}
+                <tr>
+                    <td class="ac-cell-primary">{{ cs.school_class.name }}</td>
+                    <td>{{ cs.subject.name }}</td>
+                    <td>{{ cs.school.display_name|default:"—" }}</td>
+                    <td>{% if cs.is_active %}<span class="ac-badge success">Active</span>{% else %}<span class="ac-badge neutral">Inactive</span>{% endif %}</td>
+                    <td class="text-end">
+                        <span class="ac-row-actions">
+                            <a class="btn btn-sm btn-outline-secondary" title="Edit" href="{% url 'academics:class_subject_edit' cs.pk %}"><i class="fas fa-pen"></i></a>
+                        </span>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr class="ac-table-empty"><td colspan="5">
+                    {% if filters.q or filters.status or filters.school_class %}
+                        No class subjects match these filters. <a href="{% url 'academics:class_subject_list' %}">Clear filters</a>.
+                    {% else %}
+                        No class subjects yet. <a href="{% url 'academics:class_subject_create' %}">Add one</a>.
+                    {% endif %}
+                </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'academics/_pagination.html' %}
+</div>
+{% endblock %}

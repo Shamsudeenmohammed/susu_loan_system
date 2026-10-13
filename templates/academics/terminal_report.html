@@ -1,0 +1,97 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Terminal Report · {{ student.get_full_name }}{% endblock %}
+{% block ac_eyebrow %}Academics · Reports{% endblock %}
+{% block ac_heading %}Terminal Report{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">{{ student.get_full_name }} · {{ student.school_class.name }} · {{ year.name }} {{ term.name }}</p>{% endblock %}
+{% block ac_crumb %}Terminal Report{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:results' %}">Results</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary ac-no-print" href="{% url 'academics:results' %}"><i class="fas fa-arrow-left me-1"></i>Back</a>
+<a class="btn btn-outline-primary ac-no-print" href="{% url 'academics:terminal_report_pdf' %}?student={{ student.pk }}&academic_year={{ year.pk }}&term={{ term.pk }}"><i class="fas fa-file-pdf me-1"></i>PDF</a>
+<button class="btn btn-primary ac-no-print" onclick="window.print()"><i class="fas fa-print me-1"></i>Print</button>
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-report">
+    <div class="ac-report-brand">
+        <h2>{{ data.school.name }}</h2>
+        <div class="ac-report-meta">
+            {% if data.school.location %}{{ data.school.location }} · {% endif %}
+            {% if data.school.phone %}Tel: {{ data.school.phone }}{% endif %}
+        </div>
+        <div class="ac-report-meta mt-1"><strong>{{ data.academic_year.name }} — {{ data.term.name }} Terminal Report</strong></div>
+    </div>
+
+    <dl class="ac-meta ac-meta-grid mb-3">
+        <div><dt>Student</dt><dd>{{ student.get_full_name }}</dd></div>
+        <div><dt>Admission No</dt><dd>{{ student.student_id }}</dd></div>
+        <div><dt>Class</dt><dd>{{ student.school_class.name }}</dd></div>
+    </dl>
+
+    <div class="ac-report-section-title">Academic performance</div>
+    <table class="ac-report-table">
+        <thead><tr><th>Subject</th><th>Score %</th><th>Grade</th><th>Remark</th></tr></thead>
+        <tbody>
+        {% for r in data.results.subjects %}
+            <tr>
+                <td>{{ r.subject.name }}</td>
+                <td>{% if r.percentage is not None %}{{ r.percentage }}{% else %}—{% endif %}</td>
+                <td>{% if r.grade %}<span class="ac-badge violet bare">{{ r.grade }}</span>{% else %}—{% endif %}</td>
+                <td>{{ r.remark|default:"" }}{% if r.incomplete %} <span class="text-warning">(incomplete)</span>{% endif %}{% if r.has_absent %} <span class="ac-muted">(absent)</span>{% endif %}{% if r.has_exempt %} <span class="ac-muted">(exempt)</span>{% endif %}</td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="4" class="ac-muted">No subjects configured.</td></tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr><th>Average</th><th>{{ data.results.average|default:"—" }}</th><th colspan="2"></th></tr>
+        </tfoot>
+    </table>
+
+    {% if data.settings.show_attendance_on_report %}
+    <div class="ac-report-section-title">Attendance</div>
+    <p class="mb-0">
+        Present: {{ data.attendance.present }}, Absent: {{ data.attendance.absent }},
+        Late: {{ data.attendance.late }}, Excused: {{ data.attendance.excused }}
+        — <strong>{{ data.attendance.percentage|default:"—" }}%</strong>
+    </p>
+    {% endif %}
+
+    {% if data.comment %}
+        {% if data.comment.class_teacher_comment %}
+        <div class="ac-report-section-title">Class Teacher's Comment</div>
+        <p>{{ data.comment.class_teacher_comment }}</p>
+        {% endif %}
+        {% if data.comment.head_teacher_remark %}
+        <div class="ac-report-section-title">Head Teacher's Remarks</div>
+        <p>{{ data.comment.head_teacher_remark }}</p>
+        {% endif %}
+        <p class="mb-0"><strong>Promotion Status:</strong> {{ data.comment.get_promotion_status_display }}</p>
+    {% endif %}
+
+    {% if data.report_fields %}
+    <div class="ac-report-section-title">School Fees</div>
+    <table class="ac-report-table">
+        <tbody>
+        {% for f in data.report_fields %}
+            <tr>
+                <th style="width:50%">{{ f.label }}</th>
+                <td>{% if f.value is not None %}{{ f.formatted }}{% elif f.flag %}<span class="ac-muted">{{ f.flag }}</span>{% else %}—{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <p class="ac-cell-sub mt-2 mb-0">Financial figures are taken directly from the school fees module and reconcile with the fee dashboard.</p>
+    {% endif %}
+
+    <div class="ac-report-sign">
+        <div>Class Teacher's Signature</div>
+        <div>Head Teacher's Signature</div>
+    </div>
+    {% if data.settings.head_teacher_name %}<div class="text-center ac-cell-sub mt-2">{{ data.settings.head_teacher_name }}, Head Teacher</div>{% endif %}
+</div>
+{% endblock %}

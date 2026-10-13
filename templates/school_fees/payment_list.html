@@ -40,7 +40,7 @@
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead>
-                    <tr><th>Receipt</th><th>Student</th><th>Class</th><th>Amount</th><th>Method</th><th>Date</th><th>Actions</th></tr>
+                    <tr><th>Receipt</th><th>Student</th><th>Class</th>{% if is_global_user and not active_school %}<th>School</th>{% endif %}<th>Amount</th><th>Method</th><th>Date</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                 {% for p in payments %}
@@ -48,6 +48,7 @@
                     <td><a href="{% url 'school_fees_receipt' pk=p.pk %}">{{ p.receipt_number }}</a></td>
                     <td>{{ p.student.get_full_name }}</td>
                     <td>{{ p.student.school_class.name }}</td>
+                    {% if is_global_user and not active_school %}<td>{% if p.school %}{{ p.school.short_name|default:p.school.name }}{% else %}—{% endif %}</td>{% endif %}
                     <td>{{ p.amount|currency }}</td>
                     <td>{{ p.get_payment_method_display }}</td>
                     <td>{{ p.payment_date|date:"d M Y" }}</td>
@@ -59,7 +60,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="7" class="text-center text-muted py-4">No payments found</td></tr>
+                <tr><td colspan="8" class="text-center text-muted py-4">No payments found</td></tr>
                 {% endfor %}
                 </tbody>
             </table>

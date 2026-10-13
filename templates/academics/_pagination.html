@@ -1,0 +1,32 @@
+{% load core_tags %}
+{% comment %}
+Pagination footer for academics lists. Keeps the active filters by
+rewriting only the ``page`` query parameter.
+{% endcomment %}
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<div class="ac-pagination">
+    <div class="ac-pagination-info">
+        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+        of {{ page_obj.paginator.count }}
+    </div>
+    <nav class="ac-pagination-nav" aria-label="Pagination">
+        <a class="ac-page-link{% if not page_obj.has_previous %} disabled{% endif %}"
+           {% if page_obj.has_previous %}href="?{% url_replace page=page_obj.previous_page_number %}"{% endif %}
+           aria-label="Previous">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        {% for num in page_obj.paginator.page_range %}
+            {% if num == page_obj.number %}
+                <span class="ac-page-link active" aria-current="page">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a class="ac-page-link" href="?{% url_replace page=num %}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        <a class="ac-page-link{% if not page_obj.has_next %} disabled{% endif %}"
+           {% if page_obj.has_next %}href="?{% url_replace page=page_obj.next_page_number %}"{% endif %}
+           aria-label="Next">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+    </nav>
+</div>
+{% endif %}

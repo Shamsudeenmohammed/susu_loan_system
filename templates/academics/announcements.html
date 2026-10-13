@@ -1,0 +1,81 @@
+{% extends 'academics/base_academics.html' %}
+{% load core_tags %}
+
+{% block title %}Announcements{% endblock %}
+{% block ac_eyebrow %}Academics · Communication{% endblock %}
+{% block ac_heading %}Announcements{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Notices shared with staff and the wider school community.</p>{% endblock %}
+{% block ac_crumb %}Announcements{% endblock %}
+
+{% block ac_actions %}
+{% if can_manage %}
+<a class="btn btn-primary" href="{% url 'academics:announcement_create' %}"><i class="fas fa-plus me-1"></i>New Announcement</a>
+{% endif %}
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-filter"></i>Filter announcements</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="anSearch">Search</label>
+                <div class="ac-input-icon">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input id="anSearch" type="search" name="q" value="{{ filters.q }}" class="form-control" placeholder="Title or content">
+                </div>
+            </div>
+            <div class="ac-field">
+                <label for="anAudience">Audience</label>
+                <select id="anAudience" name="audience" class="form-select">
+                    <option value="">All audiences</option>
+                    {% for value, label in audiences %}<option value="{{ value }}" {% if filters.audience == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="anStatus">Status</label>
+                <select id="anStatus" name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    <option value="published" {% if filters.status == 'published' %}selected{% endif %}>Published</option>
+                    <option value="draft" {% if filters.status == 'draft' %}selected{% endif %}>Draft</option>
+                </select>
+            </div>
+        </div>
+        <div class="ac-toolbar-actions">
+            <button class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Apply</button>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'academics:announcements' %}">Reset</a>
+            <span class="ac-muted small ms-auto">{{ total_count }} announcement{{ total_count|pluralize }}</span>
+        </div>
+    </form>
+</div>
+
+{% for a in announcements %}
+<div class="ac-card">
+    <div class="ac-card-head">
+        <span class="ac-card-title"><i class="fas fa-bullhorn"></i>{{ a.title }}</span>
+        <span class="ac-inline">
+            <span class="ac-badge info bare">{{ a.get_audience_display }}</span>
+            {% if a.is_published %}<span class="ac-badge success">Published</span>{% else %}<span class="ac-badge neutral">Draft</span>{% endif %}
+            {% if can_manage %}
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'academics:announcement_edit' a.pk %}" title="Edit"><i class="fas fa-pen"></i></a>
+            {% endif %}
+        </span>
+    </div>
+    <div class="ac-card-body">
+        <div class="ac-cell-sub mb-2"><i class="fas fa-school me-1"></i>{{ a.school.display_name|default:"—" }} · {{ a.published_at|date:"d M Y H:i" }}</div>
+        <div>{{ a.body|linebreaks }}</div>
+    </div>
+</div>
+{% empty %}
+<div class="ac-card">
+    {% if filters.q or filters.audience or filters.status %}
+        {% url 'academics:announcements' as an_list_url %}
+        {% include 'academics/_empty_state.html' with icon='fa-bullhorn' title='No announcements match' text='Try clearing the filters to see all announcements.' action_url=an_list_url action_label='Reset filters' %}
+    {% else %}
+        {% include 'academics/_empty_state.html' with icon='fa-bullhorn' title='No announcements yet' text='Announcements you publish will appear here.' %}
+    {% endif %}
+</div>
+{% endfor %}
+
+{% include 'academics/_pagination.html' %}
+{% endblock %}

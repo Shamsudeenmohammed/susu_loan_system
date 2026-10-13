@@ -1,0 +1,202 @@
+{% extends 'academics/base_academics.html' %}
+{% load core_tags %}
+
+{% block title %}Teacher Dashboard{% endblock %}
+{% block ac_eyebrow %}Academics · My teaching{% endblock %}
+{% block ac_heading %}Teacher Dashboard{% endblock %}
+{% block ac_subtitle %}
+<p class="ac-page-sub">
+    Welcome back, {{ user.get_full_name|default:user.username }}.
+    Track your classes, enter marks and submit them for review.
+</p>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary btn-sm" href="{% url 'academics:assessment_list' %}"><i class="fas fa-list-check me-1"></i>My assessments</a>
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-stat-grid cols-4">
+    {% for stat in stats %}
+    <a class="ac-stat is-link{% if stat.tone %} {{ stat.tone }}{% endif %}" href="{{ stat.url }}">
+        <span class="ac-stat-icon"><i class="fas {{ stat.icon }}"></i></span>
+        <span class="ac-stat-body">
+            <span class="ac-stat-value">{{ stat.value }}</span>
+            <span class="ac-stat-label">{{ stat.label }}</span>
+            {% if stat.hint %}<span class="ac-stat-hint">{{ stat.hint }}</span>{% endif %}
+        </span>
+        <i class="fas fa-arrow-right ac-stat-go"></i>
+    </a>
+    {% endfor %}
+</div>
+
+<div class="ac-section-title"><i class="fas fa-bolt me-1"></i>Quick actions</div>
+<div class="ac-quick-grid mb-4">
+    {% for action in quick_actions %}
+    <a class="ac-quick{% if action.tone %} {{ action.tone }}{% endif %}" href="{{ action.url }}">
+        <span class="ac-quick-icon"><i class="fas {{ action.icon }}"></i></span>
+        <span class="ac-quick-text"><strong>{{ action.label }}</strong></span>
+        <i class="fas fa-chevron-right ac-quick-arrow"></i>
+    </a>
+    {% endfor %}
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="ac-card">
+            <div class="ac-card-head">
+                <span class="ac-card-title"><i class="fas fa-pen-to-square"></i>Marks still to enter</span>
+                <a class="small" href="{% url 'academics:assessment_list' %}">All assessments</a>
+            </div>
+            <div class="ac-table-wrap">
+                <table class="ac-table">
+                    <thead>
+                        <tr><th>Assessment</th><th>Class · Subject</th><th class="center">Pending</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                    {% for row in pending_marks %}
+                        <tr>
+                            <td class="ac-cell-primary">{{ row.assessment.name }}</td>
+                            <td>{{ row.assessment.school_class.name }} <span class="ac-cell-sub">· {{ row.assessment.subject.name }}</span></td>
+                            <td class="center"><span class="ac-badge warning bare">{{ row.missing }}</span></td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-primary" href="{% url 'academics:mark_entry' row.assessment.pk %}">
+                                    <i class="fas fa-pen-to-square me-1"></i>Enter
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr class="ac-table-empty"><td colspan="4">
+                            <i class="fas fa-circle-check text-success me-1"></i>All marks are entered for this term.
+                        </td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="ac-card">
+            <div class="ac-card-head">
+                <span class="ac-card-title"><i class="fas fa-chalkboard"></i>My assignments</span>
+                <span class="ac-badge bare neutral">{{ assignments|length }} total</span>
+            </div>
+            <div class="ac-table-wrap">
+                <table class="ac-table">
+                    <thead><tr><th>Class</th><th>Subject</th><th>Year</th><th>Term</th></tr></thead>
+                    <tbody>
+                    {% for a in assignments %}
+                        <tr>
+                            <td class="ac-cell-primary">{{ a.school_class.name }}</td>
+                            <td>{{ a.subject.name }}</td>
+                            <td>{{ a.academic_year.name }}</td>
+                            <td>{{ a.term.name|default:"Whole year" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr class="ac-table-empty"><td colspan="4">No assignments yet. Ask your head teacher to assign you a class.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        {% if assessment_total %}
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-chart-pie"></i>Mark completion</span></div>
+            <div class="ac-card-body">
+                {{ progress_chart|json_script:"teacherProgressChart" }}
+                <div class="ac-chart-wrap"><canvas data-chart="teacherProgressChart"></canvas></div>
+                <div class="ac-legend">
+                    <span><i style="background:#0d9488"></i>{{ complete_count }} complete</span>
+                    <span><i style="background:#f59e0b"></i>{{ pending_count }} pending</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="ac-card">
+            <div class="ac-card-head">
+                <span class="ac-card-title"><i class="fas fa-paper-plane"></i>My recent submissions</span>
+                <a class="small" href="{% url 'academics:submissions' %}">View all</a>
+            </div>
+            <div class="ac-table-wrap">
+                <table class="ac-table">
+                    <thead><tr><th>Class · Subject</th><th>Status</th><th>Updated</th></tr></thead>
+                    <tbody>
+                    {% for s in submissions %}
+                        <tr>
+                            <td class="ac-cell-primary">{{ s.school_class.name }} <span class="ac-cell-sub">· {{ s.subject.name }}</span></td>
+                            <td><span class="ac-badge {{ s.tone }}">{{ s.get_status_display }}</span></td>
+                            <td class="ac-cell-sub">{{ s.updated_at|date:"d M Y H:i" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr class="ac-table-empty"><td colspan="3">Nothing submitted yet.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="ac-card">
+            <div class="ac-card-head">
+                <span class="ac-card-title"><i class="fas fa-list-check"></i>Requests &amp; follow-ups</span>
+                <div class="ac-inline">
+                    {% if my_open_count %}<span class="ac-badge warning bare">{{ my_open_count }} open</span>{% endif %}
+                    {% if my_overdue_count %}<span class="ac-badge danger bare">{{ my_overdue_count }} overdue</span>{% endif %}
+                    <a class="small" href="{% url 'academics:update_request_list' %}">View all</a>
+                </div>
+            </div>
+            <div class="ac-card-body tight">
+                {% for r in my_requests %}
+                <a class="d-flex align-items-center gap-3 py-2 text-decoration-none{% if not forloop.last %} border-bottom{% endif %}" href="{% url 'academics:update_request_detail' r.pk %}">
+                    <span class="flex-grow-1" style="color:var(--ac-ink)">
+                        <span class="d-block" style="font-weight:600;font-size:.875rem">{{ r.title }}</span>
+                        <span class="ac-cell-sub">
+                            {{ r.get_category_display }}
+                            {% if r.school_class %} · {{ r.school_class.name }}{% endif %}
+                            {% if r.due_date %} · due {{ r.due_date|date:"d M" }}{% endif %}
+                        </span>
+                    </span>
+                    <span class="ac-badge {{ r.status_tone }}">{{ r.get_status_display }}</span>
+                    <i class="fas fa-chevron-right ac-faint"></i>
+                </a>
+                {% empty %}
+                <p class="ac-muted mb-0 py-2">No requests assigned to you right now.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-bullhorn"></i>Announcements</span></div>
+            <div class="ac-card-body tight">
+                {% for a in announcements %}
+                <div class="py-2{% if not forloop.last %} border-bottom{% endif %}">
+                    <div class="d-flex justify-content-between gap-2">
+                        <strong>{{ a.title }}</strong>
+                        <span class="ac-cell-sub ac-nowrap">{{ a.published_at|date:"d M Y" }}</span>
+                    </div>
+                    <div class="ac-cell-sub">{{ a.body|truncatewords:18 }}</div>
+                </div>
+                {% empty %}
+                <p class="ac-muted mb-0 py-2">No announcements right now.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-calendar-days"></i>Upcoming dates</span></div>
+            <div class="ac-card-body tight">
+                {% for e in events %}
+                <div class="d-flex justify-content-between py-2{% if not forloop.last %} border-bottom{% endif %}">
+                    <span><span class="ac-event-dot type-dot-{{ e.event_type }} me-2"></span>{{ e.title }}</span>
+                    <span class="ac-cell-sub ac-nowrap">{{ e.start_date|date:"d M Y" }}</span>
+                </div>
+                {% empty %}
+                <p class="ac-muted mb-0 py-2">No upcoming events.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends 'academics/base_academics.html' %}
+{% load core_tags %}
+{% url 'academics:grading_scale_create' as gs_create_url %}
+{% url 'academics:grading_scale_list' as gs_list_url %}
+
+{% block title %}Grading Scales{% endblock %}
+{% block ac_eyebrow %}Academics · Configuration{% endblock %}
+{% block ac_heading %}Grading Scales{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Percentage ranges mapped to grades and remarks.</p>{% endblock %}
+{% block ac_crumb %}Grading Scales{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-primary" href="{% url 'academics:grading_scale_create' %}">
+    <i class="fas fa-plus me-1"></i>New Scale
+</a>
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-filter"></i>Filter grading scales</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="gsSearch">Search</label>
+                <div class="ac-input-icon">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input id="gsSearch" type="search" name="q" value="{{ filters.q }}" class="form-control" placeholder="Scale name">
+                </div>
+            </div>
+            <div class="ac-field">
+                <label for="gsStatus">Status</label>
+                <select id="gsStatus" name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if filters.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+        </div>
+        <div class="ac-toolbar-actions">
+            <button class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Apply</button>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'academics:grading_scale_list' %}">Reset</a>
+            <span class="ac-muted small ms-auto">{{ total_count }} scale{{ total_count|pluralize }}</span>
+        </div>
+    </form>
+</div>
+
+{% for scale in scales %}
+<div class="ac-card">
+    <div class="ac-card-head">
+        <span class="ac-card-title">
+            <i class="fas fa-ranking-star"></i>{{ scale.name }}
+            {% if scale.is_default %}<span class="ac-badge info bare ms-1">Default</span>{% endif %}
+            {% if not scale.is_active %}<span class="ac-badge neutral bare ms-1">Inactive</span>{% endif %}
+        </span>
+        <span class="ac-inline">
+            <span class="ac-cell-sub me-2">{{ scale.school.display_name|default:"—" }}</span>
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'academics:grading_scale_edit' scale.pk %}">
+                <i class="fas fa-pen me-1"></i>Edit
+            </a>
+        </span>
+    </div>
+    <div class="ac-table-wrap">
+        <table class="ac-table">
+            <thead><tr><th>Grade</th><th>Range</th><th>Description</th><th>Remark</th></tr></thead>
+            <tbody>
+            {% for b in scale.bands.all %}
+                <tr>
+                    <td><span class="ac-badge violet bare">{{ b.grade }}</span></td>
+                    <td class="num">{{ b.min_score }} – {{ b.max_score }}</td>
+                    <td>{{ b.description|default:"—" }}</td>
+                    <td class="ac-cell-sub">{{ b.remark|default:"—" }}</td>
+                </tr>
+            {% empty %}
+                <tr class="ac-table-empty"><td colspan="4">No bands configured for this scale.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% empty %}
+<div class="ac-card">
+    {% if filters.q or filters.status %}
+        {% include 'academics/_empty_state.html' with icon='fa-ranking-star' title='No scales match' text='Try clearing the filters to see all grading scales.' action_url=gs_list_url action_label='Reset filters' %}
+    {% else %}
+        {% include 'academics/_empty_state.html' with icon='fa-ranking-star' title='No grading scales yet' text='Create a grading scale so marks can be graded and ranked.' action_url=gs_create_url action_label='New Scale' %}
+    {% endif %}
+</div>
+{% endfor %}
+
+{% include 'academics/_pagination.html' %}
+{% endblock %}

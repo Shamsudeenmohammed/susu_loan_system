@@ -1,0 +1,295 @@
+{% extends 'academics/base_academics.html' %}
+{% load core_tags %}
+
+{% block title %}Academic Dashboard{% endblock %}
+{% block ac_eyebrow %}Academics · Oversight{% endblock %}
+{% block ac_heading %}Academic Dashboard{% endblock %}
+{% block ac_subtitle %}
+<p class="ac-page-sub">
+    {% if school %}{{ school.display_name }}{% else %}All schools combined{% endif %}
+    {% if year %} · {{ year.name }}{% if term %} · {{ term.name }}{% endif %}{% endif %}
+</p>
+{% endblock %}
+
+{% block ac_actions %}
+<form class="ac-inline" method="get">
+    <select name="academic_year" class="form-select form-select-sm" aria-label="Academic year" onchange="this.form.submit()">
+        {% for y in years %}<option value="{{ y.pk }}" {% if year and year.pk == y.pk %}selected{% endif %}>{{ y.name }}</option>{% endfor %}
+    </select>
+    <select name="term" class="form-select form-select-sm" aria-label="Term" onchange="this.form.submit()">
+        {% for t in terms %}<option value="{{ t.pk }}" {% if term and term.pk == t.pk %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+    </select>
+    <noscript><button class="btn btn-sm btn-outline-secondary">Apply</button></noscript>
+</form>
+{% if can_override %}
+<a class="btn btn-sm btn-warning" href="{% url 'academics:academic_year_override' %}"><i class="fas fa-clock-rotate-left me-1"></i>Year override</a>
+{% endif %}
+{% endblock %}
+
+{% block ac_body %}
+{% if live_overrides %}
+{% for live in live_overrides %}
+<div class="ac-card ac-card-warning mb-3">
+    <div class="ac-card-body ac-inline">
+        <span class="ac-badge danger"><i class="fas fa-triangle-exclamation me-1"></i>Override active</span>
+        <span>{{ live.school.display_name }} is working in {{ live.academic_year.name }}{% if live.term %} · {{ live.term.name }}{% endif %}
+            {% if live.enabled_by %} (enabled by {{ live.enabled_by.get_full_name|default:live.enabled_by.username }}){% endif %}
+            {% if live.expires_at %} · expires {{ live.expires_at|date:"d M Y H:i" }}{% endif %}.</span>
+        <a class="ms-auto small" href="{% url 'academics:academic_year_override' %}?school={{ live.school_id }}">Manage</a>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+<div class="ac-stat-grid cols-4">
+    {% for stat in stats %}
+    <a class="ac-stat is-link{% if stat.tone %} {{ stat.tone }}{% endif %}" href="{{ stat.url }}">
+        <span class="ac-stat-icon"><i class="fas {{ stat.icon }}"></i></span>
+        <span class="ac-stat-body">
+            <span class="ac-stat-value">{{ stat.value }}</span>
+            <span class="ac-stat-label">{{ stat.label }}</span>
+            {% if stat.hint %}<span class="ac-stat-hint">{{ stat.hint }}</span>{% endif %}
+        </span>
+        <i class="fas fa-arrow-right ac-stat-go"></i>
+    </a>
+    {% endfor %}
+</div>
+
+<div class="row g-4 mb-1">
+    <div class="col-lg-7">
+        <div class="ac-section-title"><i class="fas fa-bolt me-1"></i>Quick actions</div>
+        <div class="ac-quick-grid">
+            {% for action in quick_actions %}
+            <a class="ac-quick{% if action.tone %} {{ action.tone }}{% endif %}" href="{{ action.url }}">
+                <span class="ac-quick-icon"><i class="fas {{ action.icon }}"></i></span>
+                <span class="ac-quick-text"><strong>{{ action.label }}</strong></span>
+                <i class="fas fa-chevron-right ac-quick-arrow"></i>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="ac-section-title"><i class="fas fa-list-check me-1"></i>Pending tasks</div>
+        <div class="ac-card mb-0">
+            <div class="ac-card-body tight">
+                {% for task in tasks %}
+                <a class="d-flex align-items-center gap-3 py-2 text-decoration-none{% if not forloop.last %} border-bottom{% endif %}" href="{{ task.url }}">
+                    <span class="ac-stat-icon{% if task.tone %} {{ task.tone }}{% endif %}" style="width:36px;height:36px;font-size:.95rem;background:#eef2f7;color:var(--ac-slate)">
+                        <i class="fas {{ task.icon }}"></i>
+                    </span>
+                    <span class="flex-grow-1" style="color:var(--ac-ink)">
+                        <span class="d-block" style="font-weight:600;font-size:.875rem">{{ task.title }}</span>
+                    </span>
+                    <span class="ac-badge {% if task.count %}warning{% else %}success{% endif %} bare">{{ task.count }}</span>
+                    <i class="fas fa-chevron-right ac-faint"></i>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-0">
+    <div class="col-lg-7">
+        <div class="ac-card">
+            <div class="ac-card-head">
+                <span class="ac-card-title"><i class="fas fa-clipboard-check"></i>Attendance by class</span>
+                {% if overall_attendance %}<span class="ac-badge teal">Overall {{ overall_attendance }}%</span>{% endif %}
+            </div>
+            <div class="ac-card-body">
+                {% if attendance_rows %}
+                {{ attendance_chart|json_script:"headAttendanceChart" }}
+                <div class="ac-chart-wrap"><canvas data-chart="headAttendanceChart"></canvas></div>
+                {% else %}
+                {% include 'academics/_empty_state.html' with icon='fa-clipboard-check' title='No attendance recorded' text='Taken attendance for a class to see the term breakdown here.' %}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="ac-card">
+            <div class="ac-card-head">
+                <span class="ac-card-title"><i class="fas fa-paper-plane"></i>Submissions awaiting review</span>
+                {% if pending_count %}<span class="ac-badge warning">{{ pending_count }}</span>{% endif %}
+            </div>
+            <div class="ac-table-wrap">
+                <table class="ac-table">
+                    <thead><tr><th>Class · Subject</th><th>Teacher</th><th>Term</th><th></th></tr></thead>
+                    <tbody>
+                    {% for s in pending_submissions %}
+                        <tr>
+                            <td class="ac-cell-primary">{{ s.school_class.name }} <span class="ac-cell-sub">· {{ s.subject.name }}</span></td>
+                            <td>{{ s.submitted_by.get_full_name|default:s.submitted_by.username|default:"—" }}</td>
+                            <td>{{ s.term.name|default:"—" }}</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-primary" href="{% url 'academics:submission_review' s.pk %}">
+                                    <i class="fas fa-gavel me-1"></i>Review
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr class="ac-table-empty"><td colspan="4">
+                            <i class="fas fa-circle-check text-success me-1"></i>Nothing awaiting review.
+                        </td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="ac-card">
+            <div class="ac-card-head">
+                <span class="ac-card-title"><i class="fas fa-list-check"></i>Requests &amp; follow-ups</span>
+                <div class="ac-inline">
+                    {% if open_request_count %}<span class="ac-badge warning bare">{{ open_request_count }} open</span>{% endif %}
+                    {% if overdue_request_count %}<span class="ac-badge danger bare">{{ overdue_request_count }} overdue</span>{% endif %}
+                    <a class="small" href="{% url 'academics:update_request_list' %}">View all</a>
+                </div>
+            </div>
+            <div class="ac-card-body tight">
+                {% for r in recent_open_requests %}
+                <a class="d-flex align-items-center gap-3 py-2 text-decoration-none{% if not forloop.last %} border-bottom{% endif %}" href="{% url 'academics:update_request_detail' r.pk %}">
+                    <span class="flex-grow-1" style="color:var(--ac-ink)">
+                        <span class="d-block" style="font-weight:600;font-size:.875rem">{{ r.title }}</span>
+                        <span class="ac-cell-sub">
+                            {{ r.assigned_to.get_full_name|default:r.assigned_to.username }}
+                            {% if r.school_class %} · {{ r.school_class.name }}{% endif %}
+                            {% if r.due_date %} · due {{ r.due_date|date:"d M" }}{% endif %}
+                        </span>
+                    </span>
+                    {% include 'academics/_request_priority.html' with priority=r.priority %}
+                    <i class="fas fa-chevron-right ac-faint"></i>
+                </a>
+                {% empty %}
+                <p class="ac-muted mb-0 py-2">No open requests. <a href="{% url 'academics:update_request_create' %}">Create one</a> to follow up with a teacher.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-chart-pie"></i>Submission status</span></div>
+            <div class="ac-card-body">
+                {{ submission_chart|json_script:"headSubmissionChart" }}
+                <div class="ac-chart-wrap"><canvas data-chart="headSubmissionChart"></canvas></div>
+                <div class="ac-legend">
+                    <span><i style="background:#f59e0b"></i>{{ pending_count }} awaiting</span>
+                    <span><i style="background:#10b981"></i>{{ approved_count }} approved</span>
+                    <span><i style="background:#be123c"></i>{{ returned_count }} returned</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-clock-rotate-left"></i>Recent activity</span></div>
+            <div class="ac-card-body">
+                {% if activity %}
+                <ul class="ac-timeline{% if activity.0.tone != 'neutral' %} timeline-{{ activity.0.tone }}{% endif %}">
+                    {% for item in activity %}
+                    <li>
+                        <a class="ac-timeline-title" href="{{ item.url }}">{{ item.title }}</a>
+                        <div class="ac-timeline-time">
+                            {% if item.meta %}{{ item.meta }} · {% endif %}{{ item.time|date:"d M Y H:i" }}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="ac-muted mb-0">No recent activity.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-0">
+    <div class="col-lg-7">
+        <div class="ac-card">
+            <div class="ac-card-head">
+                <span class="ac-card-title"><i class="fas fa-chart-column"></i>Class performance</span>
+                <span class="ac-cell-sub">average of recorded marks · {{ term.name|default:"this term" }}</span>
+            </div>
+            <div class="ac-card-body">
+                {% if class_performance_chart.labels %}
+                {{ class_performance_chart|json_script:"headPerformanceChart" }}
+                <div class="ac-chart-wrap"><canvas data-chart="headPerformanceChart"></canvas></div>
+                {% else %}
+                {% include 'academics/_empty_state.html' with icon='fa-chart-simple' title='No marks yet' text='Class averages appear once marks are entered and submitted.' %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="ac-card">
+            <div class="ac-card-head">
+                <span class="ac-card-title"><i class="fas fa-coins"></i>Fees collected</span>
+                {% if fee_summary %}<span class="ac-cell-sub">{{ year.name }} · {{ term.name }}</span>{% endif %}
+            </div>
+            <div class="ac-card-body tight">
+                {% if fee_summary %}
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <span class="ac-muted">Fees charged</span><strong>{{ fee_summary.charged }}</strong>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <span class="ac-muted">Amount collected</span><strong class="text-success">{{ fee_summary.paid }}</strong>
+                </div>
+                <div class="d-flex justify-content-between py-2">
+                    <span class="ac-muted">Still outstanding</span>
+                    <strong{% if fee_summary.outstanding > 0 %} class="text-danger"{% endif %}>{{ fee_summary.outstanding }}</strong>
+                </div>
+                <a class="small" href="{% url 'school_fees_dashboard' %}">Open the fee dashboard</a>
+                {% else %}
+                <p class="ac-muted mb-0 py-2">Choose an academic year and term to see fee totals.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-0">
+    <div class="col-lg-4">
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-square-poll-vertical"></i>Published results</span></div>
+            <div class="ac-card-body tight">
+                {% for p in publications %}
+                <div class="d-flex justify-content-between py-2{% if not forloop.last %} border-bottom{% endif %}">
+                    <span>{{ p.school_class.name }} <span class="ac-cell-sub">· {{ p.term.name }}</span></span>
+                    <span class="ac-cell-sub ac-nowrap">{{ p.published_at|date:"d M Y" }}</span>
+                </div>
+                {% empty %}
+                <p class="ac-muted mb-0 py-2">No results published yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-bullhorn"></i>Announcements</span></div>
+            <div class="ac-card-body tight">
+                {% for a in announcements %}
+                <div class="py-2{% if not forloop.last %} border-bottom{% endif %}">
+                    <strong>{{ a.title }}</strong>
+                    <div class="ac-cell-sub">{{ a.body|truncatewords:14 }}</div>
+                </div>
+                {% empty %}
+                <p class="ac-muted mb-0 py-2">No announcements.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-calendar-days"></i>Upcoming</span></div>
+            <div class="ac-card-body tight">
+                {% for e in events %}
+                <div class="d-flex justify-content-between py-2{% if not forloop.last %} border-bottom{% endif %}">
+                    <span><span class="ac-event-dot type-dot-{{ e.event_type }} me-2"></span>{{ e.title }}</span>
+                    <span class="ac-cell-sub ac-nowrap">{{ e.start_date|date:"d M" }}</span>
+                </div>
+                {% empty %}
+                <p class="ac-muted mb-0 py-2">No upcoming events.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

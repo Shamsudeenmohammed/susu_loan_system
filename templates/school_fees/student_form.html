@@ -34,6 +34,14 @@
                     {{ form.last_name }}
                     {% if form.last_name.errors %}<div class="text-danger small">{{ form.last_name.errors.0 }}</div>{% endif %}
                 </div>
+                {% if form.school %}
+                <div class="col-md-6">
+                    <label class="form-label">School</label>
+                    {{ form.school }}
+                    {% if form.school.help_text %}<div class="form-text">{{ form.school.help_text }}</div>{% endif %}
+                    {% if form.school.errors %}<div class="text-danger small">{{ form.school.errors.0 }}</div>{% endif %}
+                </div>
+                {% endif %}
                 <div class="col-md-6">
                     <label class="form-label">Class/Program</label>
                     {{ form.school_class }}

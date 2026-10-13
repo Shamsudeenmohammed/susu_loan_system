@@ -1,0 +1,69 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Academic Settings{% endblock %}
+{% block ac_eyebrow %}Academics · Configuration{% endblock %}
+{% block ac_heading %}Academic Settings{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">{% if school %}{{ school.display_name }}{% else %}Your school{% endif %} · grading, weighting and report options.</p>{% endblock %}
+{% block ac_crumb %}Academic Settings{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:report_fields' %}"><i class="fas fa-list-check me-1"></i>Report Fields</a>
+{% endblock %}
+
+{% block ac_body %}
+{% if schools %}
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-school"></i>Choose a school</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="asSchool">School</label>
+                <select id="asSchool" name="school" class="form-select" onchange="this.form.submit()">
+                    {% for s in schools %}<option value="{{ s.pk }}" {% if s.pk == school.pk %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<form method="post" data-guard-unsaved>
+    {% csrf_token %}
+    <div class="ac-form-section">
+        <header><i class="fas fa-ranking-star"></i><div><h3>Grading</h3><small>Default scale, pass mark and promotion threshold.</small></div></header>
+        <div class="ac-form-body">
+            <div class="ac-grid-2">
+                {% include 'academics/_field.html' with field=form.default_grading_scale %}
+                {% include 'academics/_field.html' with field=form.pass_mark %}
+                {% include 'academics/_field.html' with field=form.promotion_min_average %}
+            </div>
+        </div>
+    </div>
+
+    <div class="ac-form-section">
+        <header><i class="fas fa-scale-balanced"></i><div><h3>Weighting</h3><small>Continuous assessment and exam weights should add up to 100.</small></div></header>
+        <div class="ac-form-body">
+            <div class="ac-grid-2">
+                {% include 'academics/_field.html' with field=form.continuous_assessment_weight %}
+                {% include 'academics/_field.html' with field=form.exam_weight %}
+            </div>
+        </div>
+    </div>
+
+    <div class="ac-form-section">
+        <header><i class="fas fa-file-lines"></i><div><h3>Report options</h3><small>What appears on the terminal report.</small></div></header>
+        <div class="ac-form-body">
+            <div class="ac-grid-2">
+                {% include 'academics/_field.html' with field=form.show_position %}
+                {% include 'academics/_field.html' with field=form.show_attendance_on_report %}
+                {% include 'academics/_field.html' with field=form.show_financials_on_report %}
+                {% include 'academics/_field.html' with field=form.currency %}
+            </div>
+        </div>
+    </div>
+
+    <div class="ac-form-actions">
+        <button class="btn btn-primary"><i class="fas fa-floppy-disk me-1"></i>Save settings</button>
+    </div>
+</form>
+{% endblock %}

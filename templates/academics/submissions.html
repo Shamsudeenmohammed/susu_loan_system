@@ -1,0 +1,96 @@
+{% extends 'academics/base_academics.html' %}
+{% load core_tags %}
+
+{% block title %}Mark Submissions{% endblock %}
+{% block ac_eyebrow %}Academics · Review workflow{% endblock %}
+{% block ac_heading %}Mark Submissions{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Submitted marksets pass through review before results can be published.</p>{% endblock %}
+{% block ac_crumb %}Submissions{% endblock %}
+
+{% block ac_body %}
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-filter"></i>Filter submissions</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="subSearch">Search</label>
+                <div class="ac-input-icon">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input id="subSearch" type="search" name="q" value="{{ filters.q }}" class="form-control" placeholder="Class, subject or teacher">
+                </div>
+            </div>
+            <div class="ac-field">
+                <label for="subStatus">Status</label>
+                <select id="subStatus" name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    {% for value, label in statuses %}
+                    <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="subClass">Class</label>
+                <select id="subClass" name="school_class" class="form-select">
+                    <option value="">All classes</option>
+                    {% for c in classes %}<option value="{{ c.pk }}" {% if filters.school_class == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="subSubject">Subject</label>
+                <select id="subSubject" name="subject" class="form-select">
+                    <option value="">All subjects</option>
+                    {% for s in subjects %}<option value="{{ s.pk }}" {% if filters.subject == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="ac-toolbar-actions">
+            <button class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Apply</button>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'academics:submissions' %}">Reset</a>
+            <span class="ac-muted small ms-auto">{{ total_count }} submission{{ total_count|pluralize }}</span>
+        </div>
+    </form>
+</div>
+
+<div class="ac-card">
+    <div class="ac-table-wrap">
+        <table class="ac-table">
+            <thead>
+                <tr><th>Class</th><th>Subject</th><th>Term</th><th>Teacher</th>
+                <th>Status</th><th>Updated</th><th class="text-end">Actions</th></tr>
+            </thead>
+            <tbody>
+            {% for s in submissions %}
+                <tr>
+                    <td class="ac-cell-primary">{{ s.school_class.name }}</td>
+                    <td>{{ s.subject.name }}</td>
+                    <td>{{ s.term.name|default:"—" }}</td>
+                    <td>{{ s.submitted_by.get_full_name|default:s.submitted_by.username|default:"—" }}</td>
+                    <td><span class="ac-badge {{ s.tone }}">{{ s.get_status_display }}</span></td>
+                    <td class="ac-cell-sub">{{ s.updated_at|date:"d M Y H:i" }}</td>
+                    <td class="text-end">
+                        {% if can_review %}
+                            {% if s.status == 'SUBMITTED' %}
+                                <a class="btn btn-sm btn-primary" href="{% url 'academics:submission_review' s.pk %}"><i class="fas fa-gavel me-1"></i>Review</a>
+                            {% else %}
+                                <a class="btn btn-sm btn-outline-secondary" href="{% url 'academics:submission_review' s.pk %}">View</a>
+                            {% endif %}
+                        {% else %}
+                            <span class="ac-cell-sub">{{ s.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr class="ac-table-empty"><td colspan="7">
+                    {% if filters.q or filters.status or filters.school_class or filters.subject %}
+                        No submissions match these filters. <a href="{% url 'academics:submissions' %}">Clear filters</a>.
+                    {% else %}
+                        No submissions yet.
+                    {% endif %}
+                </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'academics/_pagination.html' %}
+</div>
+{% endblock %}

@@ -113,7 +113,7 @@
                 </div>
                 {% endif %}
 
-                {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,CASHIER" %}
+                {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,CASHIER,HEAD_TEACHER,PROPRIETOR" %}
                 <div class="menu-group" data-group="school_fees">
                     <button type="button" class="menu-group-toggle" aria-expanded="false">
                         <i class="fas fa-graduation-cap"></i>School Fees
@@ -126,10 +126,15 @@
                         <a class="nav-link" href="{% url 'school_fees_student_list' %}">
                             <i class="fas fa-user-graduate"></i>Students
                         </a>
+                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,HEAD_TEACHER,PROPRIETOR" %}
+                        <a class="nav-link" href="{% url 'school_staff_list' %}">
+                            <i class="fas fa-chalkboard-teacher"></i>Staff &amp; Teachers
+                        </a>
+                        {% endif %}
                         <a class="nav-link" href="{% url 'school_fees_fee_structure_list' %}">
                             <i class="fas fa-file-invoice-dollar"></i>Fee Structures
                         </a>
-                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER" %}
+                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,HEAD_TEACHER" %}
                         <a class="nav-link" href="{% url 'school_fees_assign_fee' %}">
                             <i class="fas fa-hand-holding-dollar"></i>Assign Fees
                         </a>
@@ -143,12 +148,73 @@
                         <a class="nav-link" href="{% url 'school_fees_outstanding' %}">
                             <i class="fas fa-exclamation-circle"></i>Outstanding Fees
                         </a>
-                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER" %}
+                        {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,HEAD_TEACHER" %}
                         <a class="nav-link" href="{% url 'school_fees_reminder_template_list' %}">
                             <i class="fas fa-sms"></i>Fee Reminders
                         </a>
                         <a class="nav-link" href="{% url 'school_fees_reminder_log' %}">
                             <i class="fas fa-history"></i>Reminder History
+                        </a>
+                        {% endif %}
+                        <a class="nav-link" href="{% url 'school_fees_reports' %}">
+                            <i class="fas fa-chart-line"></i>Fee Reports
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if user|has_role:"SUPER_ADMIN,ADMIN,MANAGER,PROPRIETOR,HEAD_TEACHER,TEACHER" %}
+                <div class="menu-group" data-group="academics">
+                    <button type="button" class="menu-group-toggle" aria-expanded="false">
+                        <i class="fas fa-book-open"></i>Academics
+                        <span class="chevron">▸</span>
+                    </button>
+                    <div class="submenu">
+                        <a class="nav-link" href="{% url 'academics:home' %}">
+                            <i class="fas fa-gauge-high"></i>Dashboard
+                        </a>
+                        <div class="nav-section">Teaching</div>
+                        <a class="nav-link" href="{% url 'academics:attendance_index' %}">
+                            <i class="fas fa-clipboard-check"></i>Attendance
+                        </a>
+                        <a class="nav-link" href="{% url 'academics:assessment_list' %}">
+                            <i class="fas fa-file-pen"></i>Assessments
+                        </a>
+                        <a class="nav-link" href="{% url 'academics:submissions' %}">
+                            <i class="fas fa-paper-plane"></i>Submissions
+                        </a>
+                        <a class="nav-link" href="{% url 'academics:update_request_list' %}">
+                            <i class="fas fa-list-check"></i>Requests &amp; Follow-ups
+                        </a>
+                        <div class="nav-section">Outcomes</div>
+                        <a class="nav-link" href="{% url 'academics:results' %}">
+                            <i class="fas fa-square-poll-vertical"></i>Results
+                        </a>
+                        <a class="nav-link" href="{% url 'academics:calendar' %}">
+                            <i class="fas fa-calendar-days"></i>Calendar
+                        </a>
+                        <a class="nav-link" href="{% url 'academics:announcements' %}">
+                            <i class="fas fa-bullhorn"></i>Announcements
+                        </a>
+                        {% if user|has_role:"SUPER_ADMIN,ADMIN,PROPRIETOR,HEAD_TEACHER" %}
+                        <div class="nav-section">Configuration</div>
+                        <a class="nav-link" href="{% url 'academics:subject_list' %}">
+                            <i class="fas fa-book"></i>Subjects
+                        </a>
+                        <a class="nav-link" href="{% url 'academics:class_subject_list' %}">
+                            <i class="fas fa-layer-group"></i>Class Subjects
+                        </a>
+                        <a class="nav-link" href="{% url 'academics:teacher_assignment_list' %}">
+                            <i class="fas fa-chalkboard-teacher"></i>Teacher Assignments
+                        </a>
+                        <a class="nav-link" href="{% url 'academics:grading_scale_list' %}">
+                            <i class="fas fa-ranking-star"></i>Grading Scales
+                        </a>
+                        <a class="nav-link" href="{% url 'academics:academic_settings' %}">
+                            <i class="fas fa-sliders"></i>Academic Settings
+                        </a>
+                        <a class="nav-link" href="{% url 'academics:report_fields' %}">
+                            <i class="fas fa-list-check"></i>Terminal Report Fields
                         </a>
                         {% endif %}
                     </div>
@@ -249,6 +315,11 @@
                         <a class="nav-link" href="{% url 'eligibility_audit_list' %}">
                             <i class="fas fa-clipboard-check"></i>Eligibility Audit
                         </a>
+                        {% if user.is_staff and user|has_role:"SUPER_ADMIN,ADMIN" %}
+                        <a class="nav-link" href="{% url 'admin:schools_school_changelist' %}">
+                            <i class="fas fa-school"></i>Schools
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
@@ -305,6 +376,23 @@
 
                 <div class="user-area">
                     {% if user.is_authenticated %}
+                    {% if is_global_user and switchable_schools %}
+                    <form method="post" action="{% url 'switch_school' %}" class="d-flex align-items-center gap-1 me-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <i class="fas fa-school text-muted d-none d-md-inline"></i>
+                        <select name="school" class="form-select form-select-sm" style="min-width:190px;" onchange="this.form.submit()">
+                            <option value="">Combined — All Schools</option>
+                            {% for s in switchable_schools %}
+                            <option value="{{ s.pk }}" {% if active_school and active_school.pk == s.pk %}selected{% endif %}>{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                    {% elif active_school %}
+                    <span class="badge text-bg-light border me-2 d-none d-md-inline">
+                        <i class="fas fa-school me-1"></i>{{ active_school.short_name|default:active_school.name }}
+                    </span>
+                    {% endif %}
                     <div class="user-avatar">{{ user.first_name|default:user.email|first|upper }}</div>
                     <div class="d-none d-sm-block">
                         <div style="font-size:0.825rem;font-weight:600;">{{ user.get_full_name|default:user.email }}</div>

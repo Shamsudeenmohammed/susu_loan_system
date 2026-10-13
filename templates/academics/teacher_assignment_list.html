@@ -1,0 +1,92 @@
+{% extends 'academics/base_academics.html' %}
+{% load core_tags %}
+
+{% block title %}Teacher Assignments{% endblock %}
+{% block ac_eyebrow %}Academics · Configuration{% endblock %}
+{% block ac_heading %}Teacher Assignments{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Assign teachers to a class and subject for the year.</p>{% endblock %}
+{% block ac_crumb %}Teacher Assignments{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-primary" href="{% url 'academics:teacher_assignment_create' %}">
+    <i class="fas fa-plus me-1"></i>New Assignment
+</a>
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-filter"></i>Filter assignments</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="taSearch">Search</label>
+                <div class="ac-input-icon">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input id="taSearch" type="search" name="q" value="{{ filters.q }}" class="form-control" placeholder="Teacher, class or subject">
+                </div>
+            </div>
+            <div class="ac-field">
+                <label for="taYear">Academic year</label>
+                <select id="taYear" name="academic_year" class="form-select" onchange="this.form.submit()">
+                    <option value="">All years</option>
+                    {% for y in years %}<option value="{{ y.pk }}" {% if filters.academic_year == y.pk|stringformat:"s" %}selected{% endif %}>{{ y.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="taTerm">Term</label>
+                <select id="taTerm" name="term" class="form-select">
+                    <option value="">All terms</option>
+                    {% for t in terms %}<option value="{{ t.pk }}" {% if filters.term == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="taStatus">Status</label>
+                <select id="taStatus" name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if filters.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+        </div>
+        <div class="ac-toolbar-actions">
+            <button class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Apply</button>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'academics:teacher_assignment_list' %}">Reset</a>
+            <span class="ac-muted small ms-auto">{{ total_count }} assignment{{ total_count|pluralize }}</span>
+        </div>
+    </form>
+</div>
+
+<div class="ac-card">
+    <div class="ac-table-wrap">
+        <table class="ac-table">
+            <thead><tr><th>Teacher</th><th>Class</th><th>Subject</th><th>Year</th><th>Term</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+            <tbody>
+            {% for a in assignments %}
+                <tr>
+                    <td class="ac-cell-primary">{{ a.teacher.get_full_name|default:a.teacher.username }}</td>
+                    <td>{{ a.school_class.name }}</td>
+                    <td>{{ a.subject.name }}</td>
+                    <td>{{ a.academic_year.name }}</td>
+                    <td>{{ a.term.name|default:"Whole year" }}</td>
+                    <td>{% if a.is_active %}<span class="ac-badge success">Active</span>{% else %}<span class="ac-badge neutral">Inactive</span>{% endif %}</td>
+                    <td class="text-end">
+                        <span class="ac-row-actions">
+                            <a class="btn btn-sm btn-outline-secondary" title="Edit" href="{% url 'academics:teacher_assignment_edit' a.pk %}"><i class="fas fa-pen"></i></a>
+                        </span>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr class="ac-table-empty"><td colspan="7">
+                    {% if filters.q or filters.status or filters.academic_year or filters.term %}
+                        No assignments match these filters. <a href="{% url 'academics:teacher_assignment_list' %}">Clear filters</a>.
+                    {% else %}
+                        No assignments yet. <a href="{% url 'academics:teacher_assignment_create' %}">Create the first assignment</a>.
+                    {% endif %}
+                </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'academics/_pagination.html' %}
+</div>
+{% endblock %}

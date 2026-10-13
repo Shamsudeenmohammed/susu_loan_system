@@ -51,14 +51,20 @@ class LoginView(View):
 
     def _redirect_by_role(self, request):
         user = request.user
-        if user.has_role('SUPER_ADMIN', 'ADMIN', 'MANAGER', 'LOAN_OFFICER', 'CASHIER', 'COLLECTOR'):
-            return redirect('dashboard')
         if user.has_role('CUSTOMER'):
             if not hasattr(user, 'customer_profile'):
                 logout(request)
                 messages.error(request, 'Your account has no customer profile. Please contact support.')
                 return redirect('login')
             return redirect('customer_dashboard')
+        # Every staff role (super admin, proprietor, admin, manager, loan
+        # officer, cashier, collector, head teacher, teacher, …) lands on the
+        # dashboard, which then routes to the role-specific view. Listing every
+        # role explicitly is what previously caused an infinite redirect loop
+        # when a role was missing; routing everything non-customer through
+        # ``dashboard`` keeps this correct as roles are added.
+        if user.is_authenticated:
+            return redirect('dashboard')
         return redirect('login')
 
 

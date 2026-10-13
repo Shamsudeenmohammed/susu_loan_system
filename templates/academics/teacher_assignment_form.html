@@ -1,0 +1,30 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}{% if instance %}Edit{% else %}New{% endif %} Teacher Assignment{% endblock %}
+{% block ac_eyebrow %}Academics · Teacher Assignments{% endblock %}
+{% block ac_heading %}{% if instance %}Edit assignment{% else %}New assignment{% endif %}{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">A teacher can only enter marks for the class and subject they are assigned.</p>{% endblock %}
+{% block ac_crumb %}{% if instance %}Edit{% else %}New{% endif %}{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:teacher_assignment_list' %}">Teacher Assignments</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:teacher_assignment_list' %}"><i class="fas fa-arrow-left me-1"></i>Back</a>
+{% endblock %}
+
+{% block ac_body %}
+<form method="post" data-guard-unsaved>
+    {% csrf_token %}
+    <div class="ac-form-section">
+        <header><i class="fas fa-chalkboard-teacher"></i><div><h3>Assignment</h3><small>Fields marked with * are required. The subject list narrows once a class is chosen.</small></div></header>
+        <div class="ac-form-body">
+            {% include 'academics/_form.html' with form=form %}
+        </div>
+    </div>
+    <div class="ac-form-actions">
+        <button class="btn btn-primary"><i class="fas fa-floppy-disk me-1"></i>{% if instance %}Save changes{% else %}Create assignment{% endif %}</button>
+        <a class="btn btn-outline-secondary" href="{% url 'academics:teacher_assignment_list' %}">Cancel</a>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Marks · {{ assessment.name }}{% endblock %}
+{% block ac_eyebrow %}Academics · Mark entry{% endblock %}
+{% block ac_heading %}{{ assessment.name }}{% endblock %}
+{% block ac_subtitle %}
+<p class="ac-page-sub">
+    {{ assessment.school_class.name }} · {{ assessment.subject.name }} · {{ assessment.term.name }}
+    · Max score {{ assessment.max_score }} · Weight {{ assessment.weight }}
+</p>
+{% endblock %}
+{% block ac_crumb %}Enter marks{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:assessment_list' %}">Assessments</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:assessment_list' %}"><i class="fas fa-arrow-left me-1"></i>Back</a>
+{% endblock %}
+
+{% block ac_body %}
+{% if submission %}
+<div class="ac-card">
+    <div class="ac-card-body tight ac-inline">
+        <span class="ac-badge {% if submission.status == 'APPROVED' %}success{% elif submission.status == 'RETURNED' %}danger{% elif submission.status == 'SUBMITTED' %}warning{% else %}neutral{% endif %}">
+            {{ submission.get_status_display }}
+        </span>
+        {% if submission.review_comment %}
+        <span class="ac-muted small"><i class="fas fa-comment-dots me-1"></i>{{ submission.review_comment }}</span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if locked %}
+<div class="ac-card">
+    <div class="ac-card-body ac-inline">
+        <span class="ac-badge warning"><i class="fas fa-lock"></i> Results published</span>
+        <span class="ac-muted small">Results for this class are published and locked. Unpublish them on the <a href="{% url 'academics:results' %}">Results</a> page to edit marks.</span>
+    </div>
+</div>
+
+<div class="ac-card">
+    <div class="ac-table-wrap">
+        <table class="ac-table">
+            <thead><tr><th>Student</th><th class="num">Score</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for r in rows %}
+                <tr>
+                    <td class="ac-cell-primary">{{ r.student.get_full_name }} <span class="ac-cell-sub">{{ r.student.student_id }}</span></td>
+                    <td class="num">{{ r.mark.score|default:"—" }}</td>
+                    <td>{{ r.mark.get_status_display|default:"—" }}</td>
+                </tr>
+            {% empty %}
+                <tr class="ac-table-empty"><td colspan="3">No active students in this class.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<form method="post" data-mark-entry>
+    {% csrf_token %}
+    <div class="ac-card">
+        <div class="ac-card-head">
+            <span class="ac-card-title"><i class="fas fa-pen-to-square"></i>Enter marks</span>
+            <span class="ac-inline">
+                <span class="ac-muted small" data-mark-progress-text>{{ entered_count }} of {{ total_count }} entered</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-mark-all="PRESENT"><i class="fas fa-check-double me-1"></i>Mark all present</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-clear-scores><i class="fas fa-eraser me-1"></i>Clear</button>
+            </span>
+        </div>
+        <div class="ac-card-body tight">
+            <div class="ac-progress sm"><span data-mark-progress-bar style="width:{% if total_count %}{% widthratio entered_count total_count 100 %}%{% else %}0%{% endif %}"></span></div>
+        </div>
+        <div class="ac-table-wrap">
+            <table class="ac-table">
+                <thead>
+                    <tr><th>Student</th><th style="width:150px">Score <span class="ac-faint">(max {{ assessment.max_score }})</span></th><th style="width:180px">Status</th></tr>
+                </thead>
+                <tbody>
+                {% for r in rows %}
+                    <tr>
+                        <td class="ac-cell-primary">{{ r.student.get_full_name }} <span class="ac-cell-sub">{{ r.student.student_id }}</span></td>
+                        <td>
+                            <input type="number" step="0.01" min="0" max="{{ assessment.max_score }}"
+                                   class="form-control form-control-sm ac-score-input" data-max="{{ assessment.max_score }}"
+                                   name="score_{{ r.student.pk }}" value="{{ r.score }}"
+                                   aria-label="Score for {{ r.student.get_full_name }}">
+                        </td>
+                        <td>
+                            <select name="status_{{ r.student.pk }}" class="form-select form-select-sm" data-mark-status aria-label="Status for {{ r.student.get_full_name }}">
+                                {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if r.status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr class="ac-table-empty"><td colspan="3">No active students in this class.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="ac-sticky-actions">
+        <button class="btn btn-primary" name="save" value="1"><i class="fas fa-floppy-disk me-1"></i>Save marks</button>
+        <button class="btn btn-success" name="submit" value="1"><i class="fas fa-paper-plane me-1"></i>Save &amp; submit for review</button>
+        <span class="ac-muted small ms-auto">Submitting sends this class/subject to the head teacher for review.</span>
+    </div>
+</form>
+{% endif %}
+{% endblock %}

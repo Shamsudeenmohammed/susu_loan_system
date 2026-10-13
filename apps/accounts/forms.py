@@ -161,13 +161,23 @@ class StaffCreationForm(UserCreationForm):
         choices=[r for r in User.Role.choices if r[0] != User.Role.CUSTOMER],
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+    school = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text='Required for head teachers and teachers. Leave blank for proprietor/admin.',
+    )
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'first_name', 'last_name', 'phone', 'role', 'password1', 'password2']
+        fields = ['username', 'email', 'first_name', 'last_name', 'phone', 'role',
+                  'school', 'password1', 'password2']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        from apps.schools.models import School
+        self.fields['school'].queryset = School.objects.filter(is_active=True)
+        self.fields['school'].empty_label = '\u2014 None (global) \u2014'
         self.fields['username'] = forms.CharField(
             max_length=150,
             widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username', 'autofocus': True})
@@ -186,6 +196,18 @@ class StaffCreationForm(UserCreationForm):
         if email and User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError('A user with this email already exists.')
         return email
+
+    def clean(self):
+        cleaned = super().clean()
+        from apps.schools.scoping import SCHOOL_BOUND_ROLES
+
+        role = cleaned.get('role')
+        if role in SCHOOL_BOUND_ROLES and not cleaned.get('school'):
+            self.add_error(
+                'school',
+                'A school is required for head teachers and teachers so their '
+                'data stays isolated to that school.')
+        return cleaned
 
 
 class UserUpdateForm(forms.ModelForm):

@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% load humanize %}
+
+{% block title %}Proprietor Dashboard - {{ organization_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h4 class="mb-0">Proprietor Dashboard</h4>
+        <small class="text-muted">
+            {% if active_school %}{{ active_school.name }}{% else %}All schools (combined){% endif %}
+        </small>
+    </div>
+    <span class="text-muted d-none d-sm-inline">{% now "l, d F Y" %}</span>
+</div>
+
+<!-- School fee overview -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card primary stagger-item">
+            <div class="card-body">
+                <p class="stat-label mb-1">Students</p>
+                <h3 class="stat-value" data-counter="{{ combined_students }}">{{ combined_students }}</h3>
+                <small class="text-muted">Active students</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card info stagger-item">
+            <div class="card-body">
+                <p class="stat-label mb-1">Fees Billed</p>
+                <h3 class="stat-value">{{ combined_expected|currency }}</h3>
+                <small class="text-muted">Expected fees</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card success stagger-item">
+            <div class="card-body">
+                <p class="stat-label mb-1">Fees Collected</p>
+                <h3 class="stat-value">{{ combined_collected|currency }}</h3>
+                <small class="text-muted">Total receipts</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card danger stagger-item">
+            <div class="card-body">
+                <p class="stat-label mb-1">Outstanding</p>
+                <h3 class="stat-value">{{ combined_outstanding|currency }}</h3>
+                <small class="text-muted">Unpaid balance</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Staff & teacher headcount -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card info stagger-item"><div class="card-body">
+            <p class="stat-label mb-1">Teachers</p>
+            <h3 class="stat-value">{{ combined_teachers }}</h3>
+            <small class="text-muted">Head teachers</small>
+        </div></div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card primary stagger-item"><div class="card-body">
+            <p class="stat-label mb-1">Staff</p>
+            <h3 class="stat-value">{{ combined_staff }}</h3>
+            <small class="text-muted">Assigned to a school</small>
+        </div></div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card success stagger-item"><div class="card-body">
+            <p class="stat-label mb-1">Payments Received</p>
+            <h3 class="stat-value">{{ combined_payments|currency }}</h3>
+            <small class="text-muted">All fee payments</small>
+        </div></div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card warning stagger-item"><div class="card-body">
+            <p class="stat-label mb-1">Schools</p>
+            <h3 class="stat-value">{{ per_school|length }}</h3>
+            <small class="text-muted">{% if active_school %}Selected branch{% else %}In the group{% endif %}</small>
+        </div></div>
+    </div>
+</div>
+
+{% if unassigned %}
+<div class="alert alert-warning d-flex align-items-start gap-2 mb-4">
+    <i class="fas fa-triangle-exclamation mt-1"></i>
+    <div>
+        <strong>Unassigned records need review.</strong>
+        Some records created before multi-school have no school yet and appear only in the
+        combined view: {{ unassigned.students }} student(s), {{ unassigned.classes }} class(es),
+        {{ unassigned.accounts }} fee account(s), {{ unassigned.payments }} payment(s).
+        Expected {{ unassigned.expected|currency }}, collected {{ unassigned.collected|currency }}.
+        Assign them with <code>python manage.py assign_school_data --school &lt;code&gt;</code>
+        after verifying the branch.
+    </div>
+</div>
+{% endif %}
+
+<!-- Per-school breakdown -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card stagger-item">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">School Breakdown</h6>
+                <a href="{% url 'school_fees_reports' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-chart-line me-1"></i>Reports
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>School</th>
+                                <th class="text-end">Students</th>
+                                <th class="text-end">Teachers</th>
+                                <th class="text-end">Staff</th>
+                                <th class="text-end">Billed</th>
+                                <th class="text-end">Collected</th>
+                                <th class="text-end">Outstanding</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in per_school %}
+                            <tr>
+                                <td>
+                                    <i class="fas fa-school text-primary me-1"></i>
+                                    {{ row.school.name }}
+                                </td>
+                                <td class="text-end">{{ row.students }}</td>
+                                <td class="text-end">{{ row.teachers }}</td>
+                                <td class="text-end">{{ row.staff }}</td>
+                                <td class="text-end">{{ row.expected|currency }}</td>
+                                <td class="text-end text-success">{{ row.collected|currency }}</td>
+                                <td class="text-end text-danger">{{ row.outstanding|currency }}</td>
+                                <td class="text-end">
+                                    <form method="post" action="{% url 'switch_school' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="school" value="{{ row.school.pk }}">
+                                        <input type="hidden" name="next" value="{% url 'dashboard' %}">
+                                        <button class="btn btn-sm btn-outline-secondary">View</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="8" class="text-center text-muted py-3">No schools configured.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Academic comparison -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card stagger-item">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Academic Overview</h6>
+                <a href="{% url 'academics:head_dashboard' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-book-open me-1"></i>Academics
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>School</th>
+                                <th class="text-end">Subjects</th>
+                                <th class="text-end">Awaiting Review</th>
+                                <th class="text-end">Attendance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in academics_overview %}
+                            <tr>
+                                <td><i class="fas fa-book text-primary me-1"></i>{{ row.school.name }}</td>
+                                <td class="text-end">{{ row.subjects }}</td>
+                                <td class="text-end">{{ row.submissions_pending }}</td>
+                                <td class="text-end">{% if row.attendance is not None %}{{ row.attendance }}%{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted py-3">No academic data configured yet.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Savings & Loans summary -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card primary stagger-item"><div class="card-body">
+            <p class="stat-label mb-1">Customers</p>
+            <h3 class="stat-value">{{ total_customers }}</h3>
+        </div></div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card success stagger-item"><div class="card-body">
+            <p class="stat-label mb-1">Savings Balance</p>
+            <h3 class="stat-value">{{ savings_balance|currency }}</h3>
+        </div></div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card danger stagger-item"><div class="card-body">
+            <p class="stat-label mb-1">Outstanding Loans</p>
+            <h3 class="stat-value">{{ outstanding_loans|currency }}</h3>
+        </div></div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card warning stagger-item"><div class="card-body">
+            <p class="stat-label mb-1">Pending Applications</p>
+            <h3 class="stat-value">{{ pending_applications }}</h3>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card stagger-item">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Contributions (Last 30 Days)</h6>
+                <a href="{% url 'school_fees_dashboard' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-graduation-cap me-1"></i>School Fees
+                </a>
+            </div>
+            <div class="card-body"><canvas id="contributionsChart" height="100"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card stagger-item">
+            <div class="card-header"><h6 class="mb-0">Quick Links</h6></div>
+            <div class="card-body d-grid gap-2">
+                <a href="{% url 'school_fees_dashboard' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-school me-1"></i>School Fees Dashboard</a>
+                <a href="{% url 'academics:head_dashboard' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-book-open me-1"></i>Academic Dashboard</a>
+                <a href="{% url 'school_fees_reports' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-chart-pie me-1"></i>Fee Reports</a>
+                <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-hand-holding-usd me-1"></i>Loans</a>
+                <a href="{% url 'customer_list' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-users me-1"></i>Customers</a>
+                <a href="{% url 'report_index' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-file-alt me-1"></i>Reports</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const chartData = {{ contributions_chart|safe }};
+new Chart(document.getElementById('contributionsChart'), {
+    type: 'line',
+    data: {
+        labels: chartData.map(d => d.date),
+        datasets: [{
+            label: 'Contributions (GHS)',
+            data: chartData.map(d => d.amount),
+            borderColor: '#0d6efd',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 3,
+            pointHoverRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+    }
+});
+</script>
+{% endblock %}

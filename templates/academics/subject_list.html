@@ -1,0 +1,100 @@
+{% extends 'academics/base_academics.html' %}
+{% load core_tags %}
+
+{% block title %}Subjects{% endblock %}
+{% block ac_eyebrow %}Academics · Configuration{% endblock %}
+{% block ac_heading %}Subjects{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">The catalogue of subjects taught across your school.</p>{% endblock %}
+{% block ac_crumb %}Subjects{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-primary" href="{% url 'academics:subject_create' %}">
+    <i class="fas fa-plus me-1"></i>New Subject
+</a>
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-filter"></i>Filter subjects</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="subjectSearch">Search</label>
+                <div class="ac-input-icon">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input id="subjectSearch" type="search" name="q" value="{{ filters.q }}" class="form-control" placeholder="Name or code">
+                </div>
+            </div>
+            <div class="ac-field">
+                <label for="subjectStatus">Status</label>
+                <select id="subjectStatus" name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if filters.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="subjectCore">Type</label>
+                <select id="subjectCore" name="core" class="form-select">
+                    <option value="">All types</option>
+                    <option value="core" {% if filters.core == 'core' %}selected{% endif %}>Core</option>
+                    <option value="elective" {% if filters.core == 'elective' %}selected{% endif %}>Elective</option>
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="subjectSort">Sort by</label>
+                <select id="subjectSort" name="sort" class="form-select">
+                    <option value="name" {% if filters.sort == 'name' %}selected{% endif %}>Name (A–Z)</option>
+                    <option value="-name" {% if filters.sort == '-name' %}selected{% endif %}>Name (Z–A)</option>
+                    <option value="code" {% if filters.sort == 'code' %}selected{% endif %}>Code (A–Z)</option>
+                    <option value="classes" {% if filters.sort == 'classes' %}selected{% endif %}>Most used</option>
+                </select>
+            </div>
+        </div>
+        <div class="ac-toolbar-actions">
+            <button class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Apply</button>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'academics:subject_list' %}">Reset</a>
+            <span class="ac-muted small ms-auto">{{ total_count }} subject{{ total_count|pluralize }}</span>
+        </div>
+    </form>
+</div>
+
+<div class="ac-card">
+    <div class="ac-table-wrap">
+        <table class="ac-table">
+            <thead>
+                <tr>
+                    <th>Name</th><th>Code</th><th>School</th><th>Type</th>
+                    <th class="center">Classes</th><th>Status</th><th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for s in subjects %}
+                <tr>
+                    <td class="ac-cell-primary">{{ s.name }}</td>
+                    <td>{{ s.code|default:"—" }}</td>
+                    <td>{{ s.school.display_name|default:"—" }}</td>
+                    <td>{% if s.is_core %}<span class="ac-badge info bare">Core</span>{% else %}<span class="ac-badge neutral bare">Elective</span>{% endif %}</td>
+                    <td class="center">{{ s.class_count }}</td>
+                    <td>{% if s.is_active %}<span class="ac-badge success">Active</span>{% else %}<span class="ac-badge neutral">Inactive</span>{% endif %}</td>
+                    <td class="text-end">
+                        <span class="ac-row-actions">
+                            <a class="btn btn-sm btn-outline-secondary" title="Edit subject" href="{% url 'academics:subject_edit' s.pk %}"><i class="fas fa-pen"></i></a>
+                        </span>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr class="ac-table-empty"><td colspan="7">
+                    {% if filters.q or filters.status or filters.core %}
+                        No subjects match these filters. <a href="{% url 'academics:subject_list' %}">Clear filters</a>.
+                    {% else %}
+                        No subjects yet. <a href="{% url 'academics:subject_create' %}">Create the first subject</a>.
+                    {% endif %}
+                </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'academics/_pagination.html' %}
+</div>
+{% endblock %}

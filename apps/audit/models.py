@@ -25,6 +25,19 @@ class AuditLog(models.Model):
         SMS_SENT = 'SMS_SENT', 'SMS Sent'
         SMS_FAILED = 'SMS_FAILED', 'SMS Failed'
         PASSWORD_CHANGED = 'PASSWORD_CHANGED', 'Password Changed'
+        # Academic module actions (head teacher supervision workflow).
+        MARK_SUBMITTED = 'MARK_SUBMITTED', 'Marks Submitted'
+        MARK_APPROVED = 'MARK_APPROVED', 'Marks Approved'
+        MARK_RETURNED = 'MARK_RETURNED', 'Marks Returned'
+        RESULT_PUBLISHED = 'RESULT_PUBLISHED', 'Results Published'
+        RESULT_UNPUBLISHED = 'RESULT_UNPUBLISHED', 'Results Unpublished'
+        MARK_CORRECTION_OPENED = 'MARK_CORRECTION_OPENED', 'Mark Correction Opened'
+        MARK_CORRECTION_COMPLETED = 'MARK_CORRECTION_COMPLETED', 'Mark Correction Completed'
+        REQUEST_CREATED = 'REQUEST_CREATED', 'Update Request Created'
+        REQUEST_TRANSITIONED = 'REQUEST_TRANSITIONED', 'Update Request Updated'
+        REQUEST_COMMENTED = 'REQUEST_COMMENTED', 'Update Request Comment'
+        OVERRIDE_ENABLED = 'OVERRIDE_ENABLED', 'Academic Year Override Enabled'
+        OVERRIDE_DISABLED = 'OVERRIDE_DISABLED', 'Academic Year Override Disabled'
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

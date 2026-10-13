@@ -1,0 +1,140 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Academic-year override{% endblock %}
+{% block ac_eyebrow %}Academics · Oversight{% endblock %}
+{% block ac_heading %}Academic-year override{% endblock %}
+{% block ac_subtitle %}
+<p class="ac-page-sub">
+    {% if school %}{{ school.display_name }}{% else %}Select a school{% endif %}
+    · Teachers normally work only in the school's active academic year. Opening
+    an override lets them work in a different year temporarily.
+</p>
+{% endblock %}
+{% block ac_crumb %}Year override{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:head_dashboard' %}">Dashboard</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:head_dashboard' %}"><i class="fas fa-arrow-left me-1"></i>Back</a>
+{% endblock %}
+
+{% block ac_body %}
+{% if schools %}
+<form class="ac-inline mb-3" method="get">
+    <label class="form-label mb-0 me-2" for="override-school">School</label>
+    <select id="override-school" name="school" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for s in schools %}
+        <option value="{{ s.pk }}" {% if school and school.pk == s.pk %}selected{% endif %}>{{ s.display_name }}</option>
+        {% endfor %}
+    </select>
+    <noscript><button class="btn btn-sm btn-outline-secondary">Apply</button></noscript>
+</form>
+{% endif %}
+
+{% if override %}
+<div class="ac-card ac-card-warning mb-4">
+    <div class="ac-card-head">
+        <span class="ac-card-title"><i class="fas fa-triangle-exclamation"></i>Override currently active</span>
+        <span class="ac-badge danger">Active</span>
+    </div>
+    <div class="ac-card-body">
+        <div class="row g-3">
+            <div class="col-md-4"><div class="ac-muted small">Year</div><div>{{ override.academic_year.name }}{% if override.term %} · {{ override.term.name }}{% endif %}</div></div>
+            <div class="col-md-4"><div class="ac-muted small">Enabled by</div><div>{{ override.enabled_by.get_full_name|default:override.enabled_by.username|default:"-" }}</div></div>
+            <div class="col-md-4"><div class="ac-muted small">Enabled at</div><div>{{ override.enabled_at|date:"d M Y H:i" }}</div></div>
+            <div class="col-md-4"><div class="ac-muted small">Expires</div><div>{% if override.expires_at %}{{ override.expires_at|date:"d M Y H:i" }}{% else %}No expiry{% endif %}</div></div>
+            <div class="col-md-8"><div class="ac-muted small">Scope</div><div>{% if override.applies_to_all %}All teachers{% else %}{{ override.teachers.count }} selected teacher{{ override.teachers.count|pluralize }}{% endif %}</div></div>
+            <div class="col-12"><div class="ac-muted small">Reason</div><div>{{ override.reason }}</div></div>
+        </div>
+        <form method="post" class="mt-3" data-confirm="Disable this override? Teachers will return to the school's active academic year."
+              data-confirm-title="Disable override?" data-confirm-type="warning" data-confirm-text="Disable">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="disable">
+            <input type="hidden" name="override" value="{{ override.pk }}">
+            <div class="ac-field">
+                <label class="form-label" for="disabled_reason">Reason for disabling <span class="ac-muted">(optional)</span></label>
+                <input type="text" class="form-control" id="disabled_reason" name="disabled_reason" maxlength="300">
+            </div>
+            <button class="btn btn-warning"><i class="fas fa-ban me-1"></i>Disable override</button>
+        </form>
+    </div>
+</div>
+{% elif form.academic_year.field.queryset.exists %}
+<form method="post" data-guard-unsaved>
+    {% csrf_token %}
+    <input type="hidden" name="action" value="enable">
+    {% if form.non_field_errors %}
+    <div class="ac-card ac-card-warning mb-3"><div class="ac-card-body">
+        {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+    </div></div>
+    {% endif %}
+    <div class="ac-card">
+        <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-clock-rotate-left"></i>Open an override</span></div>
+        <div class="ac-card-body">
+            <div class="row g-3">
+                <div class="col-md-6">{% include 'academics/_field.html' with field=form.academic_year %}</div>
+                <div class="col-md-6">{% include 'academics/_field.html' with field=form.term %}</div>
+                <div class="col-md-6">{% include 'academics/_field.html' with field=form.expires_at %}</div>
+                <div class="col-md-6">
+                    <div class="ac-field{% if form.applies_to_all.errors %} has-error{% endif %}">
+                        <div class="form-check">{{ form.applies_to_all }}
+                            <label class="form-check-label" for="{{ form.applies_to_all.id_for_label }}">{{ form.applies_to_all.label }}</label>
+                        </div>
+                        {% if form.applies_to_all.help_text %}<div class="ac-help">{{ form.applies_to_all.help_text }}</div>{% endif %}
+                    </div>
+                </div>
+                <div class="col-12">{% include 'academics/_field.html' with field=form.teachers %}</div>
+                <div class="col-12">{% include 'academics/_field.html' with field=form.reason %}</div>
+            </div>
+            <div class="ac-muted small mt-3">
+                <i class="fas fa-shield-halved me-1"></i>
+                This action is recorded in the audit log with your name, the reason and the
+                timestamp. It only changes which year the selected teachers' academic
+                records attach to; it never bypasses school permissions or approval rules.
+            </div>
+        </div>
+    </div>
+    <div class="ac-inline mt-3">
+        <button class="btn btn-warning" data-confirm="Enable an exceptional academic-year override for {{ school.display_name }}?"
+                data-confirm-title="Enable override?" data-confirm-type="warning" data-confirm-text="Enable">
+            <i class="fas fa-clock-rotate-left me-1"></i>Enable override
+        </button>
+        <a class="btn btn-outline-secondary" href="{% url 'academics:head_dashboard' %}">Cancel</a>
+    </div>
+</form>
+{% else %}
+<div class="ac-card"><div class="ac-card-body">
+    <p class="mb-0">No academic years are configured for {{ school.display_name }}. Add an academic year first.</p>
+</div></div>
+{% endif %}
+
+{% if history %}
+<div class="ac-section-title mt-4"><i class="fas fa-clock-rotate-left me-1"></i>Recent overrides</div>
+<div class="ac-card">
+    <div class="ac-card-body tight">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead><tr><th>Year</th><th>Enabled by</th><th>Enabled</th><th>Expires</th><th>Scope</th><th>Status</th></tr></thead>
+                <tbody>
+                {% for item in history %}
+                <tr>
+                    <td>{{ item.academic_year.name }}{% if item.term %} · {{ item.term.name }}{% endif %}</td>
+                    <td>{{ item.enabled_by.get_full_name|default:item.enabled_by.username|default:"-" }}</td>
+                    <td>{{ item.enabled_at|date:"d M Y H:i" }}</td>
+                    <td>{% if item.expires_at %}{{ item.expires_at|date:"d M Y H:i" }}{% else %}—{% endif %}</td>
+                    <td>{% if item.applies_to_all %}All teachers{% else %}{{ item.teachers.count }} teacher{{ item.teachers.count|pluralize }}{% endif %}</td>
+                    <td>
+                        {% if item.is_active %}<span class="ac-badge danger">Active</span>
+                        {% elif item.disabled_at %}<span class="ac-badge neutral">Disabled</span>
+                        {% else %}<span class="ac-badge neutral">Expired</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

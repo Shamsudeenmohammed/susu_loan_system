@@ -1,0 +1,19 @@
+{% comment %}
+Render every field of a bound form in a responsive two-column grid.
+
+Usage:
+  {% include 'academics/_form.html' with form=form %}
+
+Pages that want section headings render the fields individually with
+``academics/_field.html`` instead.
+{% endcomment %}
+{% if form.non_field_errors %}
+<div class="ac-error mb-3"><i class="fas fa-circle-exclamation"></i>
+    <span>{% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</span>
+</div>
+{% endif %}
+<div class="ac-grid-2">
+    {% for field in form %}
+        {% include 'academics/_field.html' with field=field %}
+    {% endfor %}
+</div>

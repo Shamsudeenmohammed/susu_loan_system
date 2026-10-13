@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static core_tags %}
+
+{% comment %}
+Shared shell for every Academics page.
+
+It keeps the global layout from base.html (sidebar, top navbar, toasts,
+confirm dialog) and layers the module design system on top:
+
+  * academics.css is loaded here so each page does not repeat it;
+  * the top-navbar breadcrumb is replaced with the module breadcrumb;
+  * a consistent page header (eyebrow / title / subtitle / actions) is
+    exposed through blocks so pages stay visually consistent.
+
+Children extend this template and fill ``ac_body`` (and optionally the
+header blocks / ``ac_extra_css`` / ``ac_extra_js``).
+{% endcomment %}
+
+{% block extra_css %}
+<link href="{% static 'css/academics.css' %}?v={{ static_version }}" rel="stylesheet">
+{% block ac_extra_css %}{% endblock %}
+{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="ac-breadcrumb">
+        <li><a href="{% url 'academics:home' %}"><i class="fas fa-book-open"></i> Academics</a></li>
+        {% block ac_breadcrumb %}{% endblock %}
+        <li class="active" aria-current="page">{% block ac_crumb %}Overview{% endblock %}</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="ac-page">
+    <div class="ac-page-head">
+        <div class="ac-page-head-main">
+            <div class="ac-eyebrow">
+                <i class="fas fa-book-open"></i>{% block ac_eyebrow %}Academics{% endblock %}
+            </div>
+            <h1 class="ac-page-title">{% block ac_heading %}{{ ac_title }}{% endblock %}</h1>
+            {% block ac_subtitle %}{% endblock %}
+        </div>
+        <div class="ac-page-actions">{% block ac_actions %}{% endblock %}</div>
+    </div>
+
+    {% include 'academics/_year_banner.html' %}
+
+    {% block ac_body %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/academics.js' %}?v={{ static_version }}"></script>
+{% block ac_extra_js %}{% endblock %}
+{% endblock %}

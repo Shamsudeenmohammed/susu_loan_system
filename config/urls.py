@@ -7,6 +7,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('stophack/', admin.site.urls),
     path('', include('apps.dashboard.urls')),
+    path('schools/', include('apps.schools.urls')),
     path('accounts/', include('apps.accounts.urls')),
     path('customers/', include('apps.customers.urls')),
     path('susu/', include('apps.susu.urls')),
@@ -17,6 +18,7 @@ urlpatterns = [
     path('reports/', include('apps.reports.urls')),
     path('audit/', include('apps.audit.urls')),
     path('school-fees/', include('apps.school_fees.urls')),
+    path('academics/', include('apps.academics.urls')),
     path('api/', include('apps.core.api_urls')),
 ]
 

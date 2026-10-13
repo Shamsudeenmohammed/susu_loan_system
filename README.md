@@ -20,7 +20,8 @@ A professional, production-ready Susu Collection and Loan Management Platform bu
 - **Reports** - Customer, contribution, loan, repayment, overdue, and daily summary reports with CSV export
 - **Audit Log** - Comprehensive audit trail for all financial and administrative actions
 - **REST API** - Django REST Framework API for customers, accounts, transactions, loans
-- **Role-Based Access Control** - Super Admin, Admin, Manager, Loan Officer, Cashier, Collector, Customer
+- **Role-Based Access Control** - Super Admin, Proprietor, Admin, Manager, Loan Officer, Cashier, Collector, Head Teacher, Customer
+- **Multi-School Support** - Independent school branches with backend-enforced data isolation, a combined proprietor dashboard, and per-school head-teacher views
 - **Ghana Context** - GHS currency, Africa/Accra timezone, Ghanaian phone number normalization
 
 ## Tech Stack
@@ -49,6 +50,8 @@ susu_loan_system/
 │   ├── susu/             # Susu accounts
 │   ├── payments/         # Financial ledger, contributions, withdrawals
 │   ├── loans/            # Loan products, applications, repayments
+│   ├── school_fees/      # School fees (students, structures, accounts, payments, receipts)
+│   ├── schools/          # Multi-school branches, scoping & staff provisioning
 │   ├── notifications/    # SMS notifications (providers, services, tasks)
 │   ├── reports/          # Reporting & CSV export
 │   ├── audit/            # Audit logging
@@ -75,24 +78,28 @@ susu_loan_system/
 cd susu_loan_system
 
 # Create virtual environment
-python -m venv venv
+python -m venv .venv
 
 # Activate virtual environment
-# Windows:
-venv\Scripts\activate
+# Windows (PowerShell):
+.\.venv\Scripts\Activate.ps1
+# Windows (cmd.exe):
+.venv\Scripts\activate.bat
 # macOS/Linux:
-source venv/bin/activate
+source .venv/bin/activate
 
 # Install dependencies
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 
 # Copy environment file
-copy .env.example .env    # Windows
-cp .env.example .env      # macOS/Linux
+Copy-Item .env.example .env    # Windows PowerShell
+cp .env.example .env           # macOS/Linux
 
 # Edit .env with your settings (at minimum, set SECRET_KEY)
 
-# Run migrations
+# Verify the project and database
+python manage.py check
 python manage.py migrate
 
 # Create superuser
@@ -121,6 +128,82 @@ celery -A config worker --loglevel=info
 celery -A config beat --loglevel=info
 ```
 
+## Multi-School Management
+
+The system supports multiple school branches under one organisation. Each
+branch has its own classes, academic years/terms, students, fee structures,
+fee accounts, payments, receipts, reminders and reports. Data is isolated by a
+nullable `school` foreign key and enforced on the backend (not just hidden in
+the UI).
+
+### Roles
+
+| Role | Scope |
+|------|-------|
+| `SUPER_ADMIN`, `ADMIN`, `PROPRIETOR` | Global — see every school. |
+| `HEAD_TEACHER` | Bound to exactly one school (their own data only). |
+| Other staff (`MANAGER`, `CASHIER`, `COLLECTOR`, ...) | Global unless a school is assigned. |
+| `CUSTOMER` | Customer portal (unaffected). |
+
+* **Proprietors** land on a dedicated combined dashboard and can switch between
+  schools (or view all schools combined) from the top navigation bar. The
+  selection is stored in the session (`active_school_id`).
+* **Head teachers** are redirected straight to their school's fee dashboard and
+  can never see another branch's records — attempts to open another school's
+  student/account/receipt return 404.
+
+### Provisioning the two branches
+
+```powershell
+# Create the two schools only
+python manage.py setup_schools
+
+# Create the schools and the proprietor + head-teacher accounts
+python manage.py setup_schools --with-users `
+    --proprietor-username proprietor --proprietor-password "<strong-password>" `
+    --mankarigu-username mankarigu_head --mankarigu-password "<strong-password>" `
+    --lingbinsi-username lingbinsi_head --lingbinsi-password "<strong-password>"
+```
+
+Passwords can instead be supplied through the `PROPRIETOR_PASSWORD`,
+`MANKARIGU_HEAD_PASSWORD` and `LINGBINSI_HEAD_PASSWORD` environment variables so
+they never appear in the shell history. The command is idempotent and safe to
+re-run.
+
+### Legacy (school-less) data
+
+Records created before multi-school support keep `school = NULL`. They remain
+visible to global users (proprietor/admin) but are hidden from head teachers so
+nothing is ever mis-attributed. Attach them to a branch once known:
+
+```powershell
+python manage.py assign_school_data MANKARIGU --dry-run   # preview
+python manage.py assign_school_data MANKARIGU             # apply
+python manage.py assign_school_data LINGBINSI
+```
+
+### Health check & safe migrations
+
+`school_status` is read-only: it prints per-branch counts and fee totals, flags any
+records left with no school, and verifies that per-branch totals reconcile with the
+whole table.
+
+```powershell
+python manage.py school_status
+python manage.py school_status --list-unassigned
+```
+
+To rehearse a migration against a throw-away copy (the real `db.sqlite3` is never
+touched), use the dedicated settings module:
+
+```powershell
+Copy-Item db.sqlite3 backups\rehearsal.sqlite3
+$env:REHEARSAL_DB = "E:\Project\susu_loan_system\backups\rehearsal.sqlite3"
+python manage.py migrate       --settings=config.settings.rehearsal
+python manage.py school_status --settings=config.settings.rehearsal
+Remove-Item E:\Project\susu_loan_system\backups\rehearsal.sqlite3
+```
+
 ## Environment Variables
 
 | Variable | Description | Default |
@@ -146,6 +229,10 @@ celery -A config beat --loglevel=info
 | `EMAIL_HOST` | SMTP host | `smtp.gmail.com` |
 | `EMAIL_PORT` | SMTP port | `587` |
 | `TIME_ZONE` | Timezone | `Africa/Accra` |
+| `SCHOOL_NAME` | Fallback school name in reminder SMS for school-less accounts | `Zemzem Golden Child Academy` |
+| `PROPRIETOR_PASSWORD` | Password for `setup_schools --with-users` | - |
+| `MANKARIGU_HEAD_PASSWORD` | Mankarigu head-teacher password | - |
+| `LINGBINSI_HEAD_PASSWORD` | Lingbinsi head-teacher password | - |
 
 ## Sailup SMS Configuration
 

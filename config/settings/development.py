@@ -34,10 +34,16 @@ CORS_ALLOW_ALL_ORIGINS = True
 INSTALLED_APPS += ['debug_toolbar']
 MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
 INTERNAL_IPS = ['127.0.0.1']
+# NOTE: this dict REPLACES debug_toolbar's defaults (Django does not deep-merge
+# nested settings), so every panel we do not want must be listed here. In
+# particular the ProfilingPanel must stay disabled: it wraps each request in
+# cProfile, and on the threaded dev server overlapping requests raise
+# "ValueError: Another profiling tool is already active" (HTTP 500).
 DEBUG_TOOLBAR_CONFIG = {
     'DISABLE_PANELS': {
         'debug_toolbar.panels.staticfiles.StaticFilesPanel',
         'debug_toolbar.panels.redirects.RedirectsPanel',
+        'debug_toolbar.panels.profiling.ProfilingPanel',
     },
 }
 

@@ -1,0 +1,16 @@
+{% comment %}
+Reusable empty-state block.
+
+Usage:
+  {% include 'academics/_empty_state.html' with icon='fa-book' title='No subjects yet' text='Create the first subject to get started.' action_url=create_url action_label='New Subject' %}
+{% endcomment %}
+<div class="ac-empty">
+    <i class="fas {{ icon|default:'fa-inbox' }}"></i>
+    <h3>{{ title|default:'Nothing here yet' }}</h3>
+    {% if text %}<p>{{ text }}</p>{% endif %}
+    {% if action_url and action_label %}
+    <a class="btn btn-primary btn-sm" href="{{ action_url }}">
+        <i class="fas fa-plus me-1"></i>{{ action_label }}
+    </a>
+    {% endif %}
+</div>

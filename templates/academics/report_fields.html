@@ -1,0 +1,62 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Terminal Report Fields{% endblock %}
+{% block ac_eyebrow %}Academics · Configuration{% endblock %}
+{% block ac_heading %}Terminal Report Fields{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Control which financial fields appear on the terminal report for {% if school %}{{ school.display_name }}{% else %}your school{% endif %}.</p>{% endblock %}
+{% block ac_crumb %}Report Fields{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:academic_settings' %}"><i class="fas fa-sliders me-1"></i>Academic Settings</a>
+{% endblock %}
+
+{% block ac_body %}
+{% if schools %}
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-school"></i>Choose a school</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="rfSchool">School</label>
+                <select id="rfSchool" name="school" class="form-select" onchange="this.form.submit()">
+                    {% for s in schools %}<option value="{{ s.pk }}" {% if s.pk == school.pk %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<form method="post" data-guard-unsaved>
+    {% csrf_token %}
+    <div class="ac-form-section">
+        <header><i class="fas fa-list-check"></i><div><h3>Financial fields</h3><small>This only changes display — amounts always come from the fees module.</small></div></header>
+        <div class="ac-card-body tight ac-cell-sub">
+            Fields not modelled by the ledger are shown on the report with a clear "not configured" note
+            instead of a fabricated value.
+        </div>
+        <div class="ac-table-wrap">
+            <table class="ac-table">
+                <thead><tr><th>Field</th><th>Label</th><th class="num" style="width:120px">Order</th><th class="center" style="width:110px">Visible</th></tr></thead>
+                <tbody>
+                {{ formset.management_form }}
+                {% for f in formset %}
+                    <tr>
+                        <td>{{ f.id }}{{ f.key }}{% for e in f.key.errors %}<div class="ac-error"><span>{{ e }}</span></div>{% endfor %}</td>
+                        <td>{{ f.label }}{% for e in f.label.errors %}<div class="ac-error"><span>{{ e }}</span></div>{% endfor %}</td>
+                        <td class="num">{{ f.display_order }}</td>
+                        <td class="center">{{ f.is_visible }}</td>
+                    </tr>
+                {% empty %}
+                    <tr class="ac-table-empty"><td colspan="4">No report fields configured for this school.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="ac-form-actions">
+        <button class="btn btn-primary"><i class="fas fa-floppy-disk me-1"></i>Save fields</button>
+    </div>
+</form>
+{% endblock %}

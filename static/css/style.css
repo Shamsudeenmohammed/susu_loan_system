@@ -195,7 +195,7 @@ a { text-decoration: none; transition: var(--transition); }
 }
 
 .sidebar .menu-group.open .submenu {
-    max-height: 560px;
+    max-height: 760px;
 }
 
 .sidebar .submenu .nav-link {

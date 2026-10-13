@@ -1,0 +1,92 @@
+{% extends 'academics/base_academics.html' %}
+{% load core_tags %}
+
+{% block title %}Attendance Report{% endblock %}
+{% block ac_eyebrow %}Academics · Attendance{% endblock %}
+{% block ac_heading %}Attendance Report{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Per-student attendance summary for the selected class and term.</p>{% endblock %}
+{% block ac_crumb %}Report{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:attendance_index' %}">Attendance</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:attendance_index' %}"><i class="fas fa-clipboard-check me-1"></i>Take Attendance</a>
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-filter"></i>Choose a class and period</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="arClass">Class</label>
+                <select id="arClass" name="school_class" class="form-select" onchange="this.form.submit()">
+                    <option value="">Choose…</option>
+                    {% for c in classes %}<option value="{{ c.pk }}" {% if school_class and school_class.pk == c.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+                </select>
+            </div>
+            {% if not lock_year %}
+            <div class="ac-field">
+                <label for="arYear">Academic year</label>
+                <select id="arYear" name="academic_year" class="form-select" onchange="this.form.submit()">
+                    {% for y in years %}<option value="{{ y.pk }}" {% if year and year.pk == y.pk %}selected{% endif %}>{{ y.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="arTerm">Term</label>
+                <select id="arTerm" name="term" class="form-select" onchange="this.form.submit()">
+                    {% for t in terms %}<option value="{{ t.pk }}" {% if term and term.pk == t.pk %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </div>
+        <div class="ac-toolbar-actions">
+            <button class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Apply</button>
+            <span class="ac-muted small ms-auto">{% if school_class %}{{ rows|length }} student{{ rows|length|pluralize }}{% endif %}</span>
+        </div>
+    </form>
+</div>
+
+{% if school_class and year and term %}
+<div class="ac-card">
+    <div class="ac-card-head">
+        <span class="ac-card-title"><i class="fas fa-table-list"></i>{{ school_class.name }} · {{ term.name }}</span>
+        <button class="btn btn-sm btn-outline-secondary ac-no-print" onclick="window.print()"><i class="fas fa-print me-1"></i>Print</button>
+    </div>
+    <div class="ac-table-wrap">
+        <table class="ac-table">
+            <thead>
+                <tr><th>Student</th><th class="num">Present</th><th class="num">Absent</th><th class="num">Late</th><th class="num">Excused</th><th class="num">Total</th><th>Attendance %</th></tr>
+            </thead>
+            <tbody>
+            {% for r in rows %}
+                <tr>
+                    <td class="ac-cell-primary">{{ r.student.get_full_name }}</td>
+                    <td class="num">{{ r.present }}</td>
+                    <td class="num">{{ r.absent }}</td>
+                    <td class="num">{{ r.late }}</td>
+                    <td class="num">{{ r.excused }}</td>
+                    <td class="num">{{ r.total }}</td>
+                    <td>
+                        {% if r.percentage is not None %}
+                        <div class="ac-inline">
+                            <div class="ac-progress sm" style="width:90px"><span style="width:{{ r.percentage }}%"></span></div>
+                            <span class="small">{{ r.percentage }}%</span>
+                        </div>
+                        {% else %}<span class="ac-faint">—</span>{% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr class="ac-table-empty"><td colspan="7">No attendance recorded for this class and term.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="ac-card">
+    {% include 'academics/_empty_state.html' with icon='fa-clipboard-check' title='Choose a class' text='Select a class, academic year and term to see the attendance summary.' %}
+</div>
+{% endif %}
+{% endblock %}

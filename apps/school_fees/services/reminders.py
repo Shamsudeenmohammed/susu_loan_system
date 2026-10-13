@@ -37,8 +37,11 @@ def build_message(template, account):
     paid = _format_money(account.amount_paid)
     balance = _format_money(account.outstanding_balance)
     due = account.due_date.strftime('%d %b %Y') if account.due_date else 'the due date'
+    school = account.school
+    school_label = school.display_name if school else _school_name()
 
     return (template.message
+            .replace('{{school_name}}', school_label)
             .replace('{{student_name}}', student.get_full_name())
             .replace('{{parent_name}}', student.parent_name)
             .replace('{{total_fees}}', total)
@@ -54,7 +57,7 @@ def _school_name():
 
 def default_templates():
     """Return the default reminder templates keyed by type."""
-    prefix = _school_name() + ": "
+    prefix = "{{school_name}}: "
     return {
         ReminderTemplate.ReminderType.UPCOMING: (
             prefix + "Dear {{parent_name}}, this is a reminder that {{student_name}} "
@@ -137,6 +140,7 @@ def _send_one(service, account, reminder_type, sent_by, unique_key, student_pk=N
         return ReminderLog.objects.create(
             reminder_type=reminder_type,
             student_id=student_pk or account.student_id,
+            school_id=account.school_id,
             parent_phone=phone or '',
             message=message,
             status=log_status,
@@ -148,6 +152,7 @@ def _send_one(service, account, reminder_type, sent_by, unique_key, student_pk=N
         return ReminderLog.objects.create(
             reminder_type=reminder_type,
             student_id=student_pk or account.student_id,
+            school_id=account.school_id,
             parent_phone=phone or '',
             message=message,
             status=ReminderLog.Status.FAILED,

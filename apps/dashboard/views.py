@@ -14,12 +14,25 @@ from apps.loans.models import Loan, LoanRepayment, RepaymentSchedule
 
 @login_required
 def dashboard_view(request):
-    if request.user.has_role('CUSTOMER'):
+    user = request.user
+    if user.has_role('CUSTOMER'):
         return _customer_dashboard(request)
+    if user.has_role('TEACHER'):
+        return redirect('academics:teacher_dashboard')
+    if user.has_role('HEAD_TEACHER'):
+        return redirect('school_fees_dashboard')
+    if user.has_role('PROPRIETOR'):
+        return _proprietor_dashboard(request)
     return _staff_dashboard(request)
 
 
 def _staff_dashboard(request):
+    context = _savings_context()
+    return render(request, 'dashboard/staff_dashboard.html', context)
+
+
+def _savings_context():
+    """Savings / loans / susu aggregates shared by staff and proprietor views."""
     today = timezone.now().date()
     thirty_days_ago = today - timedelta(days=30)
 
@@ -78,7 +91,7 @@ def _staff_dashboard(request):
     # Recent loans
     recent_loans = Loan.objects.select_related('customer', 'loan_product').order_by('-created_at')[:5]
 
-    context = {
+    return {
         'total_customers': total_customers,
         'active_susu_accounts': active_susu,
         'total_contributions': total_contributions,
@@ -94,7 +107,133 @@ def _staff_dashboard(request):
         'recent_transactions': recent_transactions,
         'recent_loans': recent_loans,
     }
-    return render(request, 'dashboard/staff_dashboard.html', context)
+
+
+def _school_fees_overview(request):
+    """Combined or per-school fee aggregates for the proprietor dashboard.
+
+    Counts are computed with plain ``COUNT``/``SUM`` aggregates over school-owned
+    querysets (no joins that could multiply rows), so combining the two schools
+    never double-counts. Staff figures only ever include users bound to a
+    visible school, never global administrators.
+    """
+    from django.contrib.auth import get_user_model
+    from apps.school_fees.models import (
+        Student, StudentFeeAccount, FeePayment, SchoolClass,
+    )
+    from apps.schools.models import School
+    from apps.schools.scoping import get_active_school, scope_queryset
+
+    User = get_user_model()
+    active = get_active_school(request)
+    schools_qs = School.objects.filter(is_active=True)
+    if active is not None:
+        schools_qs = schools_qs.filter(pk=active.pk)
+
+    per_school = []
+    for s in schools_qs:
+        agg = StudentFeeAccount.objects.filter(school=s).aggregate(
+            fees=Sum('total_fees'), paid=Sum('amount_paid'))
+        expected = agg['fees'] or Decimal('0.00')
+        collected = agg['paid'] or Decimal('0.00')
+        scoped_staff = (User.objects
+                        .filter(school=s, is_active=True)
+                        .exclude(role='CUSTOMER'))
+        per_school.append({
+            'school': s,
+            'students': Student.objects.filter(school=s, is_active=True).count(),
+            'teachers': scoped_staff.filter(role='HEAD_TEACHER').count(),
+            'staff': scoped_staff.count(),
+            'expected': expected,
+            'collected': collected,
+            'outstanding': expected - collected,
+        })
+
+    accounts = scope_queryset(StudentFeeAccount.objects.all(), request)
+    combined = accounts.aggregate(fees=Sum('total_fees'), paid=Sum('amount_paid'))
+    combined_expected = combined['fees'] or Decimal('0.00')
+    combined_collected = combined['paid'] or Decimal('0.00')
+
+    visible_staff = (User.objects
+                     .filter(school__in=schools_qs, is_active=True)
+                     .exclude(role='CUSTOMER'))
+
+    # Legacy rows that still have no school. Only surfaced in the combined view
+    # so the proprietor knows what to review (ambiguous assignments are never
+    # guessed automatically).
+    unassigned = None
+    if active is None:
+        ua = StudentFeeAccount.objects.filter(school__isnull=True).aggregate(
+            fees=Sum('total_fees'), paid=Sum('amount_paid'))
+        unassigned = {
+            'classes': SchoolClass.objects.filter(school__isnull=True).count(),
+            'students': Student.objects.filter(school__isnull=True).count(),
+            'accounts': StudentFeeAccount.objects.filter(school__isnull=True).count(),
+            'payments': FeePayment.objects.filter(school__isnull=True).count(),
+            'expected': ua['fees'] or Decimal('0.00'),
+            'collected': ua['paid'] or Decimal('0.00'),
+        }
+
+    return {
+        'per_school': per_school,
+        'combined_students': scope_queryset(
+            Student.objects.filter(is_active=True), request).count(),
+        'combined_teachers': visible_staff.filter(role='HEAD_TEACHER').count(),
+        'combined_staff': visible_staff.count(),
+        'combined_expected': combined_expected,
+        'combined_collected': combined_collected,
+        'combined_outstanding': combined_expected - combined_collected,
+        'combined_payments': scope_queryset(FeePayment.objects.all(), request)
+            .aggregate(t=Sum('amount'))['t'] or Decimal('0.00'),
+        'unassigned': unassigned,
+    }
+
+
+def _proprietor_dashboard(request):
+    context = _savings_context()
+    context.update(_school_fees_overview(request))
+    context.update(_academics_overview(request))
+    return render(request, 'dashboard/proprietor_dashboard.html', context)
+
+
+def _academics_overview(request):
+    """Consolidated academic comparison across schools for the proprietor.
+
+    Aggregates are computed per school (never by joining across schools) so
+    combined figures cannot double count.
+    """
+    from decimal import Decimal as _D
+
+    from apps.academics.models import AttendanceRecord, MarkSubmission, Subject
+    from apps.school_fees.models import AcademicYear, Term
+    from apps.schools.models import School
+    from apps.schools.scoping import get_active_school
+
+    schools = School.objects.filter(is_active=True)
+    active = get_active_school(request)
+    if active is not None:
+        schools = schools.filter(pk=active.pk)
+    per_school = []
+    for school in schools:
+        year = AcademicYear.objects.filter(school=school).order_by('-start_date', '-name').first()
+        term = Term.objects.filter(academic_year=year).order_by('term_number').first() if year else None
+        attendance_pct = None
+        if year is not None and term is not None:
+            records = AttendanceRecord.objects.filter(
+                session__school=school, session__academic_year=year, session__term=term)
+            total = records.count()
+            if total:
+                attended = records.filter(status__in=['PRESENT', 'LATE']).count()
+                attendance_pct = (Decimal(attended) / Decimal(total) * 100).quantize(Decimal('0.1'))
+        per_school.append({
+            'school': school,
+            'subjects': Subject.objects.filter(school=school, is_active=True).count(),
+            'submissions_pending': MarkSubmission.objects.filter(
+                school=school,
+                status=MarkSubmission.Status.SUBMITTED).count(),
+            'attendance': attendance_pct,
+        })
+    return {'academics_overview': per_school}
 
 
 def _customer_dashboard(request):

@@ -70,3 +70,24 @@ def sms_units(value):
 def has_group(user, group_name):
     """Check if user belongs to a specific group."""
     return user.groups.filter(name=group_name).exists()
+
+
+@register.simple_tag(takes_context=True)
+def url_replace(context, **kwargs):
+    """Return the current query string with the given keys replaced.
+
+    Used by list pagination and filter links so that the active filters are
+    preserved when moving between pages, e.g.::
+
+        <a href="?{% url_replace page=page_obj.next_page_number %}">
+    """
+    request = context.get('request')
+    if request is None:
+        return ''
+    query = request.GET.copy()
+    for key, value in kwargs.items():
+        if value is None:
+            query.pop(key, None)
+        else:
+            query[key] = value
+    return query.urlencode()

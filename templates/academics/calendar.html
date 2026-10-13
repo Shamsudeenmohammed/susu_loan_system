@@ -1,0 +1,76 @@
+{% extends 'academics/base_academics.html' %}
+{% load core_tags %}
+
+{% block title %}Academic Calendar{% endblock %}
+{% block ac_eyebrow %}Academics · Calendar{% endblock %}
+{% block ac_heading %}Academic Calendar{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Terms, exams, holidays and deadlines across the year.</p>{% endblock %}
+{% block ac_crumb %}Calendar{% endblock %}
+
+{% block ac_actions %}
+{% if can_manage %}
+<a class="btn btn-primary" href="{% url 'academics:calendar_create' %}"><i class="fas fa-plus me-1"></i>New Event</a>
+{% endif %}
+{% endblock %}
+
+{% block ac_body %}
+{{ calendar_data|json_script:"acCalendarData" }}
+<div class="ac-card" data-calendar-root>
+    <div class="ac-card-body">
+        <div class="ac-cal-toolbar">
+            <div class="ac-cal-nav">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-cal-nav="prev" aria-label="Previous"><i class="fas fa-chevron-left"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-cal-today>Today</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-cal-nav="next" aria-label="Next"><i class="fas fa-chevron-right"></i></button>
+                <span class="ac-cal-title ms-2" id="acCalTitle">Calendar</span>
+            </div>
+            <div class="ac-cal-views" role="group" aria-label="Calendar view">
+                <button type="button" data-cal-view="month" class="active">Month</button>
+                <button type="button" data-cal-view="week">Week</button>
+                <button type="button" data-cal-view="agenda">Agenda</button>
+            </div>
+        </div>
+
+        <div class="ac-cal-filters">
+            {% for value, label in event_types %}
+            <button type="button" class="ac-filter-chip" data-cal-filter="{{ value }}">
+                <span class="ac-event-dot type-dot-{{ value }}"></span>{{ label }}
+            </button>
+            {% endfor %}
+        </div>
+
+        <div id="acCalendar">
+            <ul class="ac-agenda">
+                {% for e in events %}
+                <li>
+                    <div class="ac-agenda-date"><div class="d">{{ e.start_date|date:"d" }}</div><div class="m">{{ e.start_date|date:"M" }}</div></div>
+                    <div style="flex:1;min-width:0">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="ac-event-dot type-dot-{{ e.event_type }}"></span>
+                            <strong>{{ e.title }}</strong>
+                            <span class="ac-badge bare neutral">{{ e.get_event_type_display }}</span>
+                            {% if e.school %}<span class="ac-cell-sub">{{ e.school.display_name }}</span>{% endif %}
+                        </div>
+                        {% if e.description %}<div class="ac-cell-sub">{{ e.description }}</div>{% endif %}
+                    </div>
+                    {% if can_manage %}
+                    <div class="ac-row-actions">
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'academics:calendar_edit' e.pk %}" title="Edit"><i class="fas fa-pen"></i></a>
+                        <form method="post" action="{% url 'academics:calendar_delete' e.pk %}"
+                              data-confirm="Delete this calendar event?" data-confirm-title="Delete event?" data-confirm-type="danger" data-confirm-text="Delete">
+                            {% csrf_token %}
+                            <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </li>
+                {% empty %}
+                <li><div class="ac-empty w-100"><i class="fas fa-calendar-day"></i><h3>No events yet</h3><p>{% if can_manage %}Create the first event to populate the calendar.{% else %}No calendar events have been scheduled.{% endif %}</p></div></li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="ac-day-detail" id="acCalDetail" hidden></div>
+    </div>
+</div>
+{% endblock %}

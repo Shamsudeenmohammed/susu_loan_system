@@ -1,0 +1,181 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Review Submission{% endblock %}
+{% block ac_eyebrow %}Academics · Review{% endblock %}
+{% block ac_heading %}Review submission{% endblock %}
+{% block ac_subtitle %}
+<p class="ac-page-sub">{{ submission.school_class.name }} · {{ submission.subject.name }} · {{ submission.term.name }} · {{ submission.academic_year.name }}</p>
+{% endblock %}
+{% block ac_crumb %}Review{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:submissions' %}">Submissions</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:submissions' %}"><i class="fas fa-arrow-left me-1"></i>Back to Submissions</a>
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-card">
+    <div class="ac-card-body">
+        <dl class="ac-meta ac-meta-grid mb-0">
+            <div><dt>Status</dt><dd>
+                <span class="ac-badge {% if submission.status == 'APPROVED' %}success{% elif submission.status == 'RETURNED' %}danger{% elif submission.status == 'SUBMITTED' %}warning{% else %}neutral{% endif %}">{{ submission.get_status_display }}</span>
+            </dd></div>
+            <div><dt>Submitted by</dt><dd>{% if submission.submitted_by %}{{ submission.submitted_by.get_full_name|default:submission.submitted_by.username }}{% else %}—{% endif %}</dd></div>
+            <div><dt>Submitted at</dt><dd>{{ submission.submitted_at|date:"d M Y H:i"|default:"—" }}</dd></div>
+            <div><dt>Reviewed by</dt><dd>{% if submission.reviewed_by %}{{ submission.reviewed_by.get_full_name|default:submission.reviewed_by.username }}{% else %}—{% endif %}</dd></div>
+        </dl>
+    </div>
+</div>
+
+{% if submission.reviewed_at or submission.review_comment %}
+<div class="ac-card">
+    <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-comment-dots"></i>Last review</span></div>
+    <div class="ac-card-body">
+        <div class="ac-grid-2 mb-3">
+            <div class="ac-meta"><dt>Decision</dt><dd>{{ submission.get_status_display }}</dd></div>
+            <div class="ac-meta"><dt>Reviewed at</dt><dd>{{ submission.reviewed_at|date:"d M Y H:i"|default:"—" }}</dd></div>
+        </div>
+        {% if submission.review_comment %}
+        <div class="ac-card-body tight" style="border:1px solid var(--ac-line);border-radius:.5rem;background:#fbfcfe">
+            <strong>Feedback:</strong> {{ submission.review_comment|linebreaksbr }}
+        </div>
+        {% else %}
+        <p class="ac-muted mb-0">No feedback was recorded.</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if can_reopen %}
+<div class="ac-card ac-card-warning">
+    <div class="ac-card-head">
+        <span class="ac-card-title"><i class="fas fa-unlock"></i>Reopen for correction</span>
+        <span class="ac-badge success"><i class="fas fa-lock"></i> {{ submission.get_status_display }}</span>
+    </div>
+    <div class="ac-card-body">
+        <p class="ac-muted small mb-3">
+            This submission has been approved. Approved marks are locked, so they
+            cannot be edited directly. Reopening moves the submission back to draft,
+            notifies the teacher, and records the reason you give below in the audit
+            log. The teacher must correct the marks and resubmit for approval.
+        </p>
+        <form method="post"
+              data-confirm="Reopen this approved submission for correction? The teacher will be able to edit and resubmit the marks."
+              data-confirm-title="Reopen for correction?"
+              data-confirm-type="warning"
+              data-confirm-text="Reopen">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="reopen">
+            <div class="ac-field mb-2">
+                <label for="id_reopen_reason" class="form-label">Reason for reopening <span class="ac-req">*</span></label>
+                <textarea id="id_reopen_reason" name="reason" class="form-control" rows="3" required minlength="5"
+                          placeholder="Explain what must be corrected and why the approved marks are being reopened…"></textarea>
+                <div class="ac-help">Required. Stored with the controlled correction and written to the audit log.</div>
+            </div>
+            <button class="btn btn-warning"><i class="fas fa-unlock me-1"></i>Reopen for Correction</button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="ac-card">
+    <div class="ac-card-head">
+        <span class="ac-card-title"><i class="fas fa-table-list"></i>Marks preview <span class="ac-faint">(weighted result)</span></span>
+        <span class="ac-cell-sub">{{ assessments|length }} assessment{{ assessments|length|pluralize }} · {{ students|length }} student{{ students|length|pluralize }}</span>
+    </div>
+    <div class="ac-table-wrap">
+        <table class="ac-table">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    {% for a in assessments %}
+                    <th class="center">{{ a.name }}<br><span class="ac-cell-sub">{{ a.get_assessment_type_display }} · max {{ a.max_score }}</span></th>
+                    {% endfor %}
+                    <th class="center">Weighted %</th>
+                    <th class="center">Grade</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in preview %}
+                <tr>
+                    <td class="ac-cell-primary">{{ row.student.first_name }} {{ row.student.last_name }}</td>
+                    {% for cell in row.cells %}
+                        <td class="center">
+                            {% if cell.mark and cell.mark.status == 'PRESENT' and cell.mark.score is not None %}
+                                {{ cell.mark.score }}
+                            {% elif cell.mark %}
+                                <span class="ac-muted" title="{{ cell.mark.get_status_display }}">{{ cell.mark.get_status_display }}</span>
+                            {% else %}
+                                <span class="ac-faint">—</span>
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                    <td class="center">{% if row.result.percentage is not None %}{{ row.result.percentage }}{% else %}—{% endif %}</td>
+                    <td class="center">{% if row.result.grade %}<span class="ac-badge violet bare">{{ row.result.grade }}</span>{% else %}—{% endif %}</td>
+                    <td class="ac-cell-sub">
+                        {% if row.result.incomplete %}missing marks{% endif %}
+                        {% if row.result.has_absent %}{% if row.result.incomplete %} · {% endif %}absent{% endif %}
+                        {% if row.result.has_exempt %}{% if row.result.incomplete or row.result.has_absent %} · {% endif %}exempt{% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr class="ac-table-empty"><td colspan="{{ assessments|length|add:4 }}">No students.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if not assessments %}
+    <div class="ac-card-body ac-cell-sub">No assessments have been configured for this class, subject and term.</div>
+    {% endif %}
+</div>
+
+{% if awaiting_review and can_review %}
+<div class="ac-card">
+    <div class="ac-card-head" style="background:linear-gradient(180deg,#eff6ff,#fbfcfe)">
+        <span class="ac-card-title"><i class="fas fa-gavel"></i>Review actions</span>
+    </div>
+    <div class="ac-card-body">
+        <p class="ac-muted small mb-3">
+            Approve the submission to release these marks to the results/publication stage, or return it
+            with feedback so the submitting teacher can correct and resubmit. There is no separate
+            rejection state in this workflow, so use <strong>Return for Corrections</strong> when the
+            marks must not be approved.
+        </p>
+
+        <form method="post" class="mb-3"
+              data-confirm="Approve these results? The submission will move to Approved and the results can then be published."
+              data-confirm-title="Approve Submission?"
+              data-confirm-type="success"
+              data-confirm-text="Approve Results">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="approve">
+            <button class="btn btn-success"><i class="fas fa-check me-1"></i>Approve Results</button>
+        </form>
+
+        <div class="ac-divider"></div>
+
+        <form method="post" data-guard-unsaved>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="return">
+            <div class="ac-field mb-2">
+                <label for="id_review_comment" class="form-label">Correction feedback <span class="ac-req">*</span></label>
+                <textarea id="id_review_comment" name="comment" class="form-control" rows="3" required minlength="5"
+                          placeholder="Explain what the teacher must correct before resubmitting…"></textarea>
+                <div class="ac-help">Required. The feedback is sent to the submitting teacher and stored with the submission.</div>
+            </div>
+            <button class="btn btn-danger"><i class="fas fa-rotate-left me-1"></i>Return for Corrections</button>
+        </form>
+    </div>
+</div>
+{% elif can_review %}
+<div class="ac-card">
+    <div class="ac-card-body ac-inline">
+        <span class="ac-badge info"><i class="fas fa-circle-info"></i> Not awaiting review</span>
+        <span class="ac-muted small">Current status: <strong>{{ submission.get_status_display }}</strong>.</span>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

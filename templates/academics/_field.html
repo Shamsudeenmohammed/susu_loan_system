@@ -1,0 +1,29 @@
+{% comment %}
+Single bound field with a consistent label, required marker, help text and
+inline validation. Checkboxes are rendered with the Bootstrap form-check
+pattern so the control and its label sit side by side.
+
+Usage:
+  {% include 'academics/_field.html' with field=form.name %}
+{% endcomment %}
+{% if field.field.widget.input_type == 'checkbox' %}
+<div class="ac-field{% if field.errors %} has-error{% endif %}">
+    <div class="form-check">
+        {{ field }}
+        <label class="form-check-label" for="{{ field.id_for_label }}">
+            {{ field.label }}{% if field.field.required %}<span class="ac-req">*</span>{% endif %}
+        </label>
+    </div>
+    {% if field.help_text %}<div class="ac-help">{{ field.help_text }}</div>{% endif %}
+    {% for error in field.errors %}<div class="ac-error"><i class="fas fa-circle-exclamation"></i><span>{{ error }}</span></div>{% endfor %}
+</div>
+{% else %}
+<div class="ac-field{% if field.errors %} has-error{% endif %}">
+    <label class="form-label" for="{{ field.id_for_label }}">
+        {{ field.label }}{% if field.field.required %}<span class="ac-req">*</span>{% endif %}
+    </label>
+    {{ field }}
+    {% if field.help_text %}<div class="ac-help">{{ field.help_text }}</div>{% endif %}
+    {% for error in field.errors %}<div class="ac-error"><i class="fas fa-circle-exclamation"></i><span>{{ error }}</span></div>{% endfor %}
+</div>
+{% endif %}

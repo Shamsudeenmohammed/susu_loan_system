@@ -1,0 +1,167 @@
+{% extends 'academics/base_academics.html' %}
+{% load core_tags %}
+
+{% block title %}Request #{{ request_obj.pk }}{% endblock %}
+{% block ac_eyebrow %}Academics · Supervision{% endblock %}
+{% block ac_heading %}Request &amp; follow-up{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">{{ request_obj.title }}</p>{% endblock %}
+{% block ac_crumb %}Detail{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:update_request_list' %}">Requests</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:update_request_list' %}"><i class="fas fa-arrow-left me-1"></i>Back to Requests</a>
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-card">
+    <div class="ac-card-body">
+        <dl class="ac-meta ac-meta-grid mb-0">
+            <div><dt>Status</dt><dd><span class="ac-badge {{ request_obj.status_tone }}">{{ request_obj.get_status_display }}</span>
+                {% if request_obj.is_overdue %}<span class="ac-badge danger ms-1"><i class="fas fa-hourglass-half"></i> Overdue</span>{% endif %}
+            </dd></div>
+            <div><dt>Priority</dt><dd>{% include 'academics/_request_priority.html' with priority=request_obj.priority %}</dd></div>
+            <div><dt>Category</dt><dd>{{ request_obj.get_category_display }}</dd></div>
+            <div><dt>Due date</dt><dd>{{ request_obj.due_date|date:"d M Y"|default:"—" }}</dd></div>
+            <div><dt>Assigned to</dt><dd>{{ request_obj.assigned_to.get_full_name|default:request_obj.assigned_to.username }}</dd></div>
+            <div><dt>Requested by</dt><dd>{% if request_obj.requested_by %}{{ request_obj.requested_by.get_full_name|default:request_obj.requested_by.username }}{% else %}—{% endif %}</dd></div>
+        </dl>
+    </div>
+</div>
+
+{% if request_obj.school_class or request_obj.subject or request_obj.student or request_obj.assessment or request_obj.academic_year or request_obj.term %}
+<div class="ac-card">
+    <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-location-dot"></i>Context</span></div>
+    <div class="ac-card-body tight ac-inline">
+        {% if request_obj.academic_year %}<span class="ac-chip"><i class="fas fa-calendar"></i>{{ request_obj.academic_year.name }}</span>{% endif %}
+        {% if request_obj.term %}<span class="ac-chip">{{ request_obj.term.name }}</span>{% endif %}
+        {% if request_obj.school_class %}<span class="ac-chip"><i class="fas fa-chalkboard"></i>{{ request_obj.school_class.name }}</span>{% endif %}
+        {% if request_obj.subject %}<span class="ac-chip"><i class="fas fa-book"></i>{{ request_obj.subject.name }}</span>{% endif %}
+        {% if request_obj.student %}<span class="ac-chip"><i class="fas fa-user-graduate"></i>{{ request_obj.student.get_full_name }}</span>{% endif %}
+        {% if request_obj.assessment %}<span class="ac-chip"><i class="fas fa-file-pen"></i>{{ request_obj.assessment.name }}</span>{% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if request_obj.description %}
+<div class="ac-card">
+    <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-align-left"></i>Description</span></div>
+    <div class="ac-card-body">{{ request_obj.description|linebreaksbr }}</div>
+</div>
+{% endif %}
+
+{% if request_obj.response %}
+<div class="ac-card">
+    <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-comment-dots"></i>Teacher response</span></div>
+    <div class="ac-card-body">{{ request_obj.response|linebreaksbr }}</div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-clock-rotate-left"></i>History</span></div>
+            <div class="ac-card-body">
+                {% if events %}
+                <ul class="ac-timeline">
+                    {% for event in events %}
+                    <li>
+                        <span class="ac-timeline-title">{{ event.get_action_display }}</span>
+                        {% if event.notes %}<div class="ac-cell-sub mb-1">{{ event.notes|linebreaksbr }}</div>{% endif %}
+                        <div class="ac-timeline-time">
+                            {% if event.user %}{{ event.user.get_full_name|default:event.user.username }} · {% endif %}{{ event.created_at|date:"d M Y H:i" }}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="ac-muted mb-0">No events recorded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-comment"></i>Add a comment</span></div>
+            <div class="ac-card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="comment">
+                    <div class="ac-field mb-2">
+                        <label class="form-label" for="{{ comment_form.comment.id_for_label }}">Comment</label>
+                        {{ comment_form.comment }}
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm"><i class="fas fa-comment-medical me-1"></i>Post comment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        {% if can_manage or can_respond %}
+        <div class="ac-card">
+            <div class="ac-card-head" style="background:linear-gradient(180deg,#eff6ff,#fbfcfe)">
+                <span class="ac-card-title"><i class="fas fa-wrench"></i>Actions</span>
+            </div>
+            <div class="ac-card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="transition">
+                    <div class="ac-field mb-3">
+                        <label class="form-label" for="{{ response_form.notes.id_for_label }}">Response / notes</label>
+                        {{ response_form.notes }}
+                        <div class="ac-help">Required when submitting work back to the Head Teacher.</div>
+                    </div>
+
+                    {% if can_manage and request_obj.status == 'SUBMITTED' %}
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success" name="to_status" value="COMPLETED">
+                            <i class="fas fa-check me-1"></i>Confirm completed
+                        </button>
+                        <button class="btn btn-outline-secondary" name="to_status" value="IN_PROGRESS">
+                            <i class="fas fa-rotate-left me-1"></i>Reopen for more work
+                        </button>
+                    </div>
+                    {% elif can_respond and request_obj.status == 'PENDING' or can_respond and request_obj.status == 'IN_PROGRESS' %}
+                    <div class="d-grid gap-2">
+                        {% if request_obj.status == 'PENDING' %}
+                        <button class="btn btn-primary" name="to_status" value="IN_PROGRESS">
+                            <i class="fas fa-play me-1"></i>Start work
+                        </button>
+                        {% endif %}
+                        <button class="btn btn-success" name="to_status" value="SUBMITTED"
+                                data-confirm="Submit this work to the Head Teacher for confirmation?"
+                                data-confirm-title="Submit work?" data-confirm-type="success" data-confirm-text="Submit">
+                            <i class="fas fa-paper-plane me-1"></i>Submit completed
+                        </button>
+                    </div>
+                    {% elif can_manage %}
+                    <div class="d-grid gap-2">
+                        {% if request_obj.status == 'PENDING' or request_obj.status == 'IN_PROGRESS' %}
+                        <button class="btn btn-outline-secondary" name="to_status" value="PENDING">
+                            <i class="fas fa-rotate-left me-1"></i>Reset to pending
+                        </button>
+                        {% endif %}
+                        {% if request_obj.status == 'COMPLETED' or request_obj.status == 'CANCELLED' %}
+                        <button class="btn btn-outline-secondary" name="to_status" value="PENDING">
+                            <i class="fas fa-rotate-left me-1"></i>Reopen request
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if can_manage and request_obj.status == 'PENDING' or can_manage and request_obj.status == 'IN_PROGRESS' or can_manage and request_obj.status == 'SUBMITTED' %}
+                    <div class="ac-divider"></div>
+                    <button class="btn btn-danger w-100" name="to_status" value="CANCELLED"
+                            data-confirm="Cancel this request? It will be marked cancelled and the teacher notified."
+                            data-confirm-title="Cancel request?" data-confirm-type="warning" data-confirm-text="Cancel">
+                        <i class="fas fa-ban me-1"></i>Cancel request
+                    </button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

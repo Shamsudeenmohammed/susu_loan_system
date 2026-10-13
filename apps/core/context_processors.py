@@ -8,7 +8,12 @@ def _static_version():
     if base is None:
         return '1'
     mtimes = []
-    for rel in ('static/css/style.css', 'static/js/app.js'):
+    for rel in (
+        'static/css/style.css',
+        'static/css/academics.css',
+        'static/js/app.js',
+        'static/js/academics.js',
+    ):
         path = os.path.join(str(base), rel)
         try:
             mtimes.append(os.path.getmtime(path))

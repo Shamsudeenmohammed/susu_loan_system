@@ -15,13 +15,14 @@
 <div class="card" style="max-width:800px;margin:0 auto;">
     <div class="card-body p-4">
         <div class="text-center mb-4">
-            <h4 class="mb-0">{{ school_name }}</h4>
+            <h4 class="mb-0">{{ payment.school.name|default:school_name }}</h4>
             <small class="text-muted">School Fees Payment Receipt</small>
         </div>
         <div class="d-flex justify-content-between mb-3">
             <div>
                 <strong>Receipt No:</strong> {{ payment.receipt_number }}<br>
                 <strong>Date:</strong> {{ payment.payment_date|date:"d M Y" }}
+                {% if payment.school %}<br><strong>School:</strong> {{ payment.school.name }}{% endif %}
             </div>
             <div class="text-end">
                 <strong>Status:</strong> <span class="badge bg-success">Paid</span>

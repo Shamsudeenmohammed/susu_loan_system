@@ -1,0 +1,164 @@
+{% extends 'academics/base_academics.html' %}
+{% load core_tags %}
+
+{% block title %}Results{% endblock %}
+{% block ac_eyebrow %}Academics · Results{% endblock %}
+{% block ac_heading %}Class Results{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Weighted subject results, grades and class position for a class and term.</p>{% endblock %}
+{% block ac_crumb %}Results{% endblock %}
+
+{% block ac_actions %}
+{% if publication and publication.is_published %}
+<span class="ac-badge success"><i class="fas fa-circle-check"></i> Published {{ publication.published_at|date:"d M Y" }}</span>
+{% endif %}
+{% if can_review and school_class and year and term and not publication.is_published %}
+<form method="post">
+    {% csrf_token %}
+    <button class="btn btn-success" name="action" value="publish"
+            data-confirm="Publish results? Marks for this class and term will be locked."
+            data-confirm-title="Publish results?" data-confirm-type="success" data-confirm-text="Publish">
+        <i class="fas fa-lock me-1"></i>Publish Results
+    </button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-filter"></i>Choose a class and period</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="resClass">Class</label>
+                <select id="resClass" name="school_class" class="form-select" onchange="this.form.submit()">
+                    <option value="">Choose…</option>
+                    {% for c in classes %}<option value="{{ c.pk }}" {% if school_class and school_class.pk == c.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+                </select>
+            </div>
+            {% if not lock_year %}
+            <div class="ac-field">
+                <label for="resYear">Academic year</label>
+                <select id="resYear" name="academic_year" class="form-select" onchange="this.form.submit()">
+                    {% for y in years %}<option value="{{ y.pk }}" {% if year and year.pk == y.pk %}selected{% endif %}>{{ y.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="resTerm">Term</label>
+                <select id="resTerm" name="term" class="form-select" onchange="this.form.submit()">
+                    {% for t in terms %}<option value="{{ t.pk }}" {% if term and term.pk == t.pk %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </div>
+        <div class="ac-toolbar-actions">
+            <button class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Apply</button>
+            {% if analytics and analytics.class_average is not None %}
+            <span class="ac-chip ms-auto"><i class="fas fa-chart-line"></i> Class average <strong>{{ analytics.class_average }}%</strong></span>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+{% if can_review and school_class and year and term and publication.is_published %}
+<div class="ac-card ac-card-warning">
+    <div class="ac-card-head">
+        <span class="ac-card-title"><i class="fas fa-lock-open"></i>Unpublish for correction</span>
+        <span class="ac-badge warning"><i class="fas fa-triangle-exclamation"></i> Published results are locked</span>
+    </div>
+    <div class="ac-card-body">
+        <p class="ac-muted small mb-3">
+            These results are published and locked. Unpublishing records the reason
+            you give below in the audit log. Approved submissions must then be
+            reopened for correction (from the submission review page) before their
+            marks can be edited. Publish again once the corrections are complete.
+        </p>
+        <form method="post">
+            {% csrf_token %}
+            <div class="ac-field">
+                <label for="id_unpublish_reason" class="form-label">Reason for unpublishing <span class="ac-req">*</span></label>
+                <textarea id="id_unpublish_reason" name="reason" class="form-control" rows="2" required minlength="5"
+                          placeholder="Explain why these published results must be reopened…"></textarea>
+                <div class="ac-help">Required. Stored in the audit log against this publication.</div>
+            </div>
+            <div class="ac-form-actions">
+                <button class="btn btn-warning" name="action" value="unpublish"
+                        data-confirm="Unpublish results? The marks will become editable again and your reason will be recorded."
+                        data-confirm-title="Unpublish results?" data-confirm-type="warning" data-confirm-text="Unpublish">
+                    <i class="fas fa-lock-open me-1"></i>Unpublish Results
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if school_class and year and term %}
+    {% if subject_chart or grade_chart %}
+    <div class="row g-4">
+        {% if subject_chart %}
+        <div class="col-lg-7">
+            <div class="ac-card">
+                <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-chart-column"></i>Subject averages</span></div>
+                <div class="ac-card-body">
+                    {{ subject_chart|json_script:"resultSubjectChart" }}
+                    <div class="ac-chart-wrap"><canvas data-chart="resultSubjectChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if grade_chart %}
+        <div class="col-lg-5">
+            <div class="ac-card">
+                <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-chart-pie"></i>Grade distribution</span></div>
+                <div class="ac-card-body">
+                    {{ grade_chart|json_script:"resultGradeChart" }}
+                    <div class="ac-chart-wrap"><canvas data-chart="resultGradeChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="ac-card">
+        <div class="ac-card-head">
+            <span class="ac-card-title"><i class="fas fa-table-list"></i>{{ school_class.name }} · {{ term.name }}</span>
+            <button class="btn btn-sm btn-outline-secondary ac-no-print" onclick="window.print()"><i class="fas fa-print me-1"></i>Print</button>
+        </div>
+        <div class="ac-table-wrap">
+            <table class="ac-table">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        {% for s in subjects %}<th class="center">{{ s.name }}</th>{% endfor %}
+                        <th class="num">Average</th>
+                        {% if rows and rows.0.position is not None %}<th class="center">Pos</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in rows %}
+                    <tr>
+                        <td class="ac-cell-primary">{{ row.student.get_full_name }}</td>
+                        {% for r in row.subjects %}
+                            <td class="center">
+                                {% if r.percentage is not None %}
+                                    {{ r.percentage }}{% if r.grade %} <span class="ac-badge violet bare">{{ r.grade }}</span>{% endif %}
+                                {% else %}<span class="ac-faint">—</span>{% endif %}
+                            </td>
+                        {% endfor %}
+                        <td class="num"><strong>{{ row.average|default:"—" }}</strong></td>
+                        {% if rows and rows.0.position is not None %}<td class="center">{{ row.position|default:"—" }}</td>{% endif %}
+                    </tr>
+                {% empty %}
+                    <tr class="ac-table-empty"><td colspan="{{ subjects|length|add:3 }}">No students in this class.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% else %}
+<div class="ac-card">
+    {% include 'academics/_empty_state.html' with icon='fa-square-poll-vertical' title='Choose a class, year and term' text='Select the filters above to see that class’s results and analytics.' %}
+</div>
+{% endif %}
+{% endblock %}

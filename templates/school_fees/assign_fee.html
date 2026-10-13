@@ -32,6 +32,13 @@
                     {% endif %}
 
                     <div class="row g-3">
+                        {% if form.school %}
+                        <div class="col-md-6">
+                            <label class="form-label">School</label>
+                            {{ form.school }}
+                            {% if form.school.errors %}<div class="text-danger small">{{ form.school.errors.0 }}</div>{% endif %}
+                        </div>
+                        {% endif %}
                         <div class="col-md-6">
                             <label class="form-label">Academic Year</label>
                             {{ form.academic_year }}

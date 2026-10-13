@@ -1,0 +1,67 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}New Request{% endblock %}
+{% block ac_eyebrow %}Academics · Supervision{% endblock %}
+{% block ac_heading %}New request{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Ask a teacher to complete a legitimate academic task. The teacher is notified immediately and can respond right from the portal.</p>{% endblock %}
+{% block ac_crumb %}New{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:update_request_list' %}">Requests</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:update_request_list' %}"><i class="fas fa-arrow-left me-1"></i>Back</a>
+{% endblock %}
+
+{% block ac_body %}
+<form method="post" data-guard-unsaved>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="ac-error mb-3"><i class="fas fa-circle-exclamation"></i>
+        <span>{% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</span>
+    </div>
+    {% endif %}
+
+    <div class="ac-form-section">
+        <header><i class="fas fa-bullhorn"></i><div><h3>What needs doing</h3><small>Title, category, priority and the deadline.</small></div></header>
+        <div class="ac-form-body">
+            <div class="ac-grid-2">
+                {% include 'academics/_field.html' with field=form.title %}
+                {% include 'academics/_field.html' with field=form.category %}
+                {% include 'academics/_field.html' with field=form.priority %}
+                {% include 'academics/_field.html' with field=form.due_date %}
+                {% include 'academics/_field.html' with field=form.description %}
+            </div>
+        </div>
+    </div>
+
+    <div class="ac-form-section">
+        <header><i class="fas fa-user-tie"></i><div><h3>Who is responsible</h3><small>The teacher must belong to your school.</small></div></header>
+        <div class="ac-form-body">
+            <div class="ac-grid-2">
+                {% include 'academics/_field.html' with field=form.assigned_to %}
+                {% if form.school %}{% include 'academics/_field.html' with field=form.school %}{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="ac-form-section">
+        <header><i class="fas fa-location-dot"></i><div><h3>Relevant academic context</h3><small>Optional — narrows the request to a class, subject, student or assessment.</small></div></header>
+        <div class="ac-form-body">
+            <div class="ac-grid-2">
+                {% include 'academics/_field.html' with field=form.academic_year %}
+                {% include 'academics/_field.html' with field=form.term %}
+                {% include 'academics/_field.html' with field=form.school_class %}
+                {% include 'academics/_field.html' with field=form.subject %}
+                {% include 'academics/_field.html' with field=form.student %}
+                {% include 'academics/_field.html' with field=form.assessment %}
+            </div>
+        </div>
+    </div>
+
+    <div class="ac-form-actions">
+        <button class="btn btn-primary"><i class="fas fa-paper-plane me-1"></i>Create request</button>
+        <a class="btn btn-outline-secondary" href="{% url 'academics:update_request_list' %}">Cancel</a>
+    </div>
+</form>
+{% endblock %}

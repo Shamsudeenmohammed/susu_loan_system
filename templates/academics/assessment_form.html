@@ -1,0 +1,68 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}{% if instance %}Edit{% else %}New{% endif %} Assessment{% endblock %}
+{% block ac_eyebrow %}Academics · Assessments{% endblock %}
+{% block ac_heading %}{% if instance %}Edit assessment{% else %}New assessment{% endif %}{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Define an assessment for a class and subject, then capture marks for it.</p>{% endblock %}
+{% block ac_crumb %}{% if instance %}Edit{% else %}New{% endif %}{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:assessment_list' %}">Assessments</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:assessment_list' %}"><i class="fas fa-arrow-left me-1"></i>Back</a>
+{% endblock %}
+
+{% block ac_body %}
+<form method="post" data-guard-unsaved>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="ac-error mb-3"><i class="fas fa-circle-exclamation"></i>
+        <span>{% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</span>
+    </div>
+    {% endif %}
+
+    <div class="ac-form-section">
+        <header><i class="fas fa-location-dot"></i><div><h3>Where it applies</h3><small>Choose the class and subject this assessment belongs to.</small></div></header>
+        <div class="ac-form-body">
+            <div class="ac-grid-2">
+                {% if form.academic_year %}{% include 'academics/_field.html' with field=form.academic_year %}{% endif %}
+                {% if form.term %}{% include 'academics/_field.html' with field=form.term %}{% endif %}
+                {% include 'academics/_field.html' with field=form.school_class %}
+                {% include 'academics/_field.html' with field=form.subject %}
+            </div>
+            {% if lock_year %}
+            <div class="ac-muted small mt-2"><i class="fas fa-lock me-1"></i>The academic year and term are set automatically from your school's active year.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="ac-form-section">
+        <header><i class="fas fa-file-pen"></i><div><h3>Assessment details</h3><small>Name, type and the dates that matter.</small></div></header>
+        <div class="ac-form-body">
+            <div class="ac-grid-2">
+                {% include 'academics/_field.html' with field=form.name %}
+                {% include 'academics/_field.html' with field=form.assessment_type %}
+                {% include 'academics/_field.html' with field=form.date %}
+                {% include 'academics/_field.html' with field=form.marks_due_date %}
+            </div>
+        </div>
+    </div>
+
+    <div class="ac-form-section">
+        <header><i class="fas fa-scale-balanced"></i><div><h3>Scoring</h3><small>Maximum score and how much this assessment counts toward the subject result.</small></div></header>
+        <div class="ac-form-body">
+            <div class="ac-grid-2">
+                {% include 'academics/_field.html' with field=form.max_score %}
+                {% include 'academics/_field.html' with field=form.weight %}
+                {% include 'academics/_field.html' with field=form.is_active %}
+            </div>
+        </div>
+    </div>
+
+    <div class="ac-form-actions">
+        <button class="btn btn-primary"><i class="fas fa-floppy-disk me-1"></i>{% if instance %}Save changes{% else %}Create assessment{% endif %}</button>
+        <a class="btn btn-outline-secondary" href="{% url 'academics:assessment_list' %}">Cancel</a>
+    </div>
+</form>
+{% endblock %}

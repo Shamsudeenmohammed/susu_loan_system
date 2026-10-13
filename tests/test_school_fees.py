@@ -288,14 +288,20 @@ class TestViewsWorkflow:
         account = account_service.get_or_create_fee_account(student, term)
         return student, account
 
-    def test_create_student(self, client, staff_user, school_class):
+    def test_create_student(self, client, staff_user, db):
+        from apps.schools.models import School
+        school = School.objects.create(name='Zemzem Mankarigu', code='MK_TEST')
+        school_class = SchoolClass.objects.create(
+            name='Class 1', code='C1', school=school)
         self._login(client, staff_user)
         client.raise_request_exception = False
         resp = client.post(reverse('school_fees_student_create'), {
             'first_name': 'New', 'last_name': 'Kid', 'school_class': school_class.pk,
+            'school': school.pk,
             'parent_name': 'Parent', 'parent_phone': '0241111111', 'parent_email': '',
         })
-        assert Student.objects.filter(first_name='New').exists()
+        student = Student.objects.get(first_name='New')
+        assert student.school_id == school.pk
 
     def test_record_payment_workflow(self, client, staff_user, school_class, academic_year,
                                      term, category, student, db):

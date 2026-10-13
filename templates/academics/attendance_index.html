@@ -1,0 +1,95 @@
+{% extends 'academics/base_academics.html' %}
+{% load core_tags %}
+
+{% block title %}Attendance{% endblock %}
+{% block ac_eyebrow %}Academics · Attendance{% endblock %}
+{% block ac_heading %}Attendance{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Record daily or subject attendance, then review the term summary.</p>{% endblock %}
+{% block ac_crumb %}Attendance{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:attendance_report' %}"><i class="fas fa-chart-simple me-1"></i>Attendance Report</a>
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-stat-grid">
+    <div class="ac-stat teal">
+        <span class="ac-stat-icon"><i class="fas fa-chalkboard"></i></span>
+        <span class="ac-stat-body"><span class="ac-stat-value">{{ class_count }}</span><span class="ac-stat-label">Classes available</span></span>
+    </div>
+    <div class="ac-stat violet">
+        <span class="ac-stat-icon"><i class="fas fa-clipboard-check"></i></span>
+        <span class="ac-stat-body"><span class="ac-stat-value">{{ session_count }}</span><span class="ac-stat-label">Sessions this term</span></span>
+    </div>
+    <div class="ac-stat slate">
+        <span class="ac-stat-icon"><i class="fas fa-calendar-day"></i></span>
+        <span class="ac-stat-body"><span class="ac-stat-value">{{ today|date:"d M" }}</span><span class="ac-stat-label">Today</span></span>
+    </div>
+</div>
+
+<div class="ac-card">
+    <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-clipboard-check"></i>Take attendance</span></div>
+    <div class="ac-card-body">
+        <form method="get" action="{% url 'academics:attendance_take' %}">
+            <div class="ac-toolbar-grid">
+                <div class="ac-field">
+                    <label for="attClass">Class <span class="ac-req">*</span></label>
+                    <select id="attClass" name="school_class" class="form-select" required>
+                        <option value="">Choose a class…</option>
+                        {% for c in classes %}<option value="{{ c.pk }}">{{ c.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="ac-field">
+                    <label for="attDate">Date</label>
+                    <input id="attDate" type="date" name="date" class="form-control" value="{% now 'Y-m-d' %}">
+                </div>
+                <div class="ac-field">
+                    <label for="attSession">Session label</label>
+                    <input id="attSession" type="text" name="session_label" class="form-control" value="Daily">
+                </div>
+                {% if not lock_year %}
+                <div class="ac-field">
+                    <label for="attYear">Academic year</label>
+                    <select id="attYear" name="academic_year" class="form-select">
+                        {% for y in years %}<option value="{{ y.pk }}" {% if year and year.pk == y.pk %}selected{% endif %}>{{ y.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="ac-field">
+                    <label for="attTerm">Term</label>
+                    <select id="attTerm" name="term" class="form-select">
+                        {% for t in terms %}<option value="{{ t.pk }}" {% if term and term.pk == t.pk %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+            </div>
+            <div class="ac-toolbar-actions">
+                <button class="btn btn-primary"><i class="fas fa-arrow-right me-1"></i>Open register</button>
+                <a class="btn btn-outline-secondary" href="{% url 'academics:attendance_report' %}">View summary</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="ac-card">
+    <div class="ac-card-head">
+        <span class="ac-card-title"><i class="fas fa-clock-rotate-left"></i>Recent sessions</span>
+    </div>
+    <div class="ac-table-wrap">
+        <table class="ac-table">
+            <thead><tr><th>Date</th><th>Class</th><th>Subject / Session</th><th>Taken by</th></tr></thead>
+            <tbody>
+            {% for s in recent %}
+                <tr>
+                    <td class="ac-cell-primary ac-nowrap">{{ s.date|date:"d M Y" }}</td>
+                    <td>{{ s.school_class.name }}</td>
+                    <td>{{ s.subject.name|default:s.session_label }}</td>
+                    <td class="ac-cell-sub">{{ s.taken_by.get_full_name|default:"—" }}</td>
+                </tr>
+            {% empty %}
+                <tr class="ac-table-empty"><td colspan="4">No sessions recorded yet. Open a register above to begin.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

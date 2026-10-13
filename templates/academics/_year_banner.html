@@ -1,0 +1,43 @@
+{% comment %}
+Read-only active academic-year indicator shared by the Academics pages.
+
+Teachers never choose a year: it is resolved on the server and shown here, with
+an explicit warning while an exceptional override is in effect or when the
+school has no single active year. Reviewers also see the school's configured
+active year so the working context is never ambiguous.
+{% endcomment %}
+{% if academic_context %}
+{% if academic_context.is_override %}
+<div class="ac-card ac-card-warning mb-3">
+    <div class="ac-card-body">
+        <div class="ac-inline">
+            <span class="ac-badge warning"><i class="fas fa-triangle-exclamation me-1"></i>Academic-year override active</span>
+            <strong>{{ academic_context.year.name }}{% if academic_context.term %} · {{ academic_context.term.name }}{% endif %}</strong>
+        </div>
+        <div class="ac-muted small mt-2">
+            {% if academic_context.override.enabled_by %}
+            Enabled by {{ academic_context.override.enabled_by.get_full_name|default:academic_context.override.enabled_by.username }}
+            {% endif %}
+            {% if academic_context.override.expires_at %}
+            · expires {{ academic_context.override.expires_at|date:"d M Y H:i" }}
+            {% else %}
+            · no expiry set
+            {% endif %}
+            {% if academic_context.override.reason %}<br>Reason: {{ academic_context.override.reason }}{% endif %}
+        </div>
+    </div>
+</div>
+{% elif academic_context.has_year %}
+<div class="ac-inline mb-3">
+    <span class="ac-badge teal"><i class="fas fa-calendar-check me-1"></i>Active academic year: {{ academic_context.label }}</span>
+    {% if lock_year %}<span class="ac-muted small">Set automatically for your school.</span>{% endif %}
+</div>
+{% elif lock_year and academic_context.error_message %}
+<div class="ac-card ac-card-warning mb-3">
+    <div class="ac-card-body ac-inline">
+        <span class="ac-badge danger"><i class="fas fa-circle-exclamation me-1"></i>Attention</span>
+        <span>{{ academic_context.error_message }}</span>
+    </div>
+</div>
+{% endif %}
+{% endif %}

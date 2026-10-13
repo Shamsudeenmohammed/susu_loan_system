@@ -6,11 +6,33 @@ from decimal import Decimal
 from apps.core.utils import generate_unique_number
 
 
-class SchoolClass(models.Model):
+class SchoolOwnedModel(models.Model):
+    """Abstract base adding the owning school to a school-fees record.
+
+    ``school`` is nullable so the multi-school migration is fully backward
+    compatible: records created before multi-school (and the existing test
+    fixtures) simply have no school and remain visible to global users. Views
+    hide such records from school-scoped users so data never leaks between
+    schools.
+    """
+
+    school = models.ForeignKey(
+        'schools.School',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='%(app_label)s_%(class)s_set',
+    )
+
+    class Meta:
+        abstract = True
+
+
+class SchoolClass(SchoolOwnedModel):
     """A class/program within the school (e.g. Class 1, JHS 2, SHS 3)."""
 
     name = models.CharField(max_length=100)
-    code = models.CharField(max_length=20, unique=True)
+    code = models.CharField(max_length=20)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -18,15 +40,16 @@ class SchoolClass(models.Model):
     class Meta:
         ordering = ['name']
         verbose_name_plural = 'School Classes'
+        unique_together = ['school', 'code']
 
     def __str__(self):
         return self.name
 
 
-class AcademicYear(models.Model):
+class AcademicYear(SchoolOwnedModel):
     """An academic year (e.g. 2025/2026)."""
 
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -34,6 +57,7 @@ class AcademicYear(models.Model):
 
     class Meta:
         ordering = ['-start_date', '-name']
+        unique_together = ['school', 'name']
 
     def __str__(self):
         return self.name
@@ -66,7 +90,7 @@ class Term(models.Model):
         return f"{self.academic_year.name} - {self.name}"
 
 
-class Student(models.Model):
+class Student(SchoolOwnedModel):
     """A student enrolled in the school."""
 
     student_id = models.CharField(max_length=30, unique=True, editable=False)
@@ -94,6 +118,7 @@ class Student(models.Model):
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['school_class', 'is_active']),
+            models.Index(fields=['school', 'is_active']),
         ]
 
     def __str__(self):
@@ -102,29 +127,35 @@ class Student(models.Model):
     def save(self, *args, **kwargs):
         if not self.student_id:
             self.student_id = generate_unique_number('STU')
+        if self.school_id is None and self.school_class_id:
+            self.school_id = self.school_class.school_id
         super().save(*args, **kwargs)
+        if self.school_id:
+            # Keep existing financial records in step now that the student has
+            # a branch (legacy records may predate the assignment). Only fills
+            # NULLs; already-assigned rows are never touched.
+            self.fee_accounts.filter(school__isnull=True).update(school_id=self.school_id)
+            self.fee_payments.filter(school__isnull=True).update(school_id=self.school_id)
 
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
 
 
-class FeeCategory(models.Model):
+class FeeCategory(SchoolOwnedModel):
     """A fee type/category (e.g. Tuition, Transportation, Books)."""
 
-    name = models.CharField(max_length=100, unique=True)
-    code = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=20)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['name']
         verbose_name_plural = 'Fee Categories'
-
-    def __str__(self):
-        return self.name
+        unique_together = ['school', 'name']
 
 
-class FeeStructure(models.Model):
+class FeeStructure(SchoolOwnedModel):
     """Fees configured for an academic year + term + class + category."""
 
     academic_year = models.ForeignKey(
@@ -169,8 +200,16 @@ class FeeStructure(models.Model):
             f"{self.school_class.name} | {self.fee_category.name} | GHS {self.amount}"
         )
 
+    def save(self, *args, **kwargs):
+        if self.school_id is None:
+            if self.academic_year_id and self.academic_year.school_id:
+                self.school_id = self.academic_year.school_id
+            elif self.school_class_id and self.school_class.school_id:
+                self.school_id = self.school_class.school_id
+        super().save(*args, **kwargs)
 
-class StudentFeeAccount(models.Model):
+
+class StudentFeeAccount(SchoolOwnedModel):
     """One fee account per student per academic year + term."""
 
     class PaymentStatus(models.TextChoices):
@@ -219,6 +258,8 @@ class StudentFeeAccount(models.Model):
     def save(self, *args, **kwargs):
         if not self.account_number:
             self.account_number = generate_unique_number('FEE')
+        if self.school_id is None and self.student_id:
+            self.school_id = self.student.school_id
         super().save(*args, **kwargs)
 
     @property
@@ -262,7 +303,7 @@ class StudentFeeAccount(models.Model):
         return self.status
 
 
-class FeePayment(models.Model):
+class FeePayment(SchoolOwnedModel):
     """A payment recorded against a student's fee account."""
 
     class PaymentMethod(models.TextChoices):
@@ -323,6 +364,11 @@ class FeePayment(models.Model):
     def save(self, *args, **kwargs):
         if not self.receipt_number:
             self.receipt_number = generate_unique_number('REC')
+        if self.school_id is None:
+            if self.account_id and self.account.school_id:
+                self.school_id = self.account.school_id
+            elif self.student_id and self.student.school_id:
+                self.school_id = self.student.school_id
         super().save(*args, **kwargs)
 
 
@@ -360,7 +406,7 @@ class ReminderTemplate(models.Model):
         return self.name
 
 
-class ReminderLog(models.Model):
+class ReminderLog(SchoolOwnedModel):
     """A record of an SMS reminder sent to a parent/guardian."""
 
     class Status(models.TextChoices):
@@ -388,6 +434,11 @@ class ReminderLog(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        if self.school_id is None and self.student_id:
+            self.school_id = self.student.school_id
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.get_reminder_type_display()} to {self.parent_phone}"

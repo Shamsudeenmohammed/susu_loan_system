@@ -1,0 +1,72 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Promotion · {{ student.get_full_name }}{% endblock %}
+{% block ac_eyebrow %}Academics · Results{% endblock %}
+{% block ac_heading %}Promotion &amp; Remarks{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">{{ student.get_full_name }} · {{ student.school_class.name }} · {{ student.student_id }}{% if term %} · {{ term.name }}{% endif %}</p>{% endblock %}
+{% block ac_crumb %}Promote{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:results' %}">Results</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-primary" href="{% url 'academics:terminal_report' student.pk %}?academic_year={{ year.pk }}&term={{ term.pk }}">
+    <i class="fas fa-file-lines me-1"></i>Terminal Report
+</a>
+<a class="btn btn-outline-secondary" href="{% url 'academics:results' %}"><i class="fas fa-arrow-left me-1"></i>Back</a>
+{% endblock %}
+
+{% block ac_body %}
+<div class="row g-4">
+    <div class="col-lg-6">
+        <form method="post" data-guard-unsaved>
+            {% csrf_token %}
+            <div class="ac-form-section">
+                <header><i class="fas fa-comment-dots"></i><div><h3>Report remarks</h3><small>{{ term.name|default:"Current term" }}</small></div></header>
+                <div class="ac-form-body">
+                    {% include 'academics/_form.html' with form=comment_form %}
+                </div>
+                <div class="ac-form-actions">
+                    <button class="btn btn-primary" name="save_comment" value="1"><i class="fas fa-floppy-disk me-1"></i>Save remarks</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-6">
+        <form method="post" data-guard-unsaved>
+            {% csrf_token %}
+            <div class="ac-form-section">
+                <header><i class="fas fa-arrow-up-right-dots"></i><div><h3>Promotion</h3><small>Record the end-of-term decision.</small></div></header>
+                <div class="ac-form-body">
+                    {% include 'academics/_form.html' with form=promotion_form %}
+                </div>
+                <div class="ac-form-actions">
+                    <button class="btn btn-primary" name="save_promotion" value="1"><i class="fas fa-floppy-disk me-1"></i>Save promotion</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="ac-card">
+    <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-clock-rotate-left"></i>Promotion history</span></div>
+    <div class="ac-table-wrap">
+        <table class="ac-table">
+            <thead><tr><th>Year</th><th>From</th><th>To</th><th>Decision</th></tr></thead>
+            <tbody>
+            {% for p in history %}
+                <tr>
+                    <td class="ac-cell-primary">{{ p.academic_year.name }}</td>
+                    <td>{{ p.from_class.name }}</td>
+                    <td>{{ p.to_class.name|default:"—" }}</td>
+                    <td><span class="ac-badge neutral">{{ p.get_decision_display }}</span></td>
+                </tr>
+            {% empty %}
+                <tr class="ac-table-empty"><td colspan="4">No promotion history for this student.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

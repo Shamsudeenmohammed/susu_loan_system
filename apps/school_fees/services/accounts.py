@@ -128,9 +128,21 @@ def assign_fee_to_classes(term, classes, fee_category, amount, due_date, descrip
     return {'structures': structures, 'accounts': accounts}
 
 
-def assign_fee_to_all(term, fee_category, amount, due_date, description=''):
-    """Assign a fee to all active students across every class."""
-    classes = SchoolClass.objects.filter(is_active=True, students__is_active=True).distinct()
+def assign_fee_to_all(term, fee_category, amount, due_date, description='', school=None):
+    """Assign a fee to all active students across the classes of one school.
+
+    ``school`` (when supplied) is authoritative and overrides the term's own
+    school; callers pass the branch the administrator explicitly chose. When
+    neither is available only school-less (legacy) classes are touched, so the
+    operation can never leak across branches.
+    """
+    target = school or getattr(term, 'school', None)
+    classes = SchoolClass.objects.filter(is_active=True, students__is_active=True)
+    if target is not None:
+        classes = classes.filter(school=target)
+    else:
+        classes = classes.filter(school__isnull=True)
+    classes = classes.distinct()
     return assign_fee_to_classes(term, classes, fee_category, amount, due_date, description)
 
 

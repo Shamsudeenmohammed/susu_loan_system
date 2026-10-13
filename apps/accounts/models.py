@@ -26,16 +26,28 @@ class UserManager(BaseUserManager):
 class User(AbstractUser):
     class Role(models.TextChoices):
         SUPER_ADMIN = 'SUPER_ADMIN', 'Super Admin'
+        PROPRIETOR = 'PROPRIETOR', 'Proprietor'
         ADMIN = 'ADMIN', 'Admin'
         MANAGER = 'MANAGER', 'Manager'
         LOAN_OFFICER = 'LOAN_OFFICER', 'Loan Officer'
         CASHIER = 'CASHIER', 'Cashier'
         COLLECTOR = 'COLLECTOR', 'Collector'
+        HEAD_TEACHER = 'HEAD_TEACHER', 'Head Teacher'
+        TEACHER = 'TEACHER', 'Teacher'
         CUSTOMER = 'CUSTOMER', 'Customer'
 
     email = models.EmailField(blank=True, null=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.CUSTOMER)
     phone = models.CharField(max_length=20, blank=True)
+    school = models.ForeignKey(
+        'schools.School',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='users',
+        help_text='The school this user is bound to (head teachers and school '
+                  'staff). Leave blank for proprietor/admin/global users.',
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -61,8 +73,26 @@ class User(AbstractUser):
     def is_superuser_role(self):
         return self.role == self.Role.SUPER_ADMIN
 
+    @property
+    def is_proprietor(self):
+        return self.role == self.Role.PROPRIETOR or self.is_superuser
+
+    @property
+    def is_head_teacher(self):
+        return self.role == self.Role.HEAD_TEACHER
+
     def has_role(self, *roles):
         return self.role in roles
+
+    def accessible_schools(self):
+        """Schools this user may view. Global users see every active school."""
+        from apps.schools.models import School
+        from apps.schools.scoping import is_global_user
+        if is_global_user(self):
+            return School.objects.filter(is_active=True)
+        if self.school_id:
+            return School.objects.filter(pk=self.school_id)
+        return School.objects.none()
 
 
 class PasswordResetOTP(models.Model):
