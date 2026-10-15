@@ -1,0 +1,173 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Terminal Reports{% endblock %}
+{% block ac_eyebrow %}Academics · Reports{% endblock %}
+{% block ac_heading %}Terminal Reports{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Generate, review and publish official terminal reports. Only an approved report that has been published is the student's official report; parents are notified only after publication.</p>{% endblock %}
+{% block ac_crumb %}Terminal Reports{% endblock %}
+
+{% block ac_actions %}
+{% if school_class %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:terminal_report_hub' %}?academic_year={{ year.pk }}&term={{ term.pk }}"><i class="fas fa-xmark me-1"></i>Clear class</a>
+{% endif %}
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-stat-grid">
+    <div class="ac-stat amber">
+        <span class="ac-stat-icon"><i class="fas fa-file-signature"></i></span>
+        <span class="ac-stat-body">
+            <span class="ac-stat-value">{{ counts.generated }}</span>
+            <span class="ac-stat-label">Awaiting approval</span>
+            <span class="ac-stat-hint">Generated</span>
+        </span>
+    </div>
+    <div class="ac-stat violet">
+        <span class="ac-stat-icon"><i class="fas fa-bullhorn"></i></span>
+        <span class="ac-stat-body">
+            <span class="ac-stat-value">{{ counts.approved }}</span>
+            <span class="ac-stat-label">Approved</span>
+            <span class="ac-stat-hint">Ready to publish</span>
+        </span>
+    </div>
+    <div class="ac-stat teal">
+        <span class="ac-stat-icon"><i class="fas fa-certificate"></i></span>
+        <span class="ac-stat-body">
+            <span class="ac-stat-value">{{ counts.published }}</span>
+            <span class="ac-stat-label">Published</span>
+            <span class="ac-stat-hint">Official reports</span>
+        </span>
+    </div>
+</div>
+
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-filter"></i>Filter reports</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="trClass">Class</label>
+                <select id="trClass" name="school_class" class="form-select" onchange="this.form.submit()">
+                    <option value="">All classes</option>
+                    {% for c in classes %}
+                    <option value="{{ c.pk }}" {% if school_class and school_class.pk == c.pk %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="trStatus">Status</label>
+                <select id="trStatus" name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    {% for value, label in statuses %}
+                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="trYear">Academic year</label>
+                <select id="trYear" name="academic_year" class="form-select" onchange="this.form.submit()">
+                    {% for y in years %}<option value="{{ y.pk }}" {% if year and year.pk == y.pk %}selected{% endif %}>{{ y.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="trTerm">Term</label>
+                <select id="trTerm" name="term" class="form-select" onchange="this.form.submit()">
+                    {% for t in terms %}<option value="{{ t.pk }}" {% if term and term.pk == t.pk %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="ac-toolbar-actions">
+            <button class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Apply</button>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'academics:terminal_report_hub' %}">Reset</a>
+            <span class="ac-muted small ms-auto">{{ total_count }} report{{ total_count|pluralize }}</span>
+        </div>
+    </form>
+</div>
+
+{% if can_generate %}
+<div class="ac-card">
+    <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-wand-magic-sparkles"></i>Generate reports</span></div>
+    <div class="ac-card-body">
+        <form method="post" action="{% url 'academics:terminal_report_bulk' %}">
+            {% csrf_token %}
+            <input type="hidden" name="academic_year" value="{{ year.pk }}">
+            <input type="hidden" name="term" value="{{ term.pk }}">
+            <div class="ac-grid-2">
+                <div class="ac-field">
+                    <label class="form-label" for="bulkClass">Class <span class="ac-req">*</span></label>
+                    <select id="bulkClass" name="school_class" class="form-select" onchange="window.location='?school_class=' + this.value + '&academic_year={{ year.pk }}&term={{ term.pk }}'">
+                        <option value="">Choose a class…</option>
+                        {% for c in classes %}
+                        <option value="{{ c.pk }}" {% if school_class and school_class.pk == c.pk %}selected{% endif %}>{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="ac-field">
+                    <label class="form-label" for="bulkStudents">Students (optional)</label>
+                    <select id="bulkStudents" name="students" class="form-select" multiple size="6">
+                        {% for s in students %}<option value="{{ s.pk }}">{{ s.get_full_name }} ({{ s.student_id }})</option>{% endfor %}
+                    </select>
+                    <div class="ac-help">Leave blank to generate for the whole class. Select one or a few for individual reports.</div>
+                </div>
+            </div>
+            <div class="ac-field mb-2">
+                {% if school_class %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="force" id="bulkForce" value="1">
+                    <label class="form-check-label" for="bulkForce">Generate despite incomplete data (recorded as an override)</label>
+                </div>
+                {% endif %}
+            </div>
+            <div class="ac-field mb-2">
+                <label class="form-label" for="bulkReason">Override reason</label>
+                <textarea id="bulkReason" name="override_reason" rows="2" class="form-control" placeholder="Required only when overriding incomplete data"></textarea>
+            </div>
+            <button class="btn btn-primary" {% if not school_class %}disabled{% endif %}>
+                <i class="fas fa-file-circle-plus me-1"></i>Generate report(s)
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="ac-card">
+    <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-file-lines"></i>Reports</span></div>
+    <div class="ac-table-wrap">
+        <table class="ac-table">
+            <thead>
+                <tr>
+                    <th>Student</th><th>Class</th><th>Version</th>
+                    <th>Status</th><th class="center">Average</th><th>Generated</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for r in reports %}
+                <tr>
+                    <td class="ac-cell-primary">{{ r.student.get_full_name }} <span class="ac-cell-sub">{{ r.student.student_id }}</span></td>
+                    <td class="ac-cell-sub">{{ r.school_class.name }}</td>
+                    <td class="ac-cell-sub">v{{ r.version }}</td>
+                    <td>
+                        <span class="ac-badge {{ r.status_tone }}">{{ r.get_status_display }}</span>
+                        {% if r.is_official %}<span class="ac-badge success bare ms-1"><i class="fas fa-certificate"></i> official</span>{% endif %}
+                    </td>
+                    <td class="center">{{ r.average|default:"—" }}</td>
+                    <td class="ac-cell-sub">{{ r.generated_by.get_full_name|default:r.generated_by.username|default:"—" }}<div class="ac-cell-sub">{{ r.generated_at|date:"d M Y H:i"|default:"" }}</div></td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'academics:terminal_report_review' r.pk %}"><i class="fas fa-gavel me-1"></i>Review</a>
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'academics:terminal_report' r.student_id %}?academic_year={{ year.pk }}&term={{ term.pk }}"><i class="fas fa-eye me-1"></i>View</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr class="ac-table-empty"><td colspan="7">
+                    {% if school_class or status_filter %}
+                        No reports for this selection yet.{% if can_generate %} Generate them above.{% endif %}
+                    {% else %}
+                        {% include 'academics/_empty_state.html' with icon='fa-file-lines' title='No terminal reports yet' text='Choose a class and generate reports, then approve and publish them.' action_url=None %}
+                    {% endif %}
+                </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'academics/_pagination.html' %}
+</div>
+{% endblock %}

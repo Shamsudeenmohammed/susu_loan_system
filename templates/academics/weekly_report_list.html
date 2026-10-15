@@ -1,0 +1,167 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Weekly Reports{% endblock %}
+{% block ac_eyebrow %}Academics · Weekly reporting{% endblock %}
+{% block ac_heading %}Weekly Reports{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Teachers file a short weekly narrative for each class; the Head Teacher reviews, acknowledges or asks for clarification. The same class and week can only be reported once — revisions reuse the same entry.</p>{% endblock %}
+{% block ac_crumb %}Weekly Reports{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-primary" href="{% url 'academics:weekly_report_create' %}">
+    <i class="fas fa-plus me-1"></i>New weekly report
+</a>
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-stat-grid">
+    <div class="ac-stat amber">
+        <span class="ac-stat-icon"><i class="fas fa-calendar-week"></i></span>
+        <span class="ac-stat-body">
+            <span class="ac-stat-value">{{ submitted_count }}</span>
+            <span class="ac-stat-label">Awaiting review</span>
+            <span class="ac-stat-hint">Submitted for the Head Teacher</span>
+        </span>
+    </div>
+    <div class="ac-stat rose">
+        <span class="ac-stat-icon"><i class="fas fa-circle-question"></i></span>
+        <span class="ac-stat-body">
+            <span class="ac-stat-value">{{ clarification_count }}</span>
+            <span class="ac-stat-label">Clarification requested</span>
+            <span class="ac-stat-hint">Returned to the teacher</span>
+        </span>
+    </div>
+    <div class="ac-stat teal">
+        <span class="ac-stat-icon"><i class="fas fa-folder-open"></i></span>
+        <span class="ac-stat-body">
+            <span class="ac-stat-value">{{ open_count }}</span>
+            <span class="ac-stat-label">Open</span>
+            <span class="ac-stat-hint">Not yet reviewed</span>
+        </span>
+    </div>
+</div>
+
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-filter"></i>Filter reports</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="wrSearch">Search</label>
+                <div class="ac-input-icon">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input id="wrSearch" type="search" name="q" value="{{ filters.q }}" class="form-control" placeholder="Summary, class or teacher">
+                </div>
+            </div>
+            <div class="ac-field">
+                <label for="wrStatus">Status</label>
+                <select id="wrStatus" name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    <option value="OPEN" {% if filters.status == 'OPEN' %}selected{% endif %}>Open</option>
+                    {% for value, label in statuses %}
+                    <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="wrClass">Class</label>
+                <select id="wrClass" name="school_class" class="form-select">
+                    <option value="">All classes</option>
+                    {% for c in classes %}
+                    <option value="{{ c.pk }}" {% if filters.school_class == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if not is_teacher %}
+            <div class="ac-field">
+                <label for="wrTeacher">Teacher</label>
+                <select id="wrTeacher" name="teacher" class="form-select">
+                    <option value="">All teachers</option>
+                    {% for t in teachers %}
+                    <option value="{{ t.pk }}" {% if filters.teacher == t.pk|stringformat:'s' %}selected{% endif %}>{{ t.get_full_name|default:t.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <div class="ac-field">
+                <label for="wrYear">Academic year</label>
+                <select id="wrYear" name="academic_year" class="form-select">
+                    <option value="">All years</option>
+                    {% for y in years %}
+                    <option value="{{ y.pk }}" {% if filters.academic_year == y.pk|stringformat:'s' %}selected{% endif %}>{{ y.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if terms %}
+            <div class="ac-field">
+                <label for="wrTerm">Term</label>
+                <select id="wrTerm" name="term" class="form-select">
+                    <option value="">All terms</option>
+                    {% for t in terms %}
+                    <option value="{{ t.pk }}" {% if filters.term == t.pk|stringformat:'s' %}selected{% endif %}>{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </div>
+        <div class="ac-toolbar-actions">
+            <button class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Apply</button>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'academics:weekly_report_list' %}">Reset</a>
+            <span class="ac-muted small ms-auto">{{ total_count }} report{{ total_count|pluralize }}</span>
+        </div>
+    </form>
+</div>
+
+<div class="ac-card">
+    <div class="ac-table-wrap">
+        <table class="ac-table">
+            <thead>
+                <tr>
+                    <th>Report</th>{% if not is_teacher %}<th>Teacher</th>{% endif %}
+                    <th>Week</th><th>Status</th><th>Last update</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for r in reports %}
+                <tr class="is-clickable" data-href="{% url 'academics:weekly_report_detail' r.pk %}">
+                    <td class="ac-cell-primary">
+                        {{ r.school_class.name }}
+                        {% if r.subject %}<span class="ac-cell-sub"> · {{ r.subject.name }}</span>{% endif %}
+                        <div class="ac-cell-sub">{{ r.summary|truncatewords:14 }}</div>
+                    </td>
+                    {% if not is_teacher %}
+                    <td>{{ r.teacher.get_full_name|default:r.teacher.username }}</td>
+                    {% endif %}
+                    <td class="ac-cell-sub">{{ r.period_label }}</td>
+                    <td><span class="ac-badge {{ r.status_tone }}">{{ r.get_status_display }}</span></td>
+                    <td class="ac-cell-sub">{{ r.updated_at|date:"d M Y H:i" }}</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'academics:weekly_report_detail' r.pk %}">
+                            <i class="fas fa-eye me-1"></i>Open
+                        </a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr class="ac-table-empty"><td colspan="{% if is_teacher %}5{% else %}6{% endif %}">
+                    {% if filters.q or filters.status or filters.school_class or filters.teacher or filters.academic_year or filters.term %}
+                        No weekly reports match these filters. <a href="{% url 'academics:weekly_report_list' %}">Clear filters</a>.
+                    {% else %}
+                        {% include 'academics/_empty_state.html' with icon='fa-calendar-week' title='No weekly reports yet' text='File the first weekly report for one of your classes.' action_url=None %}
+                    {% endif %}
+                </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'academics/_pagination.html' %}
+</div>
+{% endblock %}
+
+{% block ac_extra_js %}
+<script>
+document.querySelectorAll('tr[data-href]').forEach(function(row) {
+    row.addEventListener('click', function(e) {
+        if (e.target.closest('a, button')) return;
+        window.location = row.dataset.href;
+    });
+});
+</script>
+{% endblock %}

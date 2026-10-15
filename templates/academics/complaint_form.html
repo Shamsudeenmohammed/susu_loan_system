@@ -1,0 +1,64 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Raise a Concern{% endblock %}
+{% block ac_eyebrow %}Academics · Follow-up{% endblock %}
+{% block ac_heading %}Raise a concern{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Raise a complaint, request or safeguarding concern. Management is notified immediately; safeguarding and urgent cases are escalated without delay.</p>{% endblock %}
+{% block ac_crumb %}New{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:complaint_list' %}">Concerns</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:complaint_list' %}"><i class="fas fa-arrow-left me-1"></i>Back</a>
+{% endblock %}
+
+{% block ac_body %}
+<form method="post" data-guard-unsaved>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="ac-error mb-3"><i class="fas fa-circle-exclamation"></i>
+        <span>{% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</span>
+    </div>
+    {% endif %}
+
+    <div class="ac-form-section">
+        <header><i class="fas fa-circle-exclamation"></i><div><h3>What is it about</h3><small>Give it a clear title and describe what happened.</small></div></header>
+        <div class="ac-form-body">
+            <div class="ac-grid-2">
+                {% include 'academics/_field.html' with field=form.title %}
+                {% if form.school %}{% include 'academics/_field.html' with field=form.school %}{% endif %}
+                {% include 'academics/_field.html' with field=form.case_type %}
+                {% include 'academics/_field.html' with field=form.category %}
+                {% include 'academics/_field.html' with field=form.priority %}
+                {% include 'academics/_field.html' with field=form.due_date %}
+            </div>
+            {% include 'academics/_field.html' with field=form.description %}
+            {% include 'academics/_field.html' with field=form.supporting_details %}
+            <p class="ac-muted small mb-0">Supporting details are required for a safeguarding or urgent case.</p>
+        </div>
+    </div>
+
+    <div class="ac-form-section">
+        <header><i class="fas fa-location-dot"></i><div><h3>Where (optional)</h3><small>Link the concern to a class or student in your school.</small></div></header>
+        <div class="ac-form-body">
+            <div class="ac-grid-2">
+                {% include 'academics/_field.html' with field=form.school_class %}
+                {% include 'academics/_field.html' with field=form.student %}
+            </div>
+        </div>
+    </div>
+
+    <div class="ac-form-section">
+        <header><i class="fas fa-user-tie"></i><div><h3>Who should handle it (optional)</h3><small>Leave blank to let management triage it.</small></div></header>
+        <div class="ac-form-body">
+            {% include 'academics/_field.html' with field=form.assigned_to %}
+        </div>
+    </div>
+
+    <div class="ac-form-actions">
+        <button class="btn btn-primary"><i class="fas fa-paper-plane me-1"></i>Raise concern</button>
+        <a class="btn btn-outline-secondary" href="{% url 'academics:complaint_list' %}">Cancel</a>
+    </div>
+</form>
+{% endblock %}

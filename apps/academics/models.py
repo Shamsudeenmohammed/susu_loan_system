@@ -181,6 +181,18 @@ class AcademicSettings(models.Model):
     show_attendance_on_report = models.BooleanField(default=True)
     show_financials_on_report = models.BooleanField(default=True)
 
+    # Publication gating for official terminal reports. These default to the
+    # safer behaviour: a report cannot be published while results are visibly
+    # incomplete, and attendance is optional (some schools do not track it).
+    require_complete_results_for_publication = models.BooleanField(
+        default=True,
+        help_text='Block publication of a terminal report while any subject '
+                  'result is incomplete (missing marks).')
+    require_attendance_for_publication = models.BooleanField(
+        default=False,
+        help_text='Block publication of a terminal report when no attendance '
+                  'has been recorded for the student in the period.')
+
     currency = models.CharField(max_length=10, default='GHS')
     report_title = models.CharField(max_length=160, blank=True, default='Terminal Report')
     report_header = models.CharField(
@@ -949,3 +961,421 @@ class AcademicYearOverride(SchoolOwnedModel):
         if self.applies_to_all:
             return True
         return self.teachers.filter(pk=getattr(user, 'pk', None)).exists()
+
+
+# ---------------------------------------------------------------------------
+# Weekly teacher reports
+# ---------------------------------------------------------------------------
+class WeeklyReport(SchoolOwnedModel):
+    """A teacher's weekly narrative report for one class.
+
+    A teacher drafts what was covered, the challenges faced, the support needed
+    and the plan for the coming week, then submits it to the Head Teacher. The
+    submission history is preserved through :class:`WeeklyReportEvent` and the
+    (teacher, class, year, week) combination is unique so the same week cannot
+    be reported twice; an authorised reviewer may request clarification, which
+    reopens the *same* row for revision rather than creating a duplicate.
+
+    Statuses:
+
+    * ``DRAFT`` - the teacher is still working on it (only they can see/edit).
+    * ``SUBMITTED`` - sent to the Head Teacher for review.
+    * ``ACKNOWLEDGED`` - the Head Teacher saw it but may follow up.
+    * ``CLARIFICATION_REQUESTED`` - returned to the teacher to revise.
+    * ``REVIEWED`` - accepted and closed.
+    """
+
+    class Status(models.TextChoices):
+        DRAFT = 'DRAFT', 'Draft'
+        SUBMITTED = 'SUBMITTED', 'Submitted for review'
+        ACKNOWLEDGED = 'ACKNOWLEDGED', 'Acknowledged'
+        CLARIFICATION_REQUESTED = (
+            'CLARIFICATION_REQUESTED', 'Clarification requested')
+        REVIEWED = 'REVIEWED', 'Reviewed'
+
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='weekly_reports')
+    school_class = models.ForeignKey(
+        SchoolClass, on_delete=models.CASCADE, related_name='weekly_reports')
+    subject = models.ForeignKey(
+        Subject, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='weekly_reports',
+        help_text='Optional: leave blank for a whole-class report.')
+    academic_year = models.ForeignKey(
+        AcademicYear, on_delete=models.CASCADE, related_name='weekly_reports')
+    term = models.ForeignKey(
+        Term, on_delete=models.CASCADE, related_name='weekly_reports')
+
+    week_start = models.DateField(help_text='Monday of the reported week.')
+    week_end = models.DateField(null=True, blank=True)
+    week_label = models.CharField(max_length=60, blank=True)
+
+    summary = models.TextField(help_text='What was covered this week.')
+    challenges = models.TextField(blank=True)
+    support_needed = models.TextField(blank=True)
+    next_week_plan = models.TextField(blank=True)
+    attendance_notes = models.TextField(
+        blank=True, help_text='Anything notable about attendance this week.')
+
+    status = models.CharField(
+        max_length=26, choices=Status.choices, default=Status.DRAFT)
+
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='submitted_weekly_reports')
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='reviewed_weekly_reports')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_comment = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-week_start', '-created_at']
+        unique_together = ['teacher', 'school_class', 'academic_year', 'week_start']
+        indexes = [
+            models.Index(fields=['school', 'status']),
+            models.Index(fields=['teacher', 'status']),
+        ]
+
+    def __str__(self):
+        return (f"{self.school_class} - week of {self.week_start} "
+                f"({self.get_status_display()})")
+
+    def save(self, *args, **kwargs):
+        if self.week_start and self.week_end is None:
+            self.week_end = self.week_start + timezone.timedelta(days=6)
+        if not self.week_label and self.week_start:
+            end = self.week_end or self.week_start
+            self.week_label = f"{self.week_start:%d %b} – {end:%d %b %Y}"
+        if self.school_id is None:
+            if self.school_class_id and self.school_class.school_id:
+                self.school_id = self.school_class.school_id
+            elif self.teacher_id and getattr(self.teacher, 'school_id', None):
+                self.school_id = self.teacher.school_id
+        super().save(*args, **kwargs)
+
+    @property
+    def is_editable(self):
+        """Whether the teacher may still change the report's content."""
+        return self.status in (self.Status.DRAFT,
+                               self.Status.CLARIFICATION_REQUESTED)
+
+    @property
+    def is_open(self):
+        return self.status not in (self.Status.REVIEWED,)
+
+    @property
+    def is_submitted(self):
+        return self.status in (self.Status.SUBMITTED, self.Status.ACKNOWLEDGED)
+
+    def period_label(self):
+        end = self.week_end or self.week_start
+        return f"{self.week_start:%d %b %Y} – {end:%d %b %Y}"
+
+
+class WeeklyReportEvent(models.Model):
+    """One entry in a weekly report's history (status change or comment)."""
+
+    class Action(models.TextChoices):
+        CREATED = 'CREATED', 'Created'
+        UPDATED = 'UPDATED', 'Updated'
+        SUBMITTED = 'SUBMITTED', 'Submitted'
+        ACKNOWLEDGED = 'ACKNOWLEDGED', 'Acknowledged'
+        CLARIFICATION_REQUESTED = (
+            'CLARIFICATION_REQUESTED', 'Clarification requested')
+        REVIEWED = 'REVIEWED', 'Reviewed'
+        REOPENED = 'REOPENED', 'Reopened'
+        COMMENTED = 'COMMENTED', 'Comment'
+
+    report = models.ForeignKey(
+        WeeklyReport, on_delete=models.CASCADE, related_name='events')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='weekly_report_events')
+    action = models.CharField(max_length=26, choices=Action.choices)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.report} - {self.get_action_display()}"
+
+
+# ---------------------------------------------------------------------------
+# Complaints, requests and safeguarding concerns (teacher-raised)
+# ---------------------------------------------------------------------------
+class Complaint(SchoolOwnedModel):
+    """A concern, request or safeguarding case raised by a teacher/staff member.
+
+    Unlike :class:`UpdateRequest` (which flows *from* the Head Teacher *to* a
+    teacher), this flows the other way: any staff member may raise a complaint,
+    request or safeguarding concern at any time and management follows it up to
+    resolution. A safeguarding case (or an urgent priority case) is escalated
+    immediately on creation.
+
+    Statuses: ``SUBMITTED``, ``ACKNOWLEDGED``, ``IN_PROGRESS``, ``RESOLVED`` and
+    ``REOPENED``.
+    """
+
+    class CaseType(models.TextChoices):
+        COMPLAINT = 'COMPLAINT', 'Complaint'
+        REQUEST = 'REQUEST', 'Request'
+        SAFEGUARDING = 'SAFEGUARDING', 'Safeguarding concern'
+
+    class Category(models.TextChoices):
+        ACADEMIC = 'ACADEMIC', 'Teaching & learning'
+        ATTENDANCE = 'ATTENDANCE', 'Attendance'
+        DISCIPLINE = 'DISCIPLINE', 'Discipline & behaviour'
+        RESOURCES = 'RESOURCES', 'Resources & materials'
+        FACILITIES = 'FACILITIES', 'Facilities & environment'
+        WELFARE = 'WELFARE', 'Student welfare'
+        SAFEGUARDING = 'SAFEGUARDING', 'Safeguarding / child protection'
+        STAFF = 'STAFF', 'Staff matters'
+        OTHER = 'OTHER', 'Other'
+
+    class Priority(models.TextChoices):
+        LOW = 'LOW', 'Low'
+        MEDIUM = 'MEDIUM', 'Medium'
+        HIGH = 'HIGH', 'High'
+        URGENT = 'URGENT', 'Urgent'
+
+    class Status(models.TextChoices):
+        SUBMITTED = 'SUBMITTED', 'Submitted'
+        ACKNOWLEDGED = 'ACKNOWLEDGED', 'Acknowledged'
+        IN_PROGRESS = 'IN_PROGRESS', 'In progress'
+        RESOLVED = 'RESOLVED', 'Resolved'
+        REOPENED = 'REOPENED', 'Reopened'
+
+    case_type = models.CharField(
+        max_length=12, choices=CaseType.choices, default=CaseType.COMPLAINT)
+    category = models.CharField(
+        max_length=14, choices=Category.choices, default=Category.OTHER)
+    title = models.CharField(max_length=180)
+    description = models.TextField()
+    supporting_details = models.TextField(blank=True)
+
+    raised_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='raised_complaints')
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='assigned_complaints')
+
+    school_class = models.ForeignKey(
+        SchoolClass, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='complaints')
+    student = models.ForeignKey(
+        Student, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='complaints')
+
+    priority = models.CharField(
+        max_length=10, choices=Priority.choices, default=Priority.MEDIUM)
+    status = models.CharField(
+        max_length=12, choices=Status.choices, default=Status.SUBMITTED)
+    due_date = models.DateField(null=True, blank=True)
+    resolution_notes = models.TextField(blank=True)
+
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['school', 'status']),
+            models.Index(fields=['school', 'priority']),
+            models.Index(fields=['raised_by', 'status']),
+        ]
+
+    def __str__(self):
+        return f"[{self.get_status_display()}] {self.title}"
+
+    def save(self, *args, **kwargs):
+        if self.school_id is None:
+            if self.raised_by_id and getattr(self.raised_by, 'school_id', None):
+                self.school_id = self.raised_by.school_id
+            elif self.school_class_id and self.school_class.school_id:
+                self.school_id = self.school_class.school_id
+            elif self.student_id and self.student.school_id:
+                self.school_id = self.student.school_id
+        super().save(*args, **kwargs)
+
+    @property
+    def is_safeguarding(self):
+        return (self.case_type == self.CaseType.SAFEGUARDING
+                or self.category == self.Category.SAFEGUARDING)
+
+    @property
+    def is_escalated(self):
+        """True when this case must be escalated immediately."""
+        return self.is_safeguarding or self.priority == self.Priority.URGENT
+
+    @property
+    def is_open(self):
+        return self.status != self.Status.RESOLVED
+
+    @property
+    def is_overdue(self):
+        now = timezone.localdate()
+        return (self.is_open and self.due_date is not None
+                and self.due_date < now)
+
+
+class ComplaintEvent(models.Model):
+    """One entry in a complaint's action history (status change or comment)."""
+
+    class Action(models.TextChoices):
+        CREATED = 'CREATED', 'Created'
+        ESCALATED = 'ESCALATED', 'Escalated'
+        ASSIGNED = 'ASSIGNED', 'Assigned'
+        ACKNOWLEDGED = 'ACKNOWLEDGED', 'Acknowledged'
+        STARTED = 'STARTED', 'Started'
+        COMMENTED = 'COMMENTED', 'Comment'
+        RESOLVED = 'RESOLVED', 'Resolved'
+        REOPENED = 'REOPENED', 'Reopened'
+
+    complaint = models.ForeignKey(
+        Complaint, on_delete=models.CASCADE, related_name='events')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='complaint_events')
+    action = models.CharField(max_length=12, choices=Action.choices)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.complaint} - {self.get_action_display()}"
+
+
+# ---------------------------------------------------------------------------
+# Official terminal reports (generation, approval, publication, versions)
+# ---------------------------------------------------------------------------
+class TerminalReport(SchoolOwnedModel):
+    """A generated, reviewable and publishable terminal report for a student.
+
+    A report is *generated* (snapshotting results, attendance and the reconciled
+    fee figures from the existing ledger), then *approved* by an authorised
+    reviewer and finally *published*. Only a published report that has not been
+    superseded is the student's official report. When the underlying data is
+    corrected the report is regenerated as a new version; the previous version
+    is retained and linked through ``superseded_by`` so history is never lost.
+
+    Statuses: ``DRAFT``, ``GENERATED``, ``APPROVED``, ``PUBLISHED`` and
+    ``SUPERSEDED``.
+    """
+
+    class Status(models.TextChoices):
+        DRAFT = 'DRAFT', 'Draft'
+        GENERATED = 'GENERATED', 'Generated (awaiting approval)'
+        APPROVED = 'APPROVED', 'Approved (awaiting publication)'
+        PUBLISHED = 'PUBLISHED', 'Published'
+        SUPERSEDED = 'SUPERSEDED', 'Superseded'
+
+    student = models.ForeignKey(
+        Student, on_delete=models.CASCADE, related_name='terminal_reports')
+    school_class = models.ForeignKey(
+        SchoolClass, on_delete=models.CASCADE, related_name='terminal_reports')
+    academic_year = models.ForeignKey(
+        AcademicYear, on_delete=models.CASCADE, related_name='terminal_reports')
+    term = models.ForeignKey(
+        Term, on_delete=models.CASCADE, related_name='terminal_reports')
+
+    status = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.DRAFT)
+    version = models.PositiveIntegerField(default=1)
+    superseded_by = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='supersedes',
+        help_text='The newer version that replaced this one.')
+
+    # Snapshot of the figures at generation time. Frozen so an official report
+    # never silently changes after publication.
+    snapshot = models.JSONField(default=dict, blank=True)
+
+    average = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True)
+    total = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True)
+    attendance_percentage = models.DecimalField(
+        max_digits=5, decimal_places=1, null=True, blank=True)
+    position = models.PositiveIntegerField(null=True, blank=True)
+
+    # Reconciled fee figures copied from the existing fees ledger.
+    total_fees = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    amount_paid = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    outstanding = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    arrears = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    credit = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'))
+
+    promotion_status = models.CharField(
+        max_length=10, choices=TerminalComment.PromotionStatus.choices,
+        default=TerminalComment.PromotionStatus.PENDING)
+    class_teacher_comment = models.TextField(blank=True)
+    head_teacher_remark = models.TextField(blank=True)
+
+    generated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='generated_terminal_reports')
+    generated_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='approved_terminal_reports')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approval_comment = models.TextField(blank=True)
+    published_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='published_terminal_reports')
+    published_at = models.DateTimeField(null=True, blank=True)
+    amended_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='amended_terminal_reports')
+    amended_at = models.DateTimeField(null=True, blank=True)
+    amendment_reason = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['school', 'status']),
+            models.Index(fields=['student', 'academic_year', 'term']),
+        ]
+
+    def __str__(self):
+        return (f"{self.student} - {self.term} "
+                f"v{self.version} ({self.get_status_display()})")
+
+    def save(self, *args, **kwargs):
+        if self.school_id is None:
+            if self.student_id and self.student.school_id:
+                self.school_id = self.student.school_id
+            elif self.school_class_id and self.school_class.school_id:
+                self.school_id = self.school_class.school_id
+        super().save(*args, **kwargs)
+
+    @property
+    def is_official(self):
+        """Only a published, not-superseded report is official."""
+        return (self.status == self.Status.PUBLISHED
+                and self.superseded_by_id is None)
+
+    @property
+    def is_editable(self):
+        return self.status in (self.Status.DRAFT, self.Status.GENERATED)

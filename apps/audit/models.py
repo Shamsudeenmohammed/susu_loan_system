@@ -38,6 +38,19 @@ class AuditLog(models.Model):
         REQUEST_COMMENTED = 'REQUEST_COMMENTED', 'Update Request Comment'
         OVERRIDE_ENABLED = 'OVERRIDE_ENABLED', 'Academic Year Override Enabled'
         OVERRIDE_DISABLED = 'OVERRIDE_DISABLED', 'Academic Year Override Disabled'
+        # Weekly teacher reports.
+        WEEKLY_REPORT_SUBMITTED = 'WEEKLY_REPORT_SUBMITTED', 'Weekly Report Submitted'
+        WEEKLY_REPORT_REVIEWED = 'WEEKLY_REPORT_REVIEWED', 'Weekly Report Reviewed'
+        # Complaints / requests / safeguarding.
+        COMPLAINT_CREATED = 'COMPLAINT_CREATED', 'Complaint Created'
+        COMPLAINT_TRANSITIONED = 'COMPLAINT_TRANSITIONED', 'Complaint Updated'
+        COMPLAINT_COMMENTED = 'COMPLAINT_COMMENTED', 'Complaint Comment'
+        # Official terminal report lifecycle.
+        REPORT_GENERATED = 'REPORT_GENERATED', 'Terminal Report Generated'
+        REPORT_APPROVED = 'REPORT_APPROVED', 'Terminal Report Approved'
+        REPORT_PUBLISHED = 'REPORT_PUBLISHED', 'Terminal Report Published'
+        REPORT_AMENDED = 'REPORT_AMENDED', 'Terminal Report Amended'
+        REPORT_SUPERSEDED = 'REPORT_SUPERSEDED', 'Terminal Report Superseded'
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

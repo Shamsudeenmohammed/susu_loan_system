@@ -1,0 +1,169 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Concerns &amp; Requests{% endblock %}
+{% block ac_eyebrow %}Academics · Follow-up{% endblock %}
+{% block ac_heading %}Concerns &amp; Requests{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">Raise a complaint, request or safeguarding concern at any time. Management acknowledges, works it through to resolution and records the full action history. Safeguarding and urgent cases are escalated immediately.</p>{% endblock %}
+{% block ac_crumb %}Concerns{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-primary" href="{% url 'academics:complaint_create' %}">
+    <i class="fas fa-plus me-1"></i>Raise a concern
+</a>
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-stat-grid">
+    <div class="ac-stat amber">
+        <span class="ac-stat-icon"><i class="fas fa-circle-exclamation"></i></span>
+        <span class="ac-stat-body">
+            <span class="ac-stat-value">{{ open_count }}</span>
+            <span class="ac-stat-label">Open</span>
+            <span class="ac-stat-hint">Not yet resolved</span>
+        </span>
+    </div>
+    <div class="ac-stat rose">
+        <span class="ac-stat-icon"><i class="fas fa-shield-halved"></i></span>
+        <span class="ac-stat-body">
+            <span class="ac-stat-value">{{ escalated_count }}</span>
+            <span class="ac-stat-label">Escalated</span>
+            <span class="ac-stat-hint">Safeguarding / urgent</span>
+        </span>
+    </div>
+    <div class="ac-stat violet">
+        <span class="ac-stat-icon"><i class="fas fa-hourglass-half"></i></span>
+        <span class="ac-stat-body">
+            <span class="ac-stat-value">{{ overdue_count }}</span>
+            <span class="ac-stat-label">Overdue</span>
+            <span class="ac-stat-hint">Past their due date</span>
+        </span>
+    </div>
+</div>
+
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-filter"></i>Filter concerns</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="cfSearch">Search</label>
+                <div class="ac-input-icon">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input id="cfSearch" type="search" name="q" value="{{ filters.q }}" class="form-control" placeholder="Title, description or raiser">
+                </div>
+            </div>
+            <div class="ac-field">
+                <label for="cfStatus">Status</label>
+                <select id="cfStatus" name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    <option value="OPEN" {% if filters.status == 'OPEN' %}selected{% endif %}>Open</option>
+                    {% for value, label in statuses %}
+                    <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="cfType">Type</label>
+                <select id="cfType" name="case_type" class="form-select">
+                    <option value="">All types</option>
+                    {% for value, label in case_types %}
+                    <option value="{{ value }}" {% if filters.case_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="cfCategory">Category</label>
+                <select id="cfCategory" name="category" class="form-select">
+                    <option value="">All categories</option>
+                    {% for value, label in categories %}
+                    <option value="{{ value }}" {% if filters.category == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="cfPriority">Priority</label>
+                <select id="cfPriority" name="priority" class="form-select">
+                    <option value="">All priorities</option>
+                    {% for value, label in priorities %}
+                    <option value="{{ value }}" {% if filters.priority == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="cfEscalated">Escalation</label>
+                <select id="cfEscalated" name="escalated" class="form-select">
+                    <option value="">Any</option>
+                    <option value="1" {% if filters.escalated == '1' %}selected{% endif %}>Escalated only</option>
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="cfOverdue">Due</label>
+                <select id="cfOverdue" name="overdue" class="form-select">
+                    <option value="">Any</option>
+                    <option value="1" {% if filters.overdue == '1' %}selected{% endif %}>Overdue only</option>
+                </select>
+            </div>
+        </div>
+        <div class="ac-toolbar-actions">
+            <button class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Apply</button>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'academics:complaint_list' %}">Reset</a>
+            <span class="ac-muted small ms-auto">{{ total_count }} concern{{ total_count|pluralize }}</span>
+        </div>
+    </form>
+</div>
+
+<div class="ac-card">
+    <div class="ac-table-wrap">
+        <table class="ac-table">
+            <thead>
+                <tr>
+                    <th>Concern</th><th>Type</th><th>Priority</th>
+                    <th>Status</th><th>Assigned to</th><th>Due</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for c in complaints %}
+                <tr class="is-clickable" data-href="{% url 'academics:complaint_detail' c.pk %}">
+                    <td class="ac-cell-primary">
+                        {{ c.title }}
+                        {% if c.is_escalated %}<span class="ac-badge danger bare ms-1"><i class="fas fa-shield-halved"></i> escalated</span>{% endif %}
+                        <div class="ac-cell-sub">{{ c.get_category_display }}{% if c.raised_by %} · {{ c.raised_by.get_full_name|default:c.raised_by.username }}{% endif %}{% if c.school_class %} · {{ c.school_class.name }}{% endif %}</div>
+                    </td>
+                    <td class="ac-cell-sub">{{ c.get_case_type_display }}</td>
+                    <td>{% include 'academics/_request_priority.html' with priority=c.priority %}</td>
+                    <td><span class="ac-badge {{ c.status_tone }}">{{ c.get_status_display }}</span>
+                        {% if c.is_overdue %}<div class="ac-cell-sub" style="color:var(--ac-rose)">overdue</div>{% endif %}
+                    </td>
+                    <td class="ac-cell-sub">{% if c.assigned_to %}{{ c.assigned_to.get_full_name|default:c.assigned_to.username }}{% else %}—{% endif %}</td>
+                    <td class="ac-cell-sub{% if c.is_overdue %} text-danger{% endif %}">{{ c.due_date|date:"d M Y"|default:"—" }}</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'academics:complaint_detail' c.pk %}">
+                            <i class="fas fa-eye me-1"></i>Open
+                        </a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr class="ac-table-empty"><td colspan="7">
+                    {% if filters.q or filters.status or filters.case_type or filters.category or filters.priority or filters.escalated or filters.overdue %}
+                        No concerns match these filters. <a href="{% url 'academics:complaint_list' %}">Clear filters</a>.
+                    {% else %}
+                        {% include 'academics/_empty_state.html' with icon='fa-circle-exclamation' title='No concerns raised' text='Raise a complaint, request or safeguarding concern and management will follow it up.' action_url=None %}
+                    {% endif %}
+                </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'academics/_pagination.html' %}
+</div>
+{% endblock %}
+
+{% block ac_extra_js %}
+<script>
+document.querySelectorAll('tr[data-href]').forEach(function(row) {
+    row.addEventListener('click', function(e) {
+        if (e.target.closest('a, button')) return;
+        window.location = row.dataset.href;
+    });
+});
+</script>
+{% endblock %}

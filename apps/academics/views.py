@@ -41,6 +41,10 @@ from .forms import (
     AnnouncementForm,
     AssessmentForm,
     ClassSubjectForm,
+    ComplaintAssignForm,
+    ComplaintCommentForm,
+    ComplaintForm,
+    ComplaintTransitionForm,
     GradingScaleForm,
     GradeBandFormSet,
     MarkCorrectionReasonForm,
@@ -48,10 +52,17 @@ from .forms import (
     SubjectForm,
     TeacherAssignmentForm,
     TerminalCommentForm,
+    TerminalReportAmendmentForm,
+    TerminalReportApprovalForm,
+    TerminalReportBulkForm,
     TerminalReportFieldFormSet,
+    TerminalReportPublishForm,
     UpdateRequestCommentForm,
     UpdateRequestForm,
     UpdateRequestResponseForm,
+    WeeklyReportCommentForm,
+    WeeklyReportForm,
+    WeeklyReportReviewForm,
 )
 from .models import (
     AcademicCalendarEvent,
@@ -62,6 +73,8 @@ from .models import (
     AttendanceRecord,
     AttendanceSession,
     ClassSubject,
+    Complaint,
+    ComplaintEvent,
     GradeBand,
     GradingScale,
     MarkCorrection,
@@ -72,17 +85,22 @@ from .models import (
     Subject,
     TeacherAssignment,
     TerminalComment,
+    TerminalReport,
     TerminalReportField,
     UpdateRequest,
     UpdateRequestEvent,
+    WeeklyReport,
+    WeeklyReportEvent,
 )
 from .services import (
     access,
     academic_year as academic_year_service,
     attendance as attendance_service,
+    complaints as complaints_service,
     marks,
     reports,
     requests as requests_service,
+    weekly_reports as weekly_reports_service,
 )
 from .services import results as results_service
 from .services.grading import resolve_scale, subject_result as grading_subject_result
@@ -278,6 +296,20 @@ def teacher_dashboard(request):
     for req in recent_requests:
         req.status_tone = _request_status_tone(req.status)
 
+    # Weekly reports this teacher has filed.
+    my_weekly = _scope(request, WeeklyReport.objects.filter(teacher=user))
+    my_weekly_open_count = my_weekly.exclude(
+        status=WeeklyReport.Status.REVIEWED).count()
+    my_weekly_draft_count = my_weekly.filter(
+        status=WeeklyReport.Status.DRAFT).count()
+    my_weekly_clarification_count = my_weekly.filter(
+        status=WeeklyReport.Status.CLARIFICATION_REQUESTED).count()
+
+    # Concerns/requests this teacher has raised.
+    my_complaints = _scope(request, Complaint.objects.filter(raised_by=user))
+    my_open_complaint_count = my_complaints.exclude(
+        status=Complaint.Status.RESOLVED).count()
+
     stats = [
         {'label': 'My classes', 'value': len(class_ids), 'icon': 'fa-chalkboard',
          'tone': 'teal', 'hint': 'Assigned this year',
@@ -294,10 +326,23 @@ def teacher_dashboard(request):
         {'label': 'Open requests', 'value': my_open_count, 'icon': 'fa-list-check',
          'tone': 'rose', 'hint': f'{my_overdue_count} overdue · {my_submitted_count} submitted',
          'url': reverse('academics:update_request_list')},
+        {'label': 'My weekly reports', 'value': my_weekly_open_count,
+         'icon': 'fa-calendar-week', 'tone': 'teal',
+         'hint': f'{my_weekly_draft_count} draft · {my_weekly_clarification_count} to revise',
+         'url': reverse('academics:weekly_report_list')},
+        {'label': 'My open concerns', 'value': my_open_complaint_count,
+         'icon': 'fa-circle-exclamation', 'tone': 'rose',
+         'hint': 'Raised by me', 'url': reverse('academics:complaint_list')},
     ]
     quick_actions = [
         {'label': 'Take attendance', 'icon': 'fa-clipboard-check', 'tone': 'teal',
          'url': reverse('academics:attendance_index')},
+        {'label': 'Weekly attendance', 'icon': 'fa-table-cells', 'tone': 'violet',
+         'url': reverse('academics:attendance_weekly')},
+        {'label': 'Weekly report', 'icon': 'fa-calendar-week', 'tone': '',
+         'url': reverse('academics:weekly_report_create')},
+        {'label': 'Raise a concern', 'icon': 'fa-circle-exclamation', 'tone': 'rose',
+         'url': reverse('academics:complaint_create')},
         {'label': 'New assessment', 'icon': 'fa-file-pen', 'tone': '',
          'url': reverse('academics:assessment_create')},
         {'label': 'My submissions', 'icon': 'fa-paper-plane', 'tone': 'violet',
@@ -331,6 +376,10 @@ def teacher_dashboard(request):
         'my_open_count': my_open_count,
         'my_submitted_count': my_submitted_count,
         'my_overdue_count': my_overdue_count,
+        'my_weekly_open_count': my_weekly_open_count,
+        'my_weekly_draft_count': my_weekly_draft_count,
+        'my_weekly_clarification_count': my_weekly_clarification_count,
+        'my_open_complaint_count': my_open_complaint_count,
         'announcements': announcements,
         'events': events,
         'stats': stats,
@@ -393,6 +442,31 @@ def head_dashboard(request):
         'assigned_to', 'school_class', 'subject').order_by('-created_at')[:8])
     for req in recent_open_requests:
         req.status_tone = _request_status_tone(req.status)
+
+    # Weekly teacher reports awaiting review.
+    weekly_qs = _scope(request, WeeklyReport.objects.all())
+    weekly_pending_count = weekly_qs.filter(
+        status=WeeklyReport.Status.SUBMITTED).count()
+    weekly_clarification_count = weekly_qs.filter(
+        status=WeeklyReport.Status.CLARIFICATION_REQUESTED).count()
+
+    # Complaints / requests / safeguarding.
+    complaints_qs = _scope(request, Complaint.objects.all())
+    open_complaints = complaints_qs.exclude(status=Complaint.Status.RESOLVED)
+    open_complaint_count = open_complaints.count()
+    escalated_complaint_count = open_complaints.filter(
+        Q(case_type=Complaint.CaseType.SAFEGUARDING)
+        | Q(category=Complaint.Category.SAFEGUARDING)
+        | Q(priority=Complaint.Priority.URGENT)).count()
+
+    # Official terminal reports awaiting action.
+    terminal_qs = _scope(request, TerminalReport.objects.all())
+    reports_generated_count = terminal_qs.filter(
+        status=TerminalReport.Status.GENERATED).count()
+    reports_approved_count = terminal_qs.filter(
+        status=TerminalReport.Status.APPROVED).count()
+    reports_published_count = terminal_qs.filter(
+        status=TerminalReport.Status.PUBLISHED).count()
 
     attendance_rows = []
     overall_attendance = None
@@ -487,12 +561,30 @@ def head_dashboard(request):
         {'title': 'Submissions returned for correction', 'count': returned_count,
          'icon': 'fa-rotate-left', 'tone': 'rose',
          'url': reverse('academics:submissions')},
+        {'title': 'Weekly reports awaiting review',
+         'count': weekly_pending_count, 'icon': 'fa-calendar-week',
+         'tone': 'amber', 'url': reverse('academics:weekly_report_list')},
+        {'title': 'Weekly reports needing clarification',
+         'count': weekly_clarification_count, 'icon': 'fa-circle-question',
+         'tone': 'rose', 'url': reverse('academics:weekly_report_list')},
+        {'title': 'Open concerns & follow-ups', 'count': open_complaint_count,
+         'icon': 'fa-circle-exclamation', 'tone': 'teal',
+         'url': reverse('academics:complaint_list')},
+        {'title': 'Escalated (safeguarding / urgent)',
+         'count': escalated_complaint_count, 'icon': 'fa-shield-halved',
+         'tone': 'rose', 'url': reverse('academics:complaint_list') + '?escalated=1'},
         {'title': 'Open requests & follow-ups', 'count': open_request_count,
          'icon': 'fa-list-check', 'tone': 'teal',
          'url': reverse('academics:update_request_list')},
         {'title': 'Overdue requests', 'count': overdue_request_count,
          'icon': 'fa-hourglass-half', 'tone': 'rose',
          'url': reverse('academics:update_request_list')},
+        {'title': 'Reports awaiting approval', 'count': reports_generated_count,
+         'icon': 'fa-file-signature', 'tone': 'amber',
+         'url': reverse('academics:terminal_report_hub')},
+        {'title': 'Approved reports to publish', 'count': reports_approved_count,
+         'icon': 'fa-bullhorn', 'tone': 'violet',
+         'url': reverse('academics:terminal_report_hub')},
         {'title': 'Classes with no attendance this term',
          'count': classes_without_attendance,
          'icon': 'fa-clipboard-check', 'tone': 'slate',
@@ -500,14 +592,20 @@ def head_dashboard(request):
     ]
 
     quick_actions = [
+        {'label': 'Weekly reports', 'icon': 'fa-calendar-week', 'tone': 'teal',
+         'url': reverse('academics:weekly_report_list')},
+        {'label': 'Terminal reports', 'icon': 'fa-file-lines', 'tone': 'violet',
+         'url': reverse('academics:terminal_report_hub')},
+        {'label': 'Concerns & requests', 'icon': 'fa-circle-exclamation',
+         'tone': 'rose', 'url': reverse('academics:complaint_list')},
         {'label': 'Review submissions', 'icon': 'fa-paper-plane', 'tone': 'amber',
          'url': reverse('academics:submissions')},
         {'label': 'New request', 'icon': 'fa-list-check', 'tone': 'teal',
          'url': reverse('academics:update_request_create')},
         {'label': 'Publish results', 'icon': 'fa-square-poll-vertical', 'tone': 'violet',
          'url': reverse('academics:results')},
-        {'label': 'Take attendance', 'icon': 'fa-clipboard-check', 'tone': '',
-         'url': reverse('academics:attendance_index')},
+        {'label': 'Weekly attendance', 'icon': 'fa-clipboard-check', 'tone': '',
+         'url': reverse('academics:attendance_weekly')},
     ]
     if can_override:
         quick_actions.append({
@@ -592,6 +690,13 @@ def head_dashboard(request):
         'open_request_count': open_request_count,
         'overdue_request_count': overdue_request_count,
         'recent_open_requests': recent_open_requests,
+        'weekly_pending_count': weekly_pending_count,
+        'weekly_clarification_count': weekly_clarification_count,
+        'open_complaint_count': open_complaint_count,
+        'escalated_complaint_count': escalated_complaint_count,
+        'reports_generated_count': reports_generated_count,
+        'reports_approved_count': reports_approved_count,
+        'reports_published_count': reports_published_count,
         'fee_summary': fee_summary,
         'class_performance': class_performance,
         'class_performance_chart': class_performance_chart,
@@ -884,6 +989,419 @@ def update_request_detail(request, pk):
         'comment_form': comment_form,
         'response_form': response_form,
         'open_statuses': requests_service.OPEN_STATUSES,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Weekly teacher reports
+# ---------------------------------------------------------------------------
+def _weekly_status_tone(status):
+    return {
+        WeeklyReport.Status.DRAFT: 'neutral',
+        WeeklyReport.Status.SUBMITTED: 'warning',
+        WeeklyReport.Status.ACKNOWLEDGED: 'info',
+        WeeklyReport.Status.CLARIFICATION_REQUESTED: 'rose',
+        WeeklyReport.Status.REVIEWED: 'success',
+    }.get(status, 'neutral')
+
+
+@login_required
+@role_required(*ACADEMIC_ROLES)
+def weekly_report_list(request):
+    """Weekly reports the user may see (teachers: their own; heads: the school)."""
+    qs = _scope(request, WeeklyReport.objects.select_related(
+        'teacher', 'school_class', 'subject', 'academic_year', 'term',
+        'reviewed_by'))
+    if access.is_teacher_only(request.user):
+        qs = qs.filter(teacher=request.user)
+
+    q = _get_str(request, 'q')
+    if q:
+        qs = qs.filter(Q(summary__icontains=q) | Q(challenges__icontains=q)
+                       | Q(next_week_plan__icontains=q)
+                       | Q(school_class__name__icontains=q)
+                       | Q(teacher__first_name__icontains=q)
+                       | Q(teacher__last_name__icontains=q))
+    status = _get_str(request, 'status')
+    if status:
+        if status == 'OPEN':
+            qs = qs.exclude(status=WeeklyReport.Status.REVIEWED)
+        elif status in dict(WeeklyReport.Status.choices):
+            qs = qs.filter(status=status)
+    class_id = request.GET.get('school_class')
+    if class_id:
+        qs = qs.filter(school_class_id=class_id)
+    teacher_id = request.GET.get('teacher')
+    if teacher_id and not access.is_teacher_only(request.user):
+        qs = qs.filter(teacher_id=teacher_id)
+    year_id = request.GET.get('academic_year')
+    if year_id:
+        qs = qs.filter(academic_year_id=year_id)
+    term_id = request.GET.get('term')
+    if term_id:
+        qs = qs.filter(term_id=term_id)
+
+    open_count = qs.exclude(status=WeeklyReport.Status.REVIEWED).count()
+    submitted_count = qs.filter(status=WeeklyReport.Status.SUBMITTED).count()
+    clarification_count = qs.filter(
+        status=WeeklyReport.Status.CLARIFICATION_REQUESTED).count()
+
+    page_obj = _paginate(request, qs.order_by('-week_start', '-created_at'), 20)
+    for report in page_obj:
+        report.status_tone = _weekly_status_tone(report.status)
+
+    years = scope_reference_queryset(
+        AcademicYear.objects.all(), request).order_by('-start_date', '-name')
+    term_qs = Term.objects.none()
+    if year_id:
+        term_qs = Term.objects.filter(academic_year_id=year_id).order_by('term_number')
+
+    return render(request, 'academics/weekly_report_list.html', {
+        'reports': page_obj,
+        'page_obj': page_obj,
+        'total_count': page_obj.paginator.count,
+        'open_count': open_count,
+        'submitted_count': submitted_count,
+        'clarification_count': clarification_count,
+        'statuses': WeeklyReport.Status.choices,
+        'classes': _class_choices(request),
+        'teachers': scope_assigned_teachers(request) if not access.is_teacher_only(
+            request.user) else [],
+        'years': years,
+        'terms': term_qs,
+        'can_review': access.can_review(request.user),
+        'is_teacher': access.is_teacher_only(request.user),
+        'filters': {'q': q, 'status': status,
+                    'school_class': class_id or '', 'teacher': teacher_id or '',
+                    'academic_year': year_id or '', 'term': term_id or ''},
+    })
+
+
+@login_required
+@role_required(*ACADEMIC_ROLES)
+def weekly_report_form(request, pk=None):
+    """Create or revise a weekly report draft."""
+    instance = None
+    if pk is not None:
+        instance = get_object_or_404(
+            WeeklyReport.objects.select_related('teacher', 'school_class'), pk=pk)
+        if _denied(request, instance):
+            return redirect('academics:weekly_report_list')
+        if not weekly_reports_service.can_edit(request.user, instance):
+            messages.error(
+                request,
+                'This report is no longer editable. Ask the Head Teacher to '
+                'request clarification.')
+            return redirect('academics:weekly_report_detail', pk=instance.pk)
+
+    form = WeeklyReportForm(request.POST or None, instance=instance, request=request)
+    if request.method == 'POST' and form.is_valid():
+        data = form.cleaned_data
+        school = data.get('school') or get_active_school(request)
+        if instance is not None:
+            school = instance.school
+        teacher = data.get('teacher') or getattr(instance, 'teacher', None)
+        if teacher is None:
+            teacher = getattr(form.instance, 'teacher', None) or request.user
+        # A teacher-only user has the year/term pickers removed and pinned to the
+        # school's active period, so fall back to what the form resolved.
+        academic_year = data.get('academic_year') or getattr(
+            form.instance, 'academic_year', None)
+        term = data.get('term') or getattr(form.instance, 'term', None)
+        try:
+            report = weekly_reports_service.save_draft(
+                actor=request.user, teacher=teacher, school=school,
+                school_class=data['school_class'],
+                academic_year=academic_year, term=term,
+                week_start=data['week_start'], summary=data['summary'],
+                subject=data.get('subject'),
+                challenges=data.get('challenges', ''),
+                support_needed=data.get('support_needed', ''),
+                next_week_plan=data.get('next_week_plan', ''),
+                attendance_notes=data.get('attendance_notes', ''),
+                report=instance)
+        except weekly_reports_service.WeeklyReportError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, 'Weekly report saved as a draft.')
+            return redirect('academics:weekly_report_detail', pk=report.pk)
+
+    return render(request, 'academics/weekly_report_form.html', {
+        'form': form,
+        'instance': instance,
+        'is_teacher': access.is_teacher_only(request.user),
+    })
+
+
+@login_required
+@role_required(*ACADEMIC_ROLES)
+def weekly_report_detail(request, pk):
+    """A single weekly report: read it, submit it, or review it."""
+    report = get_object_or_404(
+        WeeklyReport.objects.select_related(
+            'teacher', 'school_class', 'subject', 'academic_year', 'term',
+            'reviewed_by', 'submitted_by'), pk=pk)
+    if not weekly_reports_service.can_view(request.user, report):
+        messages.error(request, 'You are not involved in this report.')
+        return redirect('academics:weekly_report_list')
+
+    report.status_tone = _weekly_status_tone(report.status)
+    events = report.events.select_related('user').order_by('created_at')
+    can_edit = weekly_reports_service.can_edit(request.user, report)
+    can_review = weekly_reports_service.can_review(request.user, report)
+    is_owner = report.teacher_id == request.user.pk
+
+    review_form = WeeklyReportReviewForm(request.POST or None, prefix='review')
+    comment_form = WeeklyReportCommentForm(request.POST or None, prefix='comment')
+
+    if request.method == 'POST':
+        action = (request.POST.get('action') or '').strip()
+        if action == 'submit':
+            try:
+                weekly_reports_service.submit(
+                    report, request.user,
+                    notes=request.POST.get('notes', ''))
+            except weekly_reports_service.WeeklyReportError as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(request, 'Weekly report submitted for review.')
+                return redirect('academics:weekly_report_detail', pk=report.pk)
+        elif action == 'review':
+            if review_form.is_valid():
+                try:
+                    weekly_reports_service.review(
+                        report, request.user,
+                        request.POST.get('to_status', ''),
+                        comment=review_form.cleaned_data.get('comment', ''))
+                except weekly_reports_service.WeeklyReportError as exc:
+                    messages.error(request, str(exc))
+                else:
+                    messages.success(request, 'Weekly report updated.')
+                    return redirect('academics:weekly_report_detail', pk=report.pk)
+        elif action == 'comment':
+            if comment_form.is_valid():
+                try:
+                    weekly_reports_service.add_comment(
+                        report, request.user,
+                        comment_form.cleaned_data['comment'])
+                except weekly_reports_service.WeeklyReportError as exc:
+                    messages.error(request, str(exc))
+                else:
+                    messages.success(request, 'Comment added.')
+                    return redirect('academics:weekly_report_detail', pk=report.pk)
+        else:
+            messages.error(request, 'Unrecognised action on this report.')
+
+    return render(request, 'academics/weekly_report_detail.html', {
+        'report': report,
+        'events': events,
+        'can_edit': can_edit,
+        'can_review': can_review,
+        'is_owner': is_owner,
+        'review_form': review_form,
+        'comment_form': comment_form,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Complaints, requests & safeguarding
+# ---------------------------------------------------------------------------
+def _complaint_status_tone(status):
+    return {
+        Complaint.Status.SUBMITTED: 'warning',
+        Complaint.Status.ACKNOWLEDGED: 'info',
+        Complaint.Status.IN_PROGRESS: 'violet',
+        Complaint.Status.RESOLVED: 'success',
+        Complaint.Status.REOPENED: 'rose',
+    }.get(status, 'neutral')
+
+
+def _complaint_priority_tone(priority):
+    return {
+        Complaint.Priority.LOW: 'neutral',
+        Complaint.Priority.MEDIUM: 'info',
+        Complaint.Priority.HIGH: 'warning',
+        Complaint.Priority.URGENT: 'rose',
+    }.get(priority, 'neutral')
+
+
+@login_required
+@role_required(*ACADEMIC_ROLES)
+def complaint_list(request):
+    """Complaints/requests/safeguarding the user may see."""
+    qs = _scope(request, Complaint.objects.select_related(
+        'raised_by', 'assigned_to', 'school_class', 'student'))
+    if access.is_teacher_only(request.user):
+        qs = qs.filter(Q(raised_by=request.user) | Q(assigned_to=request.user))
+
+    q = _get_str(request, 'q')
+    if q:
+        qs = qs.filter(Q(title__icontains=q) | Q(description__icontains=q)
+                       | Q(raised_by__first_name__icontains=q)
+                       | Q(raised_by__last_name__icontains=q))
+    status = _get_str(request, 'status')
+    if status:
+        if status == 'OPEN':
+            qs = qs.exclude(status=Complaint.Status.RESOLVED)
+        elif status in dict(Complaint.Status.choices):
+            qs = qs.filter(status=status)
+    case_type = _get_str(request, 'case_type')
+    if case_type and case_type in dict(Complaint.CaseType.choices):
+        qs = qs.filter(case_type=case_type)
+    category = _get_str(request, 'category')
+    if category and category in dict(Complaint.Category.choices):
+        qs = qs.filter(category=category)
+    priority = _get_str(request, 'priority')
+    if priority and priority in dict(Complaint.Priority.choices):
+        qs = qs.filter(priority=priority)
+    if _get_str(request, 'escalated') == '1':
+        qs = qs.filter(
+            Q(case_type=Complaint.CaseType.SAFEGUARDING)
+            | Q(category=Complaint.Category.SAFEGUARDING)
+            | Q(priority=Complaint.Priority.URGENT))
+    if _get_str(request, 'overdue') == '1':
+        qs = qs.exclude(status=Complaint.Status.RESOLVED).filter(
+            due_date__lt=timezone.localdate())
+
+    open_count = qs.exclude(status=Complaint.Status.RESOLVED).count()
+    escalated_count = qs.filter(
+        Q(case_type=Complaint.CaseType.SAFEGUARDING)
+        | Q(category=Complaint.Category.SAFEGUARDING)
+        | Q(priority=Complaint.Priority.URGENT)).exclude(
+        status=Complaint.Status.RESOLVED).count()
+    overdue_count = qs.exclude(status=Complaint.Status.RESOLVED).filter(
+        due_date__lt=timezone.localdate()).count()
+
+    page_obj = _paginate(request, qs.order_by('-created_at'), 20)
+    for complaint in page_obj:
+        complaint.status_tone = _complaint_status_tone(complaint.status)
+        complaint.priority_tone = _complaint_priority_tone(complaint.priority)
+
+    return render(request, 'academics/complaint_list.html', {
+        'complaints': page_obj,
+        'page_obj': page_obj,
+        'total_count': page_obj.paginator.count,
+        'open_count': open_count,
+        'escalated_count': escalated_count,
+        'overdue_count': overdue_count,
+        'can_manage': access.can_review(request.user),
+        'statuses': Complaint.Status.choices,
+        'case_types': Complaint.CaseType.choices,
+        'categories': Complaint.Category.choices,
+        'priorities': Complaint.Priority.choices,
+        'filters': {'q': q, 'status': status, 'case_type': case_type,
+                    'category': category, 'priority': priority,
+                    'escalated': _get_str(request, 'escalated'),
+                    'overdue': _get_str(request, 'overdue')},
+    })
+
+
+@login_required
+@role_required(*ACADEMIC_ROLES)
+def complaint_create(request):
+    """Any staff member may raise a complaint, request or safeguarding concern."""
+    form = ComplaintForm(request.POST or None, request=request)
+    if request.method == 'POST' and form.is_valid():
+        data = form.cleaned_data
+        school = data.get('school') or get_active_school(request)
+        if school is None and access.is_teacher_only(request.user):
+            school = request.user.school
+        try:
+            complaint = complaints_service.create_complaint(
+                request.user, school=school, title=data['title'],
+                description=data['description'], case_type=data['case_type'],
+                category=data['category'], priority=data['priority'],
+                supporting_details=data.get('supporting_details', ''),
+                school_class=data.get('school_class'),
+                student=data.get('student'),
+                assigned_to=data.get('assigned_to'),
+                due_date=data.get('due_date'))
+        except complaints_service.ComplaintError as exc:
+            messages.error(request, str(exc))
+        else:
+            if complaint.is_escalated:
+                messages.warning(
+                    request,
+                    'Concern raised and escalated to management immediately.')
+            else:
+                messages.success(request, 'Concern raised. Management notified.')
+            return redirect('academics:complaint_detail', pk=complaint.pk)
+    return render(request, 'academics/complaint_form.html', {'form': form})
+
+
+@login_required
+@role_required(*ACADEMIC_ROLES)
+def complaint_detail(request, pk):
+    """A single concern: history, comments, assignment and status transitions."""
+    complaint = get_object_or_404(
+        Complaint.objects.select_related(
+            'raised_by', 'assigned_to', 'school_class', 'student'), pk=pk)
+    if not complaints_service.can_view(request.user, complaint):
+        messages.error(request, 'You are not involved in this concern.')
+        return redirect('academics:complaint_list')
+
+    complaint.status_tone = _complaint_status_tone(complaint.status)
+    complaint.priority_tone = _complaint_priority_tone(complaint.priority)
+    events = complaint.events.select_related('user').order_by('created_at')
+    can_manage = complaints_service.can_manage(request.user, complaint)
+    is_raiser = complaint.raised_by_id == request.user.pk
+
+    comment_form = ComplaintCommentForm(request.POST or None, prefix='comment')
+    transition_form = ComplaintTransitionForm(request.POST or None, prefix='transition')
+    assign_form = ComplaintAssignForm(
+        request.POST or None, school=complaint.school, prefix='assign',
+        initial={'assigned_to': complaint.assigned_to_id})
+
+    if request.method == 'POST':
+        action = (request.POST.get('action') or '').strip()
+        if action == 'comment':
+            if comment_form.is_valid():
+                try:
+                    complaints_service.add_comment(
+                        complaint, request.user,
+                        comment_form.cleaned_data['comment'])
+                except complaints_service.ComplaintError as exc:
+                    messages.error(request, str(exc))
+                else:
+                    messages.success(request, 'Comment added.')
+                    return redirect('academics:complaint_detail', pk=complaint.pk)
+        elif action == 'transition':
+            notes = request.POST.get('transition-notes') or request.POST.get('notes') or ''
+            try:
+                complaints_service.transition(
+                    complaint, request.user,
+                    request.POST.get('to_status', ''), notes=notes)
+            except complaints_service.ComplaintError as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(request, 'Concern updated.')
+                return redirect('academics:complaint_detail', pk=complaint.pk)
+        elif action == 'assign':
+            if not can_manage:
+                messages.error(request, 'You are not allowed to assign this concern.')
+            elif assign_form.is_valid():
+                try:
+                    complaints_service.assign(
+                        complaint, request.user,
+                        assign_form.cleaned_data.get('assigned_to'))
+                except complaints_service.ComplaintError as exc:
+                    messages.error(request, str(exc))
+                else:
+                    messages.success(request, 'Assignment updated.')
+                    return redirect('academics:complaint_detail', pk=complaint.pk)
+        else:
+            messages.error(request, 'Unrecognised action on this concern.')
+
+    return render(request, 'academics/complaint_detail.html', {
+        'complaint': complaint,
+        'events': events,
+        'can_manage': can_manage,
+        'is_raiser': is_raiser,
+        'comment_form': comment_form,
+        'transition_form': transition_form,
+        'assign_form': assign_form,
+        'manager_transitions': complaints_service.MANAGER_TRANSITIONS,
+        'raiser_transitions': complaints_service.RAISER_TRANSITIONS,
     })
 
 
@@ -1369,6 +1887,86 @@ def attendance_report(request):
     })
 
 
+@login_required
+@role_required(*ACADEMIC_ROLES)
+def attendance_weekly(request):
+    """Weekly bulk attendance grid built from the class register.
+
+    The grid is a data-entry convenience over the *daily* register: every cell
+    writes an ordinary daily record. A blank cell means "not recorded" and is
+    never saved as a present. Missing days and repeated absences are flagged.
+    """
+    year, term, academic_context = _active_year_term(request)
+    lock_year = access.is_teacher_only(request.user)
+    years = scope_reference_queryset(
+        AcademicYear.objects.all(), request).order_by('-start_date', '-name')
+    terms = (Term.objects.filter(academic_year=year).order_by('term_number')
+             if year is not None else Term.objects.none())
+
+    class_id = request.GET.get('school_class') or request.POST.get('school_class')
+    subject_id = request.GET.get('subject') or request.POST.get('subject') or None
+    week_param = request.GET.get('week') or request.POST.get('week')
+    session_label = (request.GET.get('session_label')
+                     or request.POST.get('session_label') or 'Daily')
+    days = int(request.GET.get('days') or request.POST.get('days')
+               or attendance_service.WEEK_DAYS)
+
+    school_class = _class_choices(request).filter(pk=class_id).first()
+    if school_class is None or year is None or term is None:
+        messages.error(request, 'Choose a class, academic year and term first.')
+        return redirect('academics:attendance_index')
+
+    subject = None
+    if subject_id:
+        subject = _scope(request, Subject.objects.all()).filter(pk=subject_id).first()
+    if not access.can_take_attendance(request.user, school_class, subject, year, term):
+        messages.error(request, 'You are not allowed to take attendance for that class.')
+        return redirect('academics:attendance_index')
+
+    week_start = attendance_service.current_week_start()
+    if week_param:
+        try:
+            parsed = timezone.datetime.fromisoformat(week_param).date()
+            week_start = attendance_service.week_start_for(parsed)
+        except ValueError:
+            pass
+
+    if request.method == 'POST':
+        entries = []
+        for day in attendance_service.week_dates(week_start, days):
+            key = day.strftime('%Y%m%d')
+            for student in school_class.students.filter(is_active=True):
+                status = request.POST.get(f'status_{student.pk}_{key}')
+                note = request.POST.get(f'note_{student.pk}_{key}', '')
+                entries.append((day, student, status, note))
+        saved = attendance_service.save_weekly_grid(
+            school_class, year, term, week_start, entries, subject=subject,
+            session_label=session_label, days=days, user=request.user,
+            reason=request.POST.get('reason', ''))
+        messages.success(
+            request,
+            f'Weekly attendance saved ({saved} change{"s" if saved != 1 else ""}).')
+        return redirect(
+            f"{request.path}?school_class={school_class.pk}&week={week_start.isoformat()}"
+            f"&session_label={session_label}&days={days}"
+            + (f"&subject={subject.pk}" if subject else '')
+            + f"&academic_year={year.pk}&term={term.pk}")
+
+    grid = attendance_service.weekly_register(
+        school_class, year, term, week_start, subject=subject,
+        session_label=session_label, days=days)
+    subjects = access.visible_class_subjects(request, school_class, year, term)
+    return render(request, 'academics/attendance_weekly.html', {
+        'school_class': school_class, 'subject': subject, 'year': year,
+        'term': term, 'years': years, 'terms': terms, 'grid': grid,
+        'week_start': week_start, 'week_end': grid['week_end'],
+        'session_label': session_label, 'days': days,
+        'subjects': subjects, 'classes': _class_choices(request),
+        'academic_context': academic_context,
+        'lock_year': lock_year, 'status_choices': AttendanceRecord.Status.choices,
+    })
+
+
 # ---------------------------------------------------------------------------
 # Marks entry / submission / review
 # ---------------------------------------------------------------------------
@@ -1825,10 +2423,37 @@ def terminal_report(request, student_id):
         messages.error(request, 'Select an academic year and term.')
         return redirect('academics:head_dashboard')
     data = reports.terminal_report_data(student, year, term)
+    official = reports.official_report(student, year, term)
+    latest = reports.latest_report(student, year, term)
+    blockers = reports.generation_blockers(student, year, term, data)
+
+    can_generate = reports.can_generate(request.user)
+    if request.method == 'POST' and request.POST.get('action') == 'generate':
+        if not can_generate:
+            messages.error(request, 'You are not allowed to generate reports.')
+        else:
+            try:
+                report = reports.generate_terminal_report(
+                    student, year, term, request.user,
+                    force=bool(request.POST.get('force')),
+                    override_reason=request.POST.get('override_reason', ''))
+            except reports.ReportError as exc:
+                messages.error(request, str(exc))
+            else:
+                messages.success(
+                    request,
+                    'Report generated. It must be approved and published before '
+                    'it becomes official.')
+                return redirect(
+                    'academics:terminal_report_review', pk=report.pk)
+
     return render(request, 'academics/terminal_report.html', {
         'data': data, 'student': student, 'year': year, 'term': term,
         'years': years, 'terms': terms,
         'academic_context': academic_context, 'lock_year': lock_year,
+        'official': official, 'latest_report': latest, 'blockers': blockers,
+        'can_generate': can_generate,
+        'can_approve': reports.can_approve(request.user),
     })
 
 
@@ -1850,80 +2475,249 @@ def terminal_report_pdf(request):
     return response
 
 
+def _report_status_tone(status):
+    return {
+        TerminalReport.Status.DRAFT: 'neutral',
+        TerminalReport.Status.GENERATED: 'warning',
+        TerminalReport.Status.APPROVED: 'info',
+        TerminalReport.Status.PUBLISHED: 'success',
+        TerminalReport.Status.SUPERSEDED: 'neutral',
+    }.get(status, 'neutral')
+
+
+@login_required
+@role_required(*ACADEMIC_ROLES)
+def terminal_report_hub(request):
+    """Official terminal reports: browse, generate and monitor status."""
+    year, term, academic_context = _active_year_term(request)
+    lock_year = access.is_teacher_only(request.user)
+    years = scope_reference_queryset(
+        AcademicYear.objects.all(), request).order_by('-start_date', '-name')
+    terms = (Term.objects.filter(academic_year=year).order_by('term_number')
+             if year is not None else Term.objects.none())
+
+    school_class = _class_choices(request).filter(
+        pk=request.GET.get('school_class')).first()
+    status_filter = _get_str(request, 'status')
+
+    reports_qs = _scope(request, TerminalReport.objects.select_related(
+        'student', 'school_class', 'term', 'academic_year', 'generated_by',
+        'approved_by', 'published_by', 'superseded_by'))
+    if year is not None:
+        reports_qs = reports_qs.filter(academic_year=year)
+    if term is not None:
+        reports_qs = reports_qs.filter(term=term)
+    if school_class is not None:
+        reports_qs = reports_qs.filter(school_class=school_class)
+    if status_filter and status_filter in dict(TerminalReport.Status.choices):
+        reports_qs = reports_qs.filter(status=status_filter)
+
+    counts = {
+        'generated': reports_qs.filter(status=TerminalReport.Status.GENERATED).count(),
+        'approved': reports_qs.filter(status=TerminalReport.Status.APPROVED).count(),
+        'published': reports_qs.filter(status=TerminalReport.Status.PUBLISHED).count(),
+    }
+
+    page_obj = _paginate(request, reports_qs.order_by('-created_at'), 20)
+    for report in page_obj:
+        report.status_tone = _report_status_tone(report.status)
+
+    students = []
+    if school_class is not None:
+        students = _scope(request, Student.objects.filter(
+            is_active=True, school_class=school_class)).order_by(
+            'last_name', 'first_name')
+
+    return render(request, 'academics/terminal_report_hub.html', {
+        'reports': page_obj,
+        'page_obj': page_obj,
+        'total_count': page_obj.paginator.count,
+        'classes': _class_choices(request),
+        'school_class': school_class,
+        'students': students,
+        'year': year,
+        'term': term,
+        'years': years,
+        'terms': terms,
+        'statuses': TerminalReport.Status.choices,
+        'status_filter': status_filter,
+        'counts': counts,
+        'academic_context': academic_context,
+        'lock_year': lock_year,
+        'can_generate': reports.can_generate(request.user),
+        'can_approve': reports.can_approve(request.user),
+    })
+
+
+@login_required
+@role_required(*REVIEW_ROLES)
+def terminal_report_bulk(request):
+    """Generate official reports for a whole class (or a chosen subset)."""
+    if request.method != 'POST':
+        return redirect('academics:terminal_report_hub')
+
+    year, term, _academic_context = _active_year_term(request)
+    school = get_active_school(request) or getattr(request.user, 'school', None)
+    if year is None or term is None or school is None:
+        messages.error(
+            request, 'Select a school, academic year and term to generate reports.')
+        return redirect('academics:terminal_report_hub')
+
+    form = TerminalReportBulkForm(request.POST, school=school)
+    if not form.is_valid():
+        messages.error(request, 'Choose a class to generate reports for.')
+        return redirect('academics:terminal_report_hub')
+
+    data = form.cleaned_data
+    school_class = data['school_class']
+    if _denied(request, school_class):
+        return redirect('academics:terminal_report_hub')
+
+    students = list(data.get('students') or [])
+    if not students:
+        students = list(school_class.students.filter(is_active=True))
+    force = data.get('force', False)
+    reason = data.get('override_reason', '')
+
+    generated = 0
+    blocked = 0
+    for student in students:
+        try:
+            reports.generate_terminal_report(
+                student, year, term, request.user,
+                force=force, override_reason=reason)
+        except reports.ReportError:
+            blocked += 1
+        else:
+            generated += 1
+
+    if generated:
+        messages.success(request, f'{generated} report(s) generated for approval.')
+    if blocked:
+        messages.warning(
+            request,
+            f'{blocked} report(s) were not generated because the data is '
+            f'incomplete. Review the results or use the override.')
+
+    return redirect(
+        f"{reverse('academics:terminal_report_hub')}?school_class="
+        f"{school_class.pk}&academic_year={year.pk}&term={term.pk}")
+
+
+@login_required
+@role_required(*ACADEMIC_ROLES)
+def terminal_report_review(request, pk):
+    """Approve, publish, return or amend one terminal report."""
+    report = get_object_or_404(
+        TerminalReport.objects.select_related(
+            'student', 'school_class', 'term', 'academic_year', 'generated_by',
+            'approved_by', 'published_by', 'superseded_by'), pk=pk)
+    if _denied(request, report):
+        return redirect('academics:terminal_report_hub')
+
+    can_approve = reports.can_approve(request.user)
+    approval_form = TerminalReportApprovalForm(request.POST or None, prefix='approve')
+    publish_form = TerminalReportPublishForm(request.POST or None, prefix='publish')
+    amendment_form = TerminalReportAmendmentForm(request.POST or None, prefix='amend')
+
+    if request.method == 'POST':
+        action = (request.POST.get('action') or '').strip()
+        if action == 'approve':
+            if not can_approve:
+                messages.error(request, 'You are not allowed to approve reports.')
+            else:
+                try:
+                    reports.approve_terminal_report(
+                        report, request.user,
+                        comment=(request.POST.get('approve-comment')
+                                 or request.POST.get('comment') or ''))
+                except reports.ReportError as exc:
+                    messages.error(request, str(exc))
+                else:
+                    messages.success(request, 'Report approved. It can now be published.')
+                    return redirect('academics:terminal_report_review', pk=report.pk)
+        elif action == 'publish':
+            if not can_approve:
+                messages.error(request, 'You are not allowed to publish reports.')
+            else:
+                try:
+                    reports.publish_terminal_report(
+                        report, request.user,
+                        force=bool(request.POST.get('publish-force')),
+                        override_reason=request.POST.get('publish-override_reason', ''))
+                except reports.ReportError as exc:
+                    messages.error(request, str(exc))
+                else:
+                    messages.success(
+                        request,
+                        'Report published as the official report. Parents have '
+                        'been notified.')
+                    return redirect('academics:terminal_report_review', pk=report.pk)
+        elif action == 'return':
+            if not can_approve:
+                messages.error(request, 'You are not allowed to review reports.')
+            else:
+                try:
+                    reports.return_terminal_report(
+                        report, request.user,
+                        comment=(request.POST.get('approve-comment')
+                                 or request.POST.get('comment') or ''))
+                except reports.ReportError as exc:
+                    messages.error(request, str(exc))
+                else:
+                    messages.success(request, 'Report returned for correction.')
+                    return redirect('academics:terminal_report_review', pk=report.pk)
+        elif action == 'amend':
+            if not can_approve:
+                messages.error(request, 'You are not allowed to amend reports.')
+            elif amendment_form.is_valid():
+                try:
+                    replacement = reports.amend_terminal_report(
+                        report, request.user,
+                        reason=amendment_form.cleaned_data['reason'])
+                except reports.ReportError as exc:
+                    messages.error(request, str(exc))
+                else:
+                    messages.success(
+                        request,
+                        'A corrected version has been generated and must be '
+                        'approved and published again.')
+                    return redirect(
+                        'academics:terminal_report_review', pk=replacement.pk)
+        else:
+            messages.error(request, 'Unrecognised action on this report.')
+
+    data = reports.terminal_report_data(
+        report.student, report.academic_year, report.term)
+    blockers = reports.generation_blockers(
+        report.student, report.academic_year, report.term, data)
+    history = reports.report_history(
+        report.student, report.academic_year, report.term)
+
+    return render(request, 'academics/terminal_report_review.html', {
+        'report': report,
+        'data': data,
+        'blockers': blockers,
+        'history': history,
+        'can_approve': can_approve,
+        'approval_form': approval_form,
+        'publish_form': publish_form,
+        'amendment_form': amendment_form,
+        'status_tone': _report_status_tone(report.status),
+    })
+
+
 def _render_terminal_pdf(data):
-    """Render a terminal report to PDF with reportlab (best effort)."""
-    from io import BytesIO
+    """Render a terminal report to PDF (delegates to the dedicated service).
 
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.lib.units import mm
-    from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer, Table,
-                                    TableStyle)
+    The legacy inline implementation has been replaced with a professional,
+    print-ready renderer that centres the school crest, adds a subtle crest
+    watermark behind content, repeats table headings across pages, preserves
+    all existing data, and safely falls back when a crest is missing.
+    """
+    from .services import pdf_reports
 
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=15 * mm, bottomMargin=15 * mm)
-    styles = getSampleStyleSheet()
-    story = []
-    school = data['school']
-    student = data['student']
-    story.append(Paragraph(school.name if school else 'Terminal Report', styles['Title']))
-    story.append(Paragraph(
-        f"{data['academic_year'].name} - {data['term'].name}", styles['Heading3']))
-    story.append(Spacer(1, 6 * mm))
-    story.append(Paragraph(
-        f"Student: {student.get_full_name()} ({student.student_id})", styles['Normal']))
-    story.append(Paragraph(
-        f"Class: {student.school_class.name}", styles['Normal']))
-    story.append(Spacer(1, 4 * mm))
-
-    rows = [['Subject', 'Score %', 'Grade', 'Remark']]
-    for result in data['results']['subjects']:
-        rows.append([
-            str(result['subject']),
-            f"{result['percentage']}" if result['percentage'] is not None else '—',
-            result['grade'] or '—',
-            (result['remark'] or '')[:40],
-        ])
-    table = Table(rows, colWidths=[70 * mm, 30 * mm, 25 * mm, 50 * mm])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0d6efd')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-    ]))
-    story.append(table)
-    story.append(Spacer(1, 5 * mm))
-
-    average = data['results']['average']
-    story.append(Paragraph(
-        f"Average: {average if average is not None else '—'}   "
-        f"Attendance: {data['attendance']['percentage'] or '—'}%", styles['Normal']))
-    if data['comment']:
-        if data['comment'].class_teacher_comment:
-            story.append(Paragraph(
-                f"Class teacher: {data['comment'].class_teacher_comment}", styles['Normal']))
-        if data['comment'].head_teacher_remark:
-            story.append(Paragraph(
-                f"Head teacher: {data['comment'].head_teacher_remark}", styles['Normal']))
-    story.append(Spacer(1, 4 * mm))
-
-    if data['report_fields']:
-        fin_rows = [['Fees', 'Amount']]
-        for field in data['report_fields']:
-            value = field['formatted'] if field['value'] is not None else (field['flag'] or '—')
-            fin_rows.append([field['label'], str(value)])
-        fin_table = Table(fin_rows, colWidths=[80 * mm, 45 * mm])
-        fin_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6c757d')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ]))
-        story.append(fin_table)
-
-    doc.build(story)
-    return buffer.getvalue()
+    return pdf_reports.render_terminal_report_pdf(data)
 
 
 # ---------------------------------------------------------------------------

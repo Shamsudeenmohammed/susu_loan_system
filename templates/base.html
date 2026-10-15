@@ -177,18 +177,30 @@
                         <a class="nav-link" href="{% url 'academics:attendance_index' %}">
                             <i class="fas fa-clipboard-check"></i>Attendance
                         </a>
+                        <a class="nav-link" href="{% url 'academics:attendance_weekly' %}">
+                            <i class="fas fa-table-cells"></i>Weekly Attendance
+                        </a>
                         <a class="nav-link" href="{% url 'academics:assessment_list' %}">
                             <i class="fas fa-file-pen"></i>Assessments
                         </a>
                         <a class="nav-link" href="{% url 'academics:submissions' %}">
                             <i class="fas fa-paper-plane"></i>Submissions
                         </a>
+                        <a class="nav-link" href="{% url 'academics:weekly_report_list' %}">
+                            <i class="fas fa-calendar-week"></i>Weekly Reports
+                        </a>
                         <a class="nav-link" href="{% url 'academics:update_request_list' %}">
                             <i class="fas fa-list-check"></i>Requests &amp; Follow-ups
+                        </a>
+                        <a class="nav-link" href="{% url 'academics:complaint_list' %}">
+                            <i class="fas fa-circle-exclamation"></i>Concerns &amp; Requests
                         </a>
                         <div class="nav-section">Outcomes</div>
                         <a class="nav-link" href="{% url 'academics:results' %}">
                             <i class="fas fa-square-poll-vertical"></i>Results
+                        </a>
+                        <a class="nav-link" href="{% url 'academics:terminal_report_hub' %}">
+                            <i class="fas fa-file-lines"></i>Terminal Reports
                         </a>
                         <a class="nav-link" href="{% url 'academics:calendar' %}">
                             <i class="fas fa-calendar-days"></i>Calendar

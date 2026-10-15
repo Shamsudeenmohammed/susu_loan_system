@@ -1,0 +1,11 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0
+django: version: 5.2.18, settings: tests.settings (from env)
+rootdir: E:\Project\susu_loan_system
+configfile: pytest.ini
+plugins: Faker-21.0.1, django-4.14.0
+collected 106 items
+
+tests\test_weekly_reports.py ...........                                 [ 10%]
+tests\test_complaints.py ............                                    [ 21%]
+tests\test_attendance_weekly.py ........                                 [ 29%]

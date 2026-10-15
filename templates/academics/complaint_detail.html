@@ -1,0 +1,169 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Concern #{{ complaint.pk }}{% endblock %}
+{% block ac_eyebrow %}Academics · Follow-up{% endblock %}
+{% block ac_heading %}Concern &amp; follow-up{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">{{ complaint.title }}</p>{% endblock %}
+{% block ac_crumb %}Detail{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:complaint_list' %}">Concerns</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:complaint_list' %}"><i class="fas fa-arrow-left me-1"></i>Back to Concerns</a>
+{% endblock %}
+
+{% block ac_body %}
+{% if complaint.is_escalated %}
+<div class="ac-card ac-card-warning">
+    <div class="ac-card-body ac-inline">
+        <span class="ac-badge danger"><i class="fas fa-shield-halved me-1"></i>Escalated</span>
+        <span>This is a safeguarding or urgent case and was escalated to management immediately when it was raised.</span>
+    </div>
+</div>
+{% endif %}
+
+<div class="ac-card">
+    <div class="ac-card-body">
+        <dl class="ac-meta ac-meta-grid mb-0">
+            <div><dt>Status</dt><dd><span class="ac-badge {{ complaint.status_tone }}">{{ complaint.get_status_display }}</span>
+                {% if complaint.is_overdue %}<span class="ac-badge danger ms-1"><i class="fas fa-hourglass-half"></i> Overdue</span>{% endif %}
+            </dd></div>
+            <div><dt>Priority</dt><dd>{% include 'academics/_request_priority.html' with priority=complaint.priority %}</dd></div>
+            <div><dt>Type</dt><dd>{{ complaint.get_case_type_display }}</dd></div>
+            <div><dt>Category</dt><dd>{{ complaint.get_category_display }}</dd></div>
+            <div><dt>Raised by</dt><dd>{% if complaint.raised_by %}{{ complaint.raised_by.get_full_name|default:complaint.raised_by.username }}{% else %}—{% endif %}</dd></div>
+            <div><dt>Assigned to</dt><dd>{% if complaint.assigned_to %}{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}{% else %}—{% endif %}</dd></div>
+            <div><dt>Due date</dt><dd>{{ complaint.due_date|date:"d M Y"|default:"—" }}</dd></div>
+            <div><dt>Raised</dt><dd>{{ complaint.created_at|date:"d M Y H:i" }}</dd></div>
+        </dl>
+    </div>
+</div>
+
+{% if complaint.school_class or complaint.student %}
+<div class="ac-card">
+    <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-location-dot"></i>Context</span></div>
+    <div class="ac-card-body tight ac-inline">
+        {% if complaint.school_class %}<span class="ac-chip"><i class="fas fa-chalkboard"></i>{{ complaint.school_class.name }}</span>{% endif %}
+        {% if complaint.student %}<span class="ac-chip"><i class="fas fa-user-graduate"></i>{{ complaint.student.get_full_name }}</span>{% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="ac-card">
+    <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-align-left"></i>Description</span></div>
+    <div class="ac-card-body">{{ complaint.description|linebreaksbr }}</div>
+</div>
+
+{% if complaint.supporting_details %}
+<div class="ac-card">
+    <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-paperclip"></i>Supporting details</span></div>
+    <div class="ac-card-body">{{ complaint.supporting_details|linebreaksbr }}</div>
+</div>
+{% endif %}
+
+{% if complaint.resolution_notes %}
+<div class="ac-card">
+    <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-circle-check"></i>Resolution notes</span></div>
+    <div class="ac-card-body">{{ complaint.resolution_notes|linebreaksbr }}</div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-clock-rotate-left"></i>Action history</span></div>
+            <div class="ac-card-body">
+                {% if events %}
+                <ul class="ac-timeline">
+                    {% for event in events %}
+                    <li>
+                        <span class="ac-timeline-title">{{ event.get_action_display }}</span>
+                        {% if event.notes %}<div class="ac-cell-sub mb-1">{{ event.notes|linebreaksbr }}</div>{% endif %}
+                        <div class="ac-timeline-time">
+                            {% if event.user %}{{ event.user.get_full_name|default:event.user.username }} · {% endif %}{{ event.created_at|date:"d M Y H:i" }}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="ac-muted mb-0">No actions recorded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-comment"></i>Add a comment / response</span></div>
+            <div class="ac-card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="comment">
+                    <div class="ac-field mb-2">
+                        <label class="form-label" for="{{ comment_form.comment.id_for_label }}">Comment</label>
+                        {{ comment_form.comment }}
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm"><i class="fas fa-comment-medical me-1"></i>Post comment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        {% if can_manage or is_raiser %}
+        <div class="ac-card">
+            <div class="ac-card-head" style="background:linear-gradient(180deg,#eff6ff,#fbfcfe)">
+                <span class="ac-card-title"><i class="fas fa-wrench"></i>Actions</span>
+            </div>
+            <div class="ac-card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="transition">
+                    <div class="ac-field mb-3">
+                        <label class="form-label" for="{{ transition_form.notes.id_for_label }}">Notes</label>
+                        {{ transition_form.notes }}
+                        <div class="ac-help">Notes are stored on the action history; resolution notes are kept with a resolved case.</div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        {% if can_manage and complaint.status == 'SUBMITTED' %}
+                        <button class="btn btn-outline-info" name="to_status" value="ACKNOWLEDGED"><i class="fas fa-eye me-1"></i>Acknowledge</button>
+                        {% endif %}
+                        {% if can_manage and complaint.status == 'SUBMITTED' or can_manage and complaint.status == 'ACKNOWLEDGED' or can_manage and complaint.status == 'REOPENED' %}
+                        <button class="btn btn-primary" name="to_status" value="IN_PROGRESS"><i class="fas fa-play me-1"></i>Start working on it</button>
+                        {% endif %}
+                        {% if can_manage and complaint.status != 'RESOLVED' %}
+                        <button class="btn btn-success" name="to_status" value="RESOLVED"
+                                data-confirm="Mark this concern resolved? Add resolution notes above first." data-confirm-title="Resolve concern?" data-confirm-type="success" data-confirm-text="Resolve">
+                            <i class="fas fa-check me-1"></i>Mark resolved
+                        </button>
+                        {% endif %}
+                        {% if is_raiser and complaint.status == 'RESOLVED' %}
+                        <button class="btn btn-outline-danger" name="to_status" value="REOPENED"
+                                data-confirm="Reopen this concern? Management will be notified." data-confirm-title="Reopen concern?" data-confirm-type="warning" data-confirm-text="Reopen">
+                            <i class="fas fa-rotate-left me-1"></i>Reopen
+                        </button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if can_manage %}
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-user-tie"></i>Assignment</span></div>
+            <div class="ac-card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="assign">
+                    <div class="ac-field mb-2">
+                        <label class="form-label" for="{{ assign_form.assigned_to.id_for_label }}">Assign to</label>
+                        {{ assign_form.assigned_to }}
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm"><i class="fas fa-user-check me-1"></i>Update assignment</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

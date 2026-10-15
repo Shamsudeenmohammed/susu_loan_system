@@ -136,3 +136,44 @@ class AcademicYearOverrideAdmin(admin.ModelAdmin):
     list_filter = ('school', 'applies_to_all', 'disabled_at')
     search_fields = ('reason', 'academic_year__name')
     filter_horizontal = ('teachers',)
+
+
+@admin.register(models.WeeklyReport)
+class WeeklyReportAdmin(admin.ModelAdmin):
+    list_display = ('school_class', 'teacher', 'week_start', 'status',
+                    'submitted_at', 'reviewed_by')
+    list_filter = ('school', 'status', 'academic_year', 'term')
+    search_fields = ('summary', 'teacher__username', 'school_class__name')
+    date_hierarchy = 'week_start'
+
+
+@admin.register(models.WeeklyReportEvent)
+class WeeklyReportEventAdmin(admin.ModelAdmin):
+    list_display = ('report', 'user', 'action', 'created_at')
+    list_filter = ('action',)
+    raw_id_fields = ('report', 'user')
+
+
+@admin.register(models.Complaint)
+class ComplaintAdmin(admin.ModelAdmin):
+    list_display = ('title', 'school', 'case_type', 'category', 'priority',
+                    'status', 'raised_by', 'assigned_to', 'due_date')
+    list_filter = ('school', 'case_type', 'category', 'priority', 'status')
+    search_fields = ('title', 'description', 'raised_by__username')
+
+
+@admin.register(models.ComplaintEvent)
+class ComplaintEventAdmin(admin.ModelAdmin):
+    list_display = ('complaint', 'user', 'action', 'created_at')
+    list_filter = ('action',)
+    raw_id_fields = ('complaint', 'user')
+
+
+@admin.register(models.TerminalReport)
+class TerminalReportAdmin(admin.ModelAdmin):
+    list_display = ('student', 'school', 'academic_year', 'term', 'version',
+                    'status', 'average', 'published_at')
+    list_filter = ('school', 'status', 'academic_year', 'term')
+    search_fields = ('student__first_name', 'student__last_name',
+                     'student__student_id')
+    raw_id_fields = ('student', 'school_class', 'superseded_by')

@@ -41,17 +41,32 @@ urlpatterns = [
     path('requests/new/', views.update_request_create, name='update_request_create'),
     path('requests/<int:pk>/', views.update_request_detail, name='update_request_detail'),
 
+    path('weekly-reports/', views.weekly_report_list, name='weekly_report_list'),
+    path('weekly-reports/new/', views.weekly_report_form, name='weekly_report_create'),
+    path('weekly-reports/<int:pk>/edit/', views.weekly_report_form, name='weekly_report_edit'),
+    path('weekly-reports/<int:pk>/', views.weekly_report_detail, name='weekly_report_detail'),
+
+    path('concerns/', views.complaint_list, name='complaint_list'),
+    path('concerns/new/', views.complaint_create, name='complaint_create'),
+    path('concerns/<int:pk>/', views.complaint_detail, name='complaint_detail'),
+
     path('academic-year/override/', views.academic_year_override,
          name='academic_year_override'),
 
     path('attendance/', views.attendance_index, name='attendance_index'),
     path('attendance/take/', views.attendance_take, name='attendance_take'),
+    path('attendance/weekly/', views.attendance_weekly, name='attendance_weekly'),
     path('attendance/report/', views.attendance_report, name='attendance_report'),
 
     path('results/', views.results, name='results'),
     path('results/promote/<int:student_id>/', views.promote, name='promote'),
 
-    path('reports/terminal/<int:student_id>/', views.terminal_report, name='terminal_report'),
+    path('reports/terminal/', views.terminal_report_hub, name='terminal_report_hub'),
+    path('reports/terminal/bulk/', views.terminal_report_bulk, name='terminal_report_bulk'),
+    path('reports/terminal/<int:pk>/review/', views.terminal_report_review,
+         name='terminal_report_review'),
+    path('reports/terminal/student/<int:student_id>/', views.terminal_report,
+         name='terminal_report'),
     path('reports/terminal/pdf/', views.terminal_report_pdf, name='terminal_report_pdf'),
 
     path('calendar/', views.calendar, name='calendar'),

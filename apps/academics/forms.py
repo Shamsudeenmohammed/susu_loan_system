@@ -25,6 +25,7 @@ from .models import (
     Announcement,
     Assessment,
     ClassSubject,
+    Complaint,
     GradeBand,
     GradingScale,
     PromotionRecord,
@@ -33,6 +34,7 @@ from .models import (
     TerminalComment,
     TerminalReportField,
     UpdateRequest,
+    WeeklyReport,
 )
 
 User = get_user_model()
@@ -241,6 +243,8 @@ class AcademicSettingsForm(BootstrapMixin, forms.ModelForm):
             'default_grading_scale', 'pass_mark', 'promotion_min_average',
             'continuous_assessment_weight', 'exam_weight', 'show_position',
             'show_attendance_on_report', 'show_financials_on_report',
+            'require_complete_results_for_publication',
+            'require_attendance_for_publication',
             'currency',
         ]
 
@@ -593,3 +597,257 @@ class AcademicYearOverrideForm(BootstrapMixin, forms.ModelForm):
                 'teachers',
                 'Select at least one teacher, or choose to apply to all teachers.')
         return cleaned
+
+
+# ---------------------------------------------------------------------------
+# Weekly teacher reports
+# ---------------------------------------------------------------------------
+class WeeklyReportForm(BaseRequestForm):
+    """Create or revise a teacher's weekly report draft.
+
+    A teacher-only user is pinned to their own assignments and active academic
+    year (the pickers are removed); a reviewer may create/revise on behalf of a
+    teacher and choose the year. Cross-school selections are rejected.
+    """
+
+    week_start = flexible_date_field()
+
+    class Meta:
+        model = WeeklyReport
+        fields = ['school', 'teacher', 'school_class', 'subject', 'academic_year',
+                  'term', 'week_start', 'summary', 'challenges', 'support_needed',
+                  'next_week_plan', 'attendance_notes']
+
+    def _scope(self):
+        from .services import access
+
+        active = self._scope_school_field()
+        teachers = User.objects.filter(role='TEACHER', is_active=True)
+        classes = self._scope_owned(SchoolClass.objects.filter(is_active=True))
+        subjects = self._scope_owned(Subject.objects.filter(is_active=True))
+        years = self._scope_shared(AcademicYear.objects.all())
+        if active is not None:
+            teachers = teachers.filter(school=active)
+            classes = classes.filter(school=active)
+            subjects = subjects.filter(school=active)
+
+        self.fields['school_class'].queryset = classes.order_by('name')
+        self.fields['subject'].queryset = subjects.order_by('name')
+        self.fields['subject'].required = False
+        self.fields['academic_year'].queryset = years.order_by('-name')
+        self.fields['term'].queryset = Term.objects.filter(
+            academic_year__in=years).order_by('academic_year', 'term_number')
+
+        if access.is_teacher_only(self.request.user):
+            teacher = self.request.user
+            self.fields.pop('teacher', None)
+            self.instance.teacher = teacher
+            if getattr(teacher, 'school_id', None):
+                classes = classes.filter(school_id=teacher.school_id)
+                subjects = subjects.filter(school_id=teacher.school_id)
+            pairs = access.teacher_class_subject_pairs(teacher)
+            if pairs:
+                classes = classes.filter(pk__in=list(pairs.keys()))
+            # Re-narrow after the teacher's assignments are known.
+            self.fields['school_class'].queryset = classes.order_by('name')
+            self.fields['subject'].queryset = subjects.order_by('name')
+            self._lock_year_to_active()
+        else:
+            self.fields['teacher'].queryset = teachers.order_by(
+                'first_name', 'last_name')
+
+    def _lock_year_to_active(self):
+        from .services import academic_year as academic_year_service
+
+        context = academic_year_service.build_context(self.request)
+        if context.year is None:
+            return
+        self.fields.pop('academic_year', None)
+        self.fields.pop('term', None)
+        self.instance.academic_year = context.year
+        if context.term is not None:
+            self.instance.term = context.term
+
+    def clean(self):
+        cleaned = super().clean()
+        school = cleaned.get('school') or get_active_school(self.request)
+        teacher = cleaned.get('teacher') or getattr(self.instance, 'teacher', None)
+        school_class = cleaned.get('school_class')
+        subject = cleaned.get('subject')
+        if school is not None and school_class is not None \
+                and school_class.school_id != school.pk:
+            self.add_error('school_class', 'Choose a class from your school.')
+        if teacher is not None and school_class is not None \
+                and getattr(teacher, 'school_id', None) != school_class.school_id:
+            self.add_error(
+                'school_class', 'The class must belong to the same school as the teacher.')
+        if subject is not None and school_class is not None \
+                and subject.school_id != school_class.school_id:
+            self.add_error(
+                'subject', 'The class and subject must belong to the same school.')
+        return cleaned
+
+
+class WeeklyReportReviewForm(BootstrapMixin, forms.Form):
+    """Reviewer comment accompanying an acknowledge/clarify/accept action."""
+
+    comment = forms.CharField(
+        label='Comment', required=False,
+        widget=forms.Textarea(attrs={
+            'rows': 3,
+            'placeholder': 'Notes for the teacher (required when requesting clarification)…'}))
+
+
+class WeeklyReportCommentForm(BootstrapMixin, forms.Form):
+    comment = forms.CharField(
+        label='Add a comment',
+        widget=forms.Textarea(attrs={'rows': 2}))
+
+
+# ---------------------------------------------------------------------------
+# Complaints, requests and safeguarding
+# ---------------------------------------------------------------------------
+class ComplaintForm(BaseRequestForm):
+    """Raise a complaint, request or safeguarding concern."""
+
+    due_date = flexible_date_field(required=False)
+
+    class Meta:
+        model = Complaint
+        fields = ['school', 'case_type', 'category', 'title', 'description',
+                  'supporting_details', 'priority', 'school_class', 'student',
+                  'assigned_to', 'due_date']
+
+    def _scope(self):
+        self._scope_school_field()
+        active = get_active_school(self.request)
+
+        classes = self._scope_owned(SchoolClass.objects.filter(is_active=True))
+        students = self._scope_owned(Student.objects.filter(is_active=True))
+        assignees = User.objects.filter(
+            is_active=True,
+            role__in=['SUPER_ADMIN', 'ADMIN', 'PROPRIETOR', 'HEAD_TEACHER', 'MANAGER'])
+        if active is not None:
+            classes = classes.filter(school=active)
+            students = students.filter(school=active)
+            assignees = assignees.filter(school=active)
+
+        self.fields['school_class'].queryset = classes.order_by('name')
+        self.fields['student'].queryset = students.order_by('last_name', 'first_name')
+        self.fields['assigned_to'].queryset = assignees.order_by(
+            'first_name', 'last_name')
+        self.fields['assigned_to'].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        school = cleaned.get('school') or get_active_school(self.request)
+        school_class = cleaned.get('school_class')
+        student = cleaned.get('student')
+        assignee = cleaned.get('assigned_to')
+        case_type = cleaned.get('case_type')
+        priority = cleaned.get('priority')
+
+        if school is not None:
+            for label, obj in (('school_class', school_class),
+                               ('student', student),
+                               ('assigned_to', assignee)):
+                if obj is None:
+                    continue
+                obj_school = getattr(obj, 'school_id', None)
+                if obj_school is not None and obj_school != school.pk:
+                    self.add_error(label, 'That selection belongs to another school.')
+        if school_class is not None and student is not None \
+                and student.school_class_id != school_class.pk:
+            self.add_error(
+                'student', 'The student is not enrolled in the selected class.')
+
+        escalated = (case_type == Complaint.CaseType.SAFEGUARDING
+                     or priority == Complaint.Priority.URGENT)
+        if escalated and not (cleaned.get('supporting_details') or '').strip():
+            self.add_error(
+                'supporting_details',
+                'Please give supporting details for a safeguarding or urgent case.')
+        return cleaned
+
+
+class ComplaintCommentForm(BootstrapMixin, forms.Form):
+    comment = forms.CharField(
+        label='Comment / response',
+        widget=forms.Textarea(attrs={'rows': 3}))
+
+
+class ComplaintTransitionForm(BootstrapMixin, forms.Form):
+    notes = forms.CharField(
+        label='Notes', required=False,
+        widget=forms.Textarea(attrs={
+            'rows': 3, 'placeholder': 'Optional notes for this action…'}))
+
+
+class ComplaintAssignForm(BootstrapMixin, forms.Form):
+    assigned_to = forms.ModelChoiceField(
+        queryset=User.objects.none(), required=False,
+        label='Assign to')
+
+    def __init__(self, *args, school=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        assignees = User.objects.filter(
+            is_active=True,
+            role__in=['SUPER_ADMIN', 'ADMIN', 'PROPRIETOR', 'HEAD_TEACHER', 'MANAGER'])
+        if school is not None:
+            assignees = assignees.filter(school=school)
+        self.fields['assigned_to'].queryset = assignees.order_by(
+            'first_name', 'last_name')
+
+
+# ---------------------------------------------------------------------------
+# Official terminal reports
+# ---------------------------------------------------------------------------
+class TerminalReportBulkForm(BootstrapMixin, forms.Form):
+    """Choose a class/period and (optionally) the students to generate."""
+
+    school_class = forms.ModelChoiceField(
+        queryset=SchoolClass.objects.none(), label='Class')
+    students = forms.ModelMultipleChoiceField(
+        queryset=Student.objects.none(), required=False,
+        label='Students (leave blank for the whole class)')
+    force = forms.BooleanField(
+        required=False, label='Generate despite incomplete data',
+        help_text='Only for an authorised reason; the override is recorded.')
+    override_reason = forms.CharField(
+        required=False, widget=forms.Textarea(attrs={'rows': 2}),
+        label='Override reason',
+        help_text='Required when generating despite incomplete data.')
+
+    def __init__(self, *args, school=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        classes = SchoolClass.objects.filter(is_active=True)
+        students = Student.objects.filter(is_active=True)
+        if school is not None:
+            classes = classes.filter(school=school)
+            students = students.filter(school=school)
+        self.fields['school_class'].queryset = classes.order_by('name')
+        self.fields['students'].queryset = students.order_by(
+            'last_name', 'first_name')
+
+
+class TerminalReportApprovalForm(BootstrapMixin, forms.Form):
+    comment = forms.CharField(
+        label='Approval comment', required=False,
+        widget=forms.Textarea(attrs={'rows': 2}))
+
+
+class TerminalReportPublishForm(BootstrapMixin, forms.Form):
+    force = forms.BooleanField(
+        required=False, label='Publish despite incomplete data')
+    override_reason = forms.CharField(
+        label='Override reason', required=False,
+        widget=forms.Textarea(attrs={'rows': 2}),
+        help_text='Required when publishing despite incomplete data.')
+
+
+class TerminalReportAmendmentForm(BootstrapMixin, forms.Form):
+    reason = forms.CharField(
+        label='Reason for amendment',
+        widget=forms.Textarea(attrs={
+            'rows': 3,
+            'placeholder': 'Why is the official report being corrected?'}))

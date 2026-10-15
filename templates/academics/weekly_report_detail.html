@@ -1,0 +1,176 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Weekly Report · {{ report.school_class.name }}{% endblock %}
+{% block ac_eyebrow %}Academics · Weekly reporting{% endblock %}
+{% block ac_heading %}Weekly report{% endblock %}
+{% block ac_subtitle %}<p class="ac-page-sub">{{ report.school_class.name }}{% if report.subject %} · {{ report.subject.name }}{% endif %} · {{ report.period_label }}{% if report.teacher %} · {{ report.teacher.get_full_name|default:report.teacher.username }}{% endif %}</p>{% endblock %}
+{% block ac_crumb %}Detail{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:weekly_report_list' %}">Weekly Reports</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:weekly_report_list' %}"><i class="fas fa-arrow-left me-1"></i>Back</a>
+{% if can_edit %}
+<a class="btn btn-primary" href="{% url 'academics:weekly_report_edit' report.pk %}"><i class="fas fa-pen me-1"></i>Edit draft</a>
+{% endif %}
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-card">
+    <div class="ac-card-body">
+        <dl class="ac-meta ac-meta-grid mb-0">
+            <div><dt>Status</dt><dd><span class="ac-badge {{ report.status_tone }}">{{ report.get_status_display }}</span>
+                {% if report.status == 'CLARIFICATION_REQUESTED' %}<span class="ac-badge danger ms-1"><i class="fas fa-circle-question"></i> Needs revision</span>{% endif %}
+            </dd></div>
+            <div><dt>Week</dt><dd>{{ report.period_label }}</dd></div>
+            <div><dt>Class</dt><dd>{{ report.school_class.name }}</dd></div>
+            <div><dt>Teacher</dt><dd>{{ report.teacher.get_full_name|default:report.teacher.username }}</dd></div>
+            <div><dt>Year / Term</dt><dd>{{ report.academic_year.name }} · {{ report.term.name }}</dd></div>
+            <div><dt>Submitted</dt><dd>{{ report.submitted_at|date:"d M Y H:i"|default:"—" }}</dd></div>
+            {% if report.reviewed_by %}
+            <div><dt>Reviewed by</dt><dd>{{ report.reviewed_by.get_full_name|default:report.reviewed_by.username }} · {{ report.reviewed_at|date:"d M Y H:i" }}</dd></div>
+            {% endif %}
+        </dl>
+    </div>
+</div>
+
+{% if report.status == 'CLARIFICATION_REQUESTED' and report.review_comment %}
+<div class="ac-card ac-card-warning">
+    <div class="ac-card-body ac-inline">
+        <span class="ac-badge danger"><i class="fas fa-circle-question me-1"></i>Clarification requested</span>
+        <span>{{ report.review_comment|linebreaksbr }}</span>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-align-left"></i>What was covered</span></div>
+            <div class="ac-card-body">{{ report.summary|linebreaksbr }}</div>
+        </div>
+
+        {% if report.challenges %}
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-triangle-exclamation"></i>Challenges</span></div>
+            <div class="ac-card-body">{{ report.challenges|linebreaksbr }}</div>
+        </div>
+        {% endif %}
+
+        {% if report.support_needed %}
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-hand-holding-heart"></i>Support needed</span></div>
+            <div class="ac-card-body">{{ report.support_needed|linebreaksbr }}</div>
+        </div>
+        {% endif %}
+
+        {% if report.next_week_plan %}
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-forward"></i>Plan for next week</span></div>
+            <div class="ac-card-body">{{ report.next_week_plan|linebreaksbr }}</div>
+        </div>
+        {% endif %}
+
+        {% if report.attendance_notes %}
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-clipboard-check"></i>Attendance notes</span></div>
+            <div class="ac-card-body">{{ report.attendance_notes|linebreaksbr }}</div>
+        </div>
+        {% endif %}
+
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-comment"></i>Add a comment</span></div>
+            <div class="ac-card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="comment">
+                    <div class="ac-field mb-2">
+                        <label class="form-label" for="{{ comment_form.comment.id_for_label }}">Comment</label>
+                        {{ comment_form.comment }}
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm"><i class="fas fa-comment-medical me-1"></i>Post comment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        {% if is_owner and report.is_editable %}
+        <div class="ac-card">
+            <div class="ac-card-head" style="background:linear-gradient(180deg,#eff6ff,#fbfcfe)">
+                <span class="ac-card-title"><i class="fas fa-paper-plane"></i>Submit for review</span>
+            </div>
+            <div class="ac-card-body">
+                <p class="ac-muted">Once submitted, this report goes to the Head Teacher. It can no longer be edited unless clarification is requested.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="submit">
+                    <div class="ac-field mb-2">
+                        <label class="form-label" for="wrSubmitNotes">Note (optional)</label>
+                        <textarea id="wrSubmitNotes" name="notes" rows="2" class="form-control"></textarea>
+                    </div>
+                    <button class="btn btn-primary w-100" data-confirm="Submit this weekly report for review?" data-confirm-title="Submit report?" data-confirm-type="success" data-confirm-text="Submit">
+                        <i class="fas fa-paper-plane me-1"></i>Submit report
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if can_review and report.status == 'SUBMITTED' or can_review and report.status == 'ACKNOWLEDGED' %}
+        <div class="ac-card">
+            <div class="ac-card-head" style="background:linear-gradient(180deg,#eff6ff,#fbfcfe)">
+                <span class="ac-card-title"><i class="fas fa-gavel"></i>Review</span>
+            </div>
+            <div class="ac-card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="review">
+                    <div class="ac-field mb-3">
+                        <label class="form-label" for="{{ review_form.comment.id_for_label }}">Comment</label>
+                        {{ review_form.comment }}
+                        <div class="ac-help">Required when requesting clarification.</div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        {% if report.status == 'SUBMITTED' %}
+                        <button class="btn btn-outline-info" name="to_status" value="ACKNOWLEDGED">
+                            <i class="fas fa-eye me-1"></i>Acknowledge
+                        </button>
+                        {% endif %}
+                        <button class="btn btn-success" name="to_status" value="REVIEWED"
+                                data-confirm="Accept this report as reviewed?" data-confirm-title="Accept report?" data-confirm-type="success" data-confirm-text="Accept">
+                            <i class="fas fa-check me-1"></i>Accept &amp; close
+                        </button>
+                        <button class="btn btn-outline-danger" name="to_status" value="CLARIFICATION_REQUESTED">
+                            <i class="fas fa-circle-question me-1"></i>Request clarification
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="ac-card">
+            <div class="ac-card-head"><span class="ac-card-title"><i class="fas fa-clock-rotate-left"></i>History</span></div>
+            <div class="ac-card-body">
+                {% if events %}
+                <ul class="ac-timeline">
+                    {% for event in events %}
+                    <li>
+                        <span class="ac-timeline-title">{{ event.get_action_display }}</span>
+                        {% if event.notes %}<div class="ac-cell-sub mb-1">{{ event.notes|linebreaksbr }}</div>{% endif %}
+                        <div class="ac-timeline-time">
+                            {% if event.user %}{{ event.user.get_full_name|default:event.user.username }} · {% endif %}{{ event.created_at|date:"d M Y H:i" }}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="ac-muted mb-0">No events recorded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

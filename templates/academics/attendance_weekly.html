@@ -1,0 +1,174 @@
+{% extends 'academics/base_academics.html' %}
+
+{% block title %}Weekly Attendance · {{ school_class.name }}{% endblock %}
+{% block ac_eyebrow %}Academics · Attendance{% endblock %}
+{% block ac_heading %}Weekly attendance register{% endblock %}
+{% block ac_subtitle %}
+<p class="ac-page-sub">
+    {{ school_class.name }}{% if subject %} · {{ subject.name }}{% endif %}
+    · week of {{ week_start|date:"d M Y" }} – {{ week_end|date:"d M Y" }}
+    · {{ session_label }} · {{ term.name }} ({{ year.name }})
+</p>
+{% endblock %}
+{% block ac_crumb %}Weekly register{% endblock %}
+{% block ac_breadcrumb %}
+<li><a href="{% url 'academics:attendance_index' %}">Attendance</a></li>
+{% endblock %}
+
+{% block ac_actions %}
+<a class="btn btn-outline-secondary" href="{% url 'academics:attendance_index' %}"><i class="fas fa-arrow-left me-1"></i>Back</a>
+{% endblock %}
+
+{% block ac_body %}
+<div class="ac-card ac-card-warning">
+    <div class="ac-card-body ac-inline">
+        <span class="ac-badge warning"><i class="fas fa-circle-info me-1"></i>Daily records</span>
+        <span>Each cell you fill writes an ordinary <strong>daily</strong> attendance record through the class register — this screen is a fast bulk entry over the same data, never a separate weekly summary. A blank cell means <em>not recorded</em> and is never saved as present. Any change to an existing status is kept in the correction audit trail.</span>
+        <span class="ac-muted ms-auto">{{ grid.recorded_days }}/{{ grid.total_days }} day{{ grid.total_days|pluralize }} recorded</span>
+    </div>
+</div>
+
+<div class="ac-toolbar">
+    <div class="ac-toolbar-title"><i class="fas fa-filter"></i>Choose class &amp; week</div>
+    <form method="get">
+        <div class="ac-toolbar-grid">
+            <div class="ac-field">
+                <label for="awClass">Class</label>
+                <select id="awClass" name="school_class" class="form-select" onchange="this.form.submit()">
+                    {% for c in classes %}
+                    <option value="{{ c.pk }}" {% if school_class.pk == c.pk %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="awSubject">Subject</label>
+                <select id="awSubject" name="subject" class="form-select">
+                    <option value="">Whole class / no subject</option>
+                    {% for s in subjects %}
+                    <option value="{{ s.pk }}" {% if subject and subject.pk == s.pk %}selected{% endif %}>{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="awWeek">Week starting (Monday)</label>
+                <input id="awWeek" type="date" name="week" value="{{ week_start|date:'Y-m-d' }}" class="form-control">
+            </div>
+            <div class="ac-field">
+                <label for="awLabel">Session label</label>
+                <select id="awLabel" name="session_label" class="form-select">
+                    <option value="Daily" {% if session_label == 'Daily' %}selected{% endif %}>Daily</option>
+                    <option value="Morning" {% if session_label == 'Morning' %}selected{% endif %}>Morning</option>
+                    <option value="Afternoon" {% if session_label == 'Afternoon' %}selected{% endif %}>Afternoon</option>
+                </select>
+            </div>
+            <div class="ac-field">
+                <label for="awDays">Days shown</label>
+                <select id="awDays" name="days" class="form-select">
+                    <option value="5" {% if days == 5 %}selected{% endif %}>Monday–Friday (5)</option>
+                    <option value="6" {% if days == 6 %}selected{% endif %}>Monday–Saturday (6)</option>
+                    <option value="7" {% if days == 7 %}selected{% endif %}>Monday–Sunday (7)</option>
+                </select>
+            </div>
+        </div>
+        <div class="ac-toolbar-actions">
+            <button class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Load register</button>
+        </div>
+    </form>
+</div>
+
+<form method="post" data-guard-unsaved>
+    {% csrf_token %}
+    <input type="hidden" name="school_class" value="{{ school_class.pk }}">
+    <input type="hidden" name="subject" value="{{ subject.pk|default:'' }}">
+    <input type="hidden" name="week" value="{{ week_start|date:'Y-m-d' }}">
+    <input type="hidden" name="session_label" value="{{ session_label }}">
+    <input type="hidden" name="days" value="{{ days }}">
+
+    <div class="ac-card">
+        <div class="ac-card-head">
+            <span class="ac-card-title"><i class="fas fa-users"></i>{{ grid.rows|length }} student{{ grid.rows|length|pluralize }}</span>
+            <span class="ac-inline">
+                <button type="button" class="btn btn-sm btn-outline-success" data-week-all="PRESENT"><i class="fas fa-check-double me-1"></i>Mark all present</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-week-clear>Clear all</button>
+            </span>
+        </div>
+        <div class="ac-table-wrap">
+            <table class="ac-table ac-attendance-grid">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        {% for day in grid.days %}
+                        <th class="center">
+                            {{ day.date|date:"D" }}<div class="ac-cell-sub">{{ day.date|date:"d M" }}</div>
+                            {% if day.session %}<span class="ac-badge success bare">saved</span>{% else %}<span class="ac-badge neutral bare">blank</span>{% endif %}
+                        </th>
+                        {% endfor %}
+                        <th class="center">Flags</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in grid.rows %}
+                    <tr>
+                        <td class="ac-cell-primary">{{ row.student.get_full_name }} <span class="ac-cell-sub">{{ row.student.student_id }}</span></td>
+                        {% for cell in row.cells %}
+                        <td>
+                            <select name="status_{{ row.student.pk }}_{{ cell.date|date:'Ymd' }}" class="form-select form-select-sm" aria-label="Status for {{ row.student.get_full_name }} on {{ cell.date|date:'D' }}">
+                                <option value="">—</option>
+                                {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if cell.record and cell.record.status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" class="form-control form-control-sm mt-1" name="note_{{ row.student.pk }}_{{ cell.date|date:'Ymd' }}" value="{{ cell.record.note|default:'' }}" placeholder="Note">
+                        </td>
+                        {% endfor %}
+                        <td class="center">
+                            {% if row.missing_count %}<span class="ac-badge neutral bare">{{ row.missing_count }} missing</span>{% endif %}
+                            {% if row.repeated_absence %}<span class="ac-badge danger bare"><i class="fas fa-triangle-exclamation"></i> {{ row.absent_count }} absences</span>{% elif row.absent_count %}<span class="ac-badge warning bare">{{ row.absent_count }} absent</span>{% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr class="ac-table-empty"><td colspan="{{ grid.days|length|add:2 }}">No active students in this class.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="ac-form-section">
+        <div class="ac-form-body">
+            <div class="ac-field">
+                <label for="awReason" class="form-label">Reason (optional)</label>
+                <input id="awReason" type="text" name="reason" class="form-control" placeholder="Recorded with any corrections to the register">
+                <div class="ac-help">Stored on the correction audit trail when a previously saved status is changed.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ac-form-actions">
+        <button class="btn btn-primary"><i class="fas fa-floppy-disk me-1"></i>Save weekly attendance</button>
+        <a class="btn btn-outline-secondary" href="{% url 'academics:attendance_index' %}">Cancel</a>
+    </div>
+</form>
+{% endblock %}
+
+{% block ac_extra_js %}
+<script>
+(function () {
+    document.querySelectorAll('[data-week-all]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var value = btn.dataset.weekAll;
+            document.querySelectorAll('.ac-attendance-grid select').forEach(function (sel) {
+                sel.value = value;
+            });
+        });
+    });
+    document.querySelectorAll('[data-week-clear]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.ac-attendance-grid select').forEach(function (sel) {
+                sel.value = '';
+            });
+        });
+    });
+})();
+</script>
+{% endblock %}

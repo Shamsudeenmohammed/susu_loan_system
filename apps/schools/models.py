@@ -21,6 +21,10 @@ class School(models.Model):
     phone = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
     address = models.TextField(blank=True)
+    logo = models.ImageField(
+        upload_to='school_logos/', blank=True, null=True,
+        help_text='School crest/logo shown on the header and watermark of '
+                  'official documents such as the terminal report PDF.')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

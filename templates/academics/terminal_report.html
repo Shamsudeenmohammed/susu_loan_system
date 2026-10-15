@@ -16,6 +16,59 @@
 {% endblock %}
 
 {% block ac_body %}
+{% if official %}
+<div class="ac-card">
+    <div class="ac-card-body ac-inline">
+        <span class="ac-badge success"><i class="fas fa-certificate me-1"></i>Official report</span>
+        <span>This is the student's official published report (v{{ official.version }}{% if official.published_at %}, published {{ official.published_at|date:"d M Y H:i" }}{% endif %}).</span>
+        <a class="ms-auto small" href="{% url 'academics:terminal_report_review' official.pk %}">History &amp; review</a>
+    </div>
+</div>
+{% elif latest_report %}
+<div class="ac-card ac-card-warning">
+    <div class="ac-card-body ac-inline">
+        <span class="ac-badge warning"><i class="fas fa-triangle-exclamation me-1"></i>Not yet official</span>
+        <span>v{{ latest_report.version }} is {{ latest_report.get_status_display|lower }} — it must be approved and published before it is the official report.</span>
+        <a class="ms-auto small" href="{% url 'academics:terminal_report_review' latest_report.pk %}">Review</a>
+    </div>
+</div>
+{% endif %}
+
+{% if blockers %}
+<div class="ac-card ac-card-warning">
+    <div class="ac-card-body ac-inline">
+        <span class="ac-badge danger"><i class="fas fa-triangle-exclamation me-1"></i>Incomplete data</span>
+        <span>{% for b in blockers %}{{ b }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</span>
+    </div>
+</div>
+{% endif %}
+
+{% if can_generate %}
+<div class="ac-card ac-no-print">
+    <div class="ac-card-body">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="generate">
+            <div class="ac-inline">
+                <button class="btn btn-primary"><i class="fas fa-file-circle-plus me-1"></i>Generate report for approval</button>
+                {% if blockers %}
+                <div class="form-check ms-3">
+                    <input class="form-check-input" type="checkbox" name="force" id="genForce" value="1">
+                    <label class="form-check-label" for="genForce">Generate despite incomplete data (override)</label>
+                </div>
+                {% endif %}
+            </div>
+            {% if blockers %}
+            <div class="ac-field mt-2">
+                <label class="form-label" for="genReason">Override reason</label>
+                <input id="genReason" type="text" name="override_reason" class="form-control" placeholder="Required when overriding incomplete data">
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endif %}
+
 <div class="ac-report">
     <div class="ac-report-brand">
         <h2>{{ data.school.name }}</h2>
@@ -85,7 +138,7 @@
         {% endfor %}
         </tbody>
     </table>
-    <p class="ac-cell-sub mt-2 mb-0">Financial figures are taken directly from the school fees module and reconcile with the fee dashboard.</p>
+    <p class="ac-cell-sub mt-2 mb-0">Financial figures are taken directly from the school fees automated system and reconcile with the fee dashboard.</p>
     {% endif %}
 
     <div class="ac-report-sign">
