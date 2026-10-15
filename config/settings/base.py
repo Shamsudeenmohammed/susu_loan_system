@@ -80,10 +80,19 @@ LOGIN_URL = '/accounts/login/'
 LOGOUT_REDIRECT_URL = 'login'
 
 AUTH_PASSWORD_VALIDATORS = [
-    # {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    # {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    # {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    # {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 8},
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
 ]
 
 LANGUAGE_CODE = 'en-us'
@@ -222,7 +231,7 @@ JAZZMIN_SETTINGS = {
     'site_logo_classes': 'img-circle',
     'site_icon': 'jazzmin-custom/logo.svg',
     'show_sidebar': True,
-    'navigation_expanded': True,
+    'navigation_expanded': False,
 
     # ------------------------------------------------------------------
     # Search — single box in the navbar keeps the top bar aligned

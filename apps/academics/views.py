@@ -1914,7 +1914,31 @@ def attendance_weekly(request):
     school_class = _class_choices(request).filter(pk=class_id).first()
     if school_class is None or year is None or term is None:
         messages.error(request, 'Choose a class, academic year and term first.')
-        return redirect('academics:attendance_index')
+        return render(request, 'academics/attendance_weekly.html', {
+            'school_class': school_class,
+            'classes': _class_choices(request),
+            'year': year,
+            'term': term,
+            'years': years,
+            'terms': terms,
+            'academic_context': academic_context,
+            'lock_year': lock_year,
+            'week_start': None,
+            'week_label': None,
+            'days': days,
+            'session_label': session_label,
+            'subject': subject,
+            'subjects': [],
+            'grid': [],
+            'students': [],
+            'missing_days': [],
+            'repeated_absences': [],
+            'corrections': [],
+            'can_save': False,
+            'status_choices': AttendanceRecord.Status.choices,
+            'form': None,
+        })
+
 
     subject = None
     if subject_id:
