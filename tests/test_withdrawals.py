@@ -1,5 +1,6 @@
 import pytest
 from decimal import Decimal
+from django.urls import reverse
 from apps.payments.services import record_withdrawal
 from apps.payments.models import Withdrawal, Transaction
 from apps.susu.models import SusuAccount
@@ -45,3 +46,20 @@ class TestWithdrawals:
         assert txn.transaction_type == 'WITHDRAWAL'
         assert txn.balance_before == Decimal('500.00')
         assert txn.balance_after == Decimal('400.00')
+
+    def test_dashboard_total_contributions_deducts_withdrawals(
+            self, client, admin_user, customer, susu_account, cashier_user):
+        self._setup_with_balance(customer, susu_account, cashier_user)
+        w = Withdrawal.objects.create(
+            customer=customer, account=susu_account,
+            amount=Decimal('200.00'), requested_by=cashier_user
+        )
+        txn, success, _ = record_withdrawal(w, cashier_user)
+        assert success is True
+
+        client.force_login(admin_user)
+        response = client.get(reverse('dashboard'))
+
+        assert response.status_code == 200
+        assert response.context['total_contributions'] == Decimal('300.00')
+        assert response.context['total_withdrawals'] == Decimal('200.00')

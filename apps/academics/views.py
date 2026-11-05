@@ -1911,6 +1911,7 @@ def attendance_weekly(request):
     days = int(request.GET.get('days') or request.POST.get('days')
                or attendance_service.WEEK_DAYS)
 
+    subject = None
     school_class = _class_choices(request).filter(pk=class_id).first()
     if school_class is None or year is None or term is None:
         messages.error(request, 'Choose a class, academic year and term first.')

@@ -39,7 +39,7 @@ def _savings_context():
     total_customers = Customer.objects.filter(status='ACTIVE').count()
     active_susu = SusuAccount.objects.filter(status='ACTIVE').count()
 
-    total_contributions = Transaction.objects.filter(
+    gross_contributions = Transaction.objects.filter(
         transaction_type='SUSU_CONTRIBUTION'
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
@@ -51,6 +51,10 @@ def _savings_context():
     total_withdrawals = Transaction.objects.filter(
         transaction_type='WITHDRAWAL'
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+    # Approved withdrawals are paid out of the contributions collected, so the
+    # dashboard shows the net amount still held for processing transactions.
+    total_contributions = gross_contributions - total_withdrawals
 
     outstanding_loans = Loan.objects.filter(
         status__in=['ACTIVE', 'DISBURSED']
@@ -65,7 +69,7 @@ def _savings_context():
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
     savings_balance = (
-        total_contributions - total_withdrawals + total_disbursed - total_repayments
+        gross_contributions - total_withdrawals + total_disbursed - total_repayments
     )
 
     overdue_count = RepaymentSchedule.objects.filter(

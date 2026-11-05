@@ -13,13 +13,16 @@ class SubjectAdmin(admin.ModelAdmin):
 @admin.register(models.ClassSubject)
 class ClassSubjectAdmin(admin.ModelAdmin):
     list_display = ('school_class', 'subject', 'school', 'is_active')
-    list_filter = ('school', 'is_active')
+    list_filter = ('school', 'school_class', 'subject', 'is_active')
+    search_fields = ('school_class__name', 'subject__name', 'school__name')
+    autocomplete_fields = ('school_class', 'subject')
 
 
 @admin.register(models.TeacherAssignment)
 class TeacherAssignmentAdmin(admin.ModelAdmin):
     list_display = ('teacher', 'school_class', 'subject', 'academic_year', 'term', 'is_active')
-    list_filter = ('school', 'academic_year', 'is_active')
+    list_filter = ('school', 'academic_year', 'term', 'school_class', 'subject', 'is_active')
+    autocomplete_fields = ('teacher', 'school_class', 'subject', 'academic_year', 'term')
 
 
 @admin.register(models.GradingScale)
@@ -40,7 +43,8 @@ class AcademicSettingsAdmin(admin.ModelAdmin):
 @admin.register(models.Assessment)
 class AssessmentAdmin(admin.ModelAdmin):
     list_display = ('name', 'school_class', 'subject', 'term', 'max_score', 'weight', 'is_active')
-    list_filter = ('school', 'academic_year', 'term', 'is_active')
+    list_filter = ('school', 'academic_year', 'term', 'school_class', 'subject', 'is_active')
+    autocomplete_fields = ('school_class', 'subject', 'term', 'academic_year')
 
 
 @admin.register(models.StudentMark)
